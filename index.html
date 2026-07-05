@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ClarityIQ — Patient Lens Education</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f0ede8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+#app {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e4e2da;
+  display: flex;
+  flex-direction: column;
+  min-height: 580px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+}
+
+/* Header */
+#header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e4e2da;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  background: #fff;
+}
+.logo-mark {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  background: #1D9E75;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.logo-mark svg { width: 18px; height: 18px; }
+#header-title { font-size: 16px; font-weight: 600; color: #1a1a18; letter-spacing: -0.01em; }
+#header-sub   { font-size: 12px; color: #a0a09a; margin-left: auto; }
+
+/* Progress */
+#progress-wrap {
+  padding: 12px 20px 10px;
+  background: #fff;
+  border-bottom: 1px solid #f0ede8;
+  flex-shrink: 0;
+}
+#progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+#progress-stage-label { font-size: 12px; color: #5f5e5a; font-weight: 500; }
+#progress-step        { font-size: 11px; color: #b4b2a9; }
+#progress-track { height: 4px; background: #f0ede8; border-radius: 99px; overflow: hidden; }
+#progress-fill  { height: 100%; background: #1D9E75; border-radius: 99px; width: 10%; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+
+/* Voice panel */
+#voice-panel {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 28px 24px 24px;
+  gap: 20px;
+}
+
+/* Status pill */
+#status-pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 14px;
+  background: #f5f5f0; border: 1px solid #e8e6de;
+  border-radius: 99px;
+  font-size: 13px; color: #5f5e5a; font-weight: 500;
+  transition: all 0.3s;
+}
+#status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #c4c2ba; flex-shrink: 0; transition: background 0.3s;
+}
+#status-pill.connecting #status-dot { background: #f0a500; animation: blink 1s infinite; }
+#status-pill.listening  #status-dot { background: #1D9E75; animation: blink 0.8s infinite; }
+#status-pill.speaking   #status-dot { background: #1D9E75; }
+#status-pill.idle       #status-dot { background: #1D9E75; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* Orb */
+#orb {
+  width: 148px; height: 148px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #34d399, #1D9E75 60%, #0d7a56);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: transform 0.2s;
+  box-shadow: 0 8px 32px rgba(29,158,117,0.25);
+}
+#orb::after {
+  content: ''; position: absolute;
+  top: 18%; left: 22%; width: 30%; height: 20%;
+  background: rgba(255,255,255,0.22); border-radius: 50%; filter: blur(4px);
+}
+#orb svg { width: 46px; height: 46px; color: #fff; position: relative; z-index: 1; }
+#orb:hover { transform: scale(1.03); }
+#orb.speaking { animation: orb-pulse 1.4s ease-in-out infinite; }
+#orb.listening { animation: orb-breathe 2s ease-in-out infinite; box-shadow: 0 0 0 14px rgba(29,158,117,0.1), 0 0 0 28px rgba(29,158,117,0.05); }
+@keyframes orb-pulse  { 0%,100%{box-shadow:0 0 0 0 rgba(29,158,117,0.4);transform:scale(1)} 50%{box-shadow:0 0 0 22px rgba(29,158,117,0);transform:scale(1.03)} }
+@keyframes orb-breathe{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+
+/* Transcript */
+#transcript-wrap {
+  width: 100%; max-height: 130px;
+  overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+}
+#transcript-wrap::-webkit-scrollbar { width: 3px; }
+#transcript-wrap::-webkit-scrollbar-thumb { background: #e4e2da; border-radius: 2px; }
+.tr-line {
+  font-size: 13.5px; line-height: 1.6;
+  padding: 8px 12px; border-radius: 10px; max-width: 92%;
+}
+.tr-line.agent { background:#f5f5f0; border:1px solid #e8e6de; color:#1a1a18; align-self:flex-start; border-radius:4px 10px 10px 10px; }
+.tr-line.user  { background:#1D9E75; color:#fff; align-self:flex-end; border-radius:10px 4px 10px 10px; }
+
+#hint { font-size: 13px; color: #a0a09a; text-align: center; line-height: 1.5; max-width: 280px; }
+
+/* Buttons */
+#start-btn {
+  padding: 14px 36px;
+  background: #1D9E75; color: #fff; border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+  transition: background 0.15s, transform 0.1s; letter-spacing: -0.01em;
+}
+#start-btn:hover  { background: #0f6e56; transform: scale(1.02); }
+#start-btn:active { transform: scale(0.98); }
+#start-btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
+
+#end-btn {
+  padding: 10px 24px;
+  background: transparent; color: #a0a09a;
+  border: 1px solid #d8d6ce; border-radius: 10px;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  transition: all 0.15s; display: none;
+}
+#end-btn:hover { background: #f5f5f0; color: #5f5e5a; }
+
+/* Error box */
+#error-box {
+  display: none;
+  background: #fff5f5; border: 1px solid #fca5a5;
+  border-radius: 10px; padding: 12px 14px;
+  font-size: 13px; color: #b91c1c; line-height: 1.5;
+  width: 100%; text-align: center;
+}
+
+/* Summary */
+#summary { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+#summary-header { padding: 20px 20px 16px; background: #1D9E75; flex-shrink: 0; }
+#summary-header h2 { font-size: 17px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+#summary-header p  { font-size: 13px; color: rgba(255,255,255,0.82); }
+#summary-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+#summary-body::-webkit-scrollbar { width: 4px; }
+#summary-body::-webkit-scrollbar-thumb { background: #e4e2da; border-radius: 2px; }
+.summary-card { background: #f8f8f4; border: 1px solid #e8e6de; border-radius: 14px; padding: 14px 16px; }
+.summary-card-label { font-size: 11px; font-weight: 600; color: #a0a09a; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 7px; }
+.summary-card-value { font-size: 14px; color: #1a1a18; line-height: 1.55; }
+.checklist { display: flex; flex-direction: column; gap: 7px; margin-top: 2px; }
+.check-row { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: #4a4a48; line-height: 1.45; }
+.check-icon { width: 18px; height: 18px; border-radius: 50%; background: #e1f5ee; color: #1D9E75; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 11px; font-weight: 600; }
+.surgeon-q-block { margin-top: 10px; background: #fffbf0; border: 1px solid #fac775; border-radius: 10px; padding: 11px 13px; }
+.surgeon-q-label { font-size: 11px; font-weight: 600; color: #854F0B; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 5px; }
+.surgeon-q-text  { font-size: 13px; color: #4a3000; line-height: 1.5; }
+#summary-footer { padding: 13px 20px; border-top: 1px solid #e8e6de; background: #fff; flex-shrink: 0; display: flex; gap: 10px; align-items: center; justify-content: center; }
+#restart-btn { padding: 10px 22px; background: transparent; color: #5f5e5a; border: 1px solid #d8d6ce; border-radius: 10px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+#restart-btn:hover { background: #f5f5f0; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="header">
+    <div class="logo-mark">
+      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="9" cy="9" r="3.5" fill="white"/>
+        <path d="M9 2V4.5M9 13.5V16M2 9H4.5M13.5 9H16" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span id="header-title">ClarityIQ</span>
+    <span id="header-sub">Lens education</span>
+  </div>
+
+  <div id="progress-wrap">
+    <div id="progress-meta">
+      <span id="progress-stage-label">Getting started</span>
+      <span id="progress-step">Step 1 of 6</span>
+    </div>
+    <div id="progress-track"><div id="progress-fill"></div></div>
+  </div>
+
+  <div id="voice-panel">
+    <div id="status-pill"><div id="status-dot"></div><span id="status-text">Ready to begin</span></div>
+
+    <div id="orb">
+      <svg id="orb-icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="9" y="2" width="6" height="12" rx="3"/>
+        <path d="M5 10a7 7 0 0 0 14 0"/>
+        <line x1="12" y1="19" x2="12" y2="22"/>
+        <line x1="8" y1="22" x2="16" y2="22"/>
+      </svg>
+      <svg id="orb-icon-wave" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="display:none">
+        <path d="M2 12h2M6 8v8M10 5v14M14 8v8M18 10v4M22 12h-2"/>
+      </svg>
+    </div>
+
+    <div id="transcript-wrap"></div>
+    <div id="error-box"></div>
+    <p id="hint">Tap the button below to start your conversation with ClarityIQ</p>
+    <button id="start-btn">Begin conversation</button>
+    <button id="end-btn">End conversation</button>
+  </div>
+
+  <div id="summary">
+    <div id="summary-header">
+      <h2>Your lens preference summary</h2>
+      <p>Screenshot this to bring to your appointment</p>
+    </div>
+    <div id="summary-body"></div>
+    <div id="summary-footer">
+      <button id="restart-btn">Start over</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+// ── ElevenLabs client SDK via esm.sh CDN ──────────────────────────────────────
+import { Conversation } from 'https://esm.sh/@elevenlabs/client';
+
+const AGENT_ID = 'agent_1401kws7xzy8ev4ryzbwvza7mex5';
+
+const STAGES = [
+  { label: 'Welcome',            pct: 10  },
+  { label: 'How cataracts work', pct: 25  },
+  { label: 'Your vision goals',  pct: 45  },
+  { label: 'Lens options',       pct: 65  },
+  { label: 'Your questions',     pct: 82  },
+  { label: 'Summary ready',      pct: 100 },
+];
+
+const STAGE_SIGNALS = [
+  { stage: 2, keywords: ['cataract', 'natural lens', 'iol', 'intraocular', 'presbyopia', 'clouding'] },
+  { stage: 3, keywords: ['glasses', 'feel about', 'wear glasses', 'hoping for', 'after surgery'] },
+  { stage: 4, keywords: ['trifocal', 'panoptix', 'toric', 'monofocal', 'astigmatism', 'halos', '9 in 10', 'nine in ten', 'focal point'] },
+  { stage: 5, keywords: ['any questions', 'does that make sense', 'anything else'] },
+  { stage: 6, keywords: ['summary', 'screenshot', 'bring to your appointment', 'lens preference'] },
+];
+
+let currentStage  = 1;
+let conversation  = null;
+let transcriptLog = [];
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function setProgress(n) {
+  currentStage = Math.max(currentStage, n);
+  const s = STAGES[Math.min(currentStage - 1, STAGES.length - 1)];
+  document.getElementById('progress-fill').style.width        = s.pct + '%';
+  document.getElementById('progress-stage-label').textContent = s.label;
+  document.getElementById('progress-step').textContent        = 'Step ' + currentStage + ' of 6';
+}
+
+function setStatus(state, text) {
+  const pill = document.getElementById('status-pill');
+  pill.className = state;
+  document.getElementById('status-text').textContent = text;
+  const orb      = document.getElementById('orb');
+  const iconMic  = document.getElementById('orb-icon-mic');
+  const iconWave = document.getElementById('orb-icon-wave');
+  orb.className = '';
+  if (state === 'speaking') {
+    orb.classList.add('speaking');
+    iconMic.style.display  = 'none';
+    iconWave.style.display = 'block';
+  } else if (state === 'listening') {
+    orb.classList.add('listening');
+    iconMic.style.display  = 'block';
+    iconWave.style.display = 'none';
+  } else {
+    iconMic.style.display  = 'block';
+    iconWave.style.display = 'none';
+  }
+}
+
+function showError(msg) {
+  const box = document.getElementById('error-box');
+  box.textContent  = msg;
+  box.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('error-box').style.display = 'none';
+}
+
+function stripMarkdown(text) {
+  return (text || '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\*(.+?)\*/g,     '$1')
+    .replace(/__(.+?)__/g,     '$1')
+    .replace(/_(.+?)_/g,       '$1')
+    .replace(/#{1,6}\s+/g,     '')
+    .replace(/`(.+?)`/g,       '$1')
+    .trim();
+}
+
+function addTranscriptLine(role, text) {
+  const clean = stripMarkdown(text);
+  if (!clean) return;
+  transcriptLog.push({ role, text: clean });
+  const wrap = document.getElementById('transcript-wrap');
+  const line = document.createElement('div');
+  line.className   = 'tr-line ' + role;
+  line.textContent = clean;
+  wrap.appendChild(line);
+  wrap.scrollTop = wrap.scrollHeight;
+  // Auto-advance stage
+  const lower = clean.toLowerCase();
+  for (let i = STAGE_SIGNALS.length - 1; i >= 0; i--) {
+    if (STAGE_SIGNALS[i].keywords.some(k => lower.includes(k))) {
+      if (STAGE_SIGNALS[i].stage > currentStage) setProgress(STAGE_SIGNALS[i].stage);
+      break;
+    }
+  }
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+function buildAndShowSummary() {
+  const all = transcriptLog.map(t => t.text).join(' ').toLowerCase();
+
+  let lens = 'To be confirmed with your surgeon';
+  if (all.includes('panoptix') || all.includes('trifocal')) {
+    lens = 'Trifocal lens (PanOptix) — full range of vision, minimal glasses dependence';
+  } else if (all.includes('toric')) {
+    lens = 'Toric monofocal — sharpest single-focus vision with astigmatism correction';
+  } else if (all.includes('standard') || all.includes('monofocal')) {
+    lens = 'Standard monofocal — single focal point, fully covered by insurance';
+  }
+
+  let goal = 'Vision goals discussed during conversation';
+  if (all.includes('free from glasses') || all.includes('without glasses') || all.includes('independence')) {
+    goal = 'Minimize glasses dependence across all distances';
+  } else if (all.includes('sharpest') || all.includes('clearest') || (all.includes('distance') && all.includes('clear'))) {
+    goal = 'Sharpest possible vision at one focal point, comfortable with glasses otherwise';
+  } else if (all.includes('comfortable') && all.includes('glasses')) {
+    goal = 'Primarily treat the cataract, comfortable continuing to wear glasses';
+  }
+
+  const topics = [];
+  if (all.includes('cataract'))                              topics.push('How cataracts work');
+  if (all.includes('possible') || all.includes('full range'))topics.push("What's possible with today's lenses");
+  if (all.includes('focal point') || all.includes('presbyopia')) topics.push('Focal points explained');
+  if (all.includes('trifocal') || all.includes('panoptix'))  topics.push('Trifocal lens education');
+  if (all.includes('halo') || all.includes('adapt'))         topics.push('Halos and adaptation period');
+  if (all.includes('toric'))                                 topics.push('Toric monofocal education');
+  if (all.includes('astigmatism'))                           topics.push('Astigmatism correction');
+  if (all.includes('cost') || all.includes('insurance') || all.includes('covered')) topics.push('Cost and insurance coverage');
+  if (topics.length === 0)                                   topics.push('Lens options overview');
+
+  const body = document.getElementById('summary-body');
+  body.innerHTML = '';
+
+  const s1 = document.createElement('div');
+  s1.className = 'summary-card';
+  s1.innerHTML = `<div class="summary-card-label">My vision goal</div><div class="summary-card-value">${goal}</div>`;
+  body.appendChild(s1);
+
+  const s2 = document.createElement('div');
+  s2.className = 'summary-card';
+  s2.innerHTML = `<div class="summary-card-label">Lens preference</div><div class="summary-card-value">${lens}</div>`;
+  body.appendChild(s2);
+
+  const s3 = document.createElement('div');
+  s3.className = 'summary-card';
+  let html = '<div class="summary-card-label">Topics covered</div><div class="checklist">';
+  topics.forEach(t => { html += `<div class="check-row"><div class="check-icon">&#10003;</div><span>${t}</span></div>`; });
+  html += '</div><div class="surgeon-q-block"><div class="surgeon-q-label">Question for your surgeon</div><div class="surgeon-q-text">Ask which lens your eye measurements and astigmatism level support best.</div></div>';
+  s3.innerHTML = html;
+  body.appendChild(s3);
+
+  document.getElementById('voice-panel').style.display = 'none';
+  document.getElementById('summary').style.display     = 'flex';
+  setProgress(6);
+}
+
+// ── Session control ───────────────────────────────────────────────────────────
+async function startConversation() {
+  hideError();
+  const startBtn = document.getElementById('start-btn');
+  const endBtn   = document.getElementById('end-btn');
+  const hint     = document.getElementById('hint');
+
+  startBtn.disabled = true;
+  setStatus('connecting', 'Connecting…');
+
+  try {
+    // Request mic first — gives a clear browser permission prompt
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    conversation = await Conversation.startSession({
+      agentId: AGENT_ID,
+
+      onConnect: () => {
+        setStatus('idle', 'Connected — listening');
+        startBtn.style.display = 'none';
+        endBtn.style.display   = 'inline-block';
+        hint.style.display     = 'none';
+      },
+
+      onDisconnect: () => {
+        setStatus('', 'Conversation ended');
+        endBtn.style.display   = 'none';
+        startBtn.style.display = 'inline-block';
+        startBtn.disabled      = false;
+        startBtn.textContent   = 'Start again';
+        hint.textContent       = 'Conversation complete — see your summary below.';
+        hint.style.display     = 'block';
+        buildAndShowSummary();
+      },
+
+      onError: (err) => {
+        console.error('ElevenLabs error:', err);
+        showError('Connection error. Make sure you are on HTTPS or localhost, and that your agent is published.');
+        setStatus('', 'Error');
+        startBtn.disabled    = false;
+        startBtn.style.display = 'inline-block';
+        endBtn.style.display = 'none';
+      },
+
+      onModeChange: ({ mode }) => {
+        if (mode === 'speaking') {
+          setStatus('speaking', 'ClarityIQ is speaking…');
+        } else if (mode === 'listening') {
+          setStatus('listening', 'Listening…');
+        } else {
+          setStatus('idle', 'Processing…');
+        }
+      },
+
+      onMessage: ({ message, source }) => {
+        if (message && message.trim()) {
+          addTranscriptLine(source === 'user' ? 'user' : 'agent', message);
+        }
+      },
+    });
+
+  } catch (err) {
+    console.error('startSession failed:', err);
+    const msg = err.message || String(err);
+    if (msg.toLowerCase().includes('permission') || msg.toLowerCase().includes('denied')) {
+      showError('Microphone access was denied. Please allow microphone access in your browser and try again.');
+    } else {
+      showError('Could not connect to ClarityIQ. Make sure the agent is published in ElevenLabs and try again. (' + msg + ')');
+    }
+    setStatus('', 'Ready to begin');
+    startBtn.disabled      = false;
+    startBtn.style.display = 'inline-block';
+  }
+}
+
+async function endConversation() {
+  if (conversation) {
+    try { await conversation.endSession(); } catch(e) {}
+    conversation = null;
+  }
+}
+
+// ── Restart ───────────────────────────────────────────────────────────────────
+function resetUI() {
+  transcriptLog = [];
+  currentStage  = 1;
+  document.getElementById('transcript-wrap').innerHTML  = '';
+  document.getElementById('summary').style.display      = 'none';
+  document.getElementById('voice-panel').style.display  = 'flex';
+  document.getElementById('start-btn').style.display    = 'inline-block';
+  document.getElementById('start-btn').disabled         = false;
+  document.getElementById('start-btn').textContent      = 'Begin conversation';
+  document.getElementById('end-btn').style.display      = 'none';
+  document.getElementById('hint').textContent           = 'Tap the button below to start your conversation with ClarityIQ';
+  document.getElementById('hint').style.display         = 'block';
+  hideError();
+  setStatus('', 'Ready to begin');
+  setProgress(1);
+  document.getElementById('progress-stage-label').textContent = 'Getting started';
+  document.getElementById('progress-step').textContent        = 'Step 1 of 6';
+  document.getElementById('progress-fill').style.width        = '10%';
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+document.getElementById('start-btn').addEventListener('click',   startConversation);
+document.getElementById('end-btn').addEventListener('click',     endConversation);
+document.getElementById('restart-btn').addEventListener('click', resetUI);
+</script>
+</body>
+</html>
