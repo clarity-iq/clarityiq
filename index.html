@@ -676,12 +676,16 @@ async function startConversation() {
         stopProgressTimer();
         setStatus('', 'Conversation ended');
         document.getElementById('active-controls').style.display = 'none';
-        startBtn.style.display   = 'inline-block';
-        startBtn.disabled        = false;
-        startBtn.textContent     = 'Start again';
+        const startBtn = document.getElementById('start-btn');
+        startBtn.style.display  = 'inline-block';
+        startBtn.disabled       = false;
+        startBtn.textContent    = 'Start again';
         isMuted      = false;
         summaryReady = false;
-        buildAndShowSummary();
+        // Summary is built in endConversation — only build here if session dropped unexpectedly
+        if (document.getElementById('summary').style.display !== 'flex') {
+          buildAndShowSummary();
+        }
       },
 
       onError: (err) => {
@@ -719,10 +723,21 @@ async function startConversation() {
 }
 
 async function endConversation() {
+  // Generate summary FIRST while page context is stable, then end the session
+  stopProgressTimer();
+  await buildAndShowSummary();
   if (conversation) {
     try { await conversation.endSession(); } catch(e) {}
     conversation = null;
   }
+  // Clean up controls
+  document.getElementById('active-controls').style.display = 'none';
+  const startBtn = document.getElementById('start-btn');
+  startBtn.style.display  = 'inline-block';
+  startBtn.disabled       = false;
+  startBtn.textContent    = 'Start again';
+  isMuted      = false;
+  summaryReady = false;
 }
 
 // ── Reset ─────────────────────────────────────────────────────────────────────
