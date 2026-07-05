@@ -142,13 +142,26 @@ body {
 #start-btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
 
 #end-btn {
-  padding: 10px 24px;
+  padding: 10px 20px;
   background: transparent; color: #a0a09a;
   border: 1px solid #d8d6ce; border-radius: 10px;
   font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
-  transition: all 0.15s; display: none;
+  transition: all 0.15s;
 }
 #end-btn:hover { background: #f5f5f0; color: #5f5e5a; }
+
+#mute-btn {
+  padding: 10px 20px;
+  background: transparent; color: #1D9E75;
+  border: 1px solid #1D9E75; border-radius: 10px;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+#mute-btn:hover { background: #e1f5ee; }
+#mute-btn.muted {
+  background: #fff5f5; color: #e05050;
+  border-color: #e05050;
+}
 
 /* Error box */
 #error-box {
@@ -222,7 +235,10 @@ body {
     <div id="error-box"></div>
     <p id="hint">Tap the button below to start your conversation with ClarityIQ</p>
     <button id="start-btn">Begin conversation</button>
-    <button id="end-btn">End conversation</button>
+    <div id="active-controls" style="display:none; gap:10px; justify-content:center; align-items:center;">
+      <button id="mute-btn" title="Mute microphone">🎤 Mute</button>
+      <button id="end-btn">End conversation</button>
+    </div>
   </div>
 
   <div id="summary">
@@ -264,6 +280,7 @@ const STAGE_SIGNALS = [
 let currentStage  = 1;
 let conversation  = null;
 let transcriptLog = [];
+let isMuted       = false;
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
 function setProgress(n) {
@@ -339,8 +356,10 @@ function addTranscriptLine(role, text) {
 
 // ── Summary ───────────────────────────────────────────────────────────────────
 function buildAndShowSummary() {
-  const all = transcriptLog.map(t => t.text).join(' ').toLowerCase();
+  const all        = transcriptLog.map(t => t.text).join(' ').toLowerCase();
+  const agentOnly  = transcriptLog.filter(t => t.role === 'agent').map(t => t.text).join(' ').toLowerCase();
 
+  // ── Lens preference ──
   let lens = 'To be confirmed with your surgeon';
   if (all.includes('panoptix') || all.includes('trifocal')) {
     lens = 'Trifocal lens (PanOptix) — full range of vision, minimal glasses dependence';
@@ -350,8 +369,9 @@ function buildAndShowSummary() {
     lens = 'Standard monofocal — single focal point, fully covered by insurance';
   }
 
+  // ── Vision goal ──
   let goal = 'Vision goals discussed during conversation';
-  if (all.includes('free from glasses') || all.includes('without glasses') || all.includes('independence')) {
+  if (all.includes('free from glasses') || all.includes('without glasses') || all.includes('glasses independence') || all.includes('glasses free') || all.includes('no glasses')) {
     goal = 'Minimize glasses dependence across all distances';
   } else if (all.includes('sharpest') || all.includes('clearest') || (all.includes('distance') && all.includes('clear'))) {
     goal = 'Sharpest possible vision at one focal point, comfortable with glasses otherwise';
@@ -359,17 +379,53 @@ function buildAndShowSummary() {
     goal = 'Primarily treat the cataract, comfortable continuing to wear glasses';
   }
 
-  const topics = [];
-  if (all.includes('cataract'))                              topics.push('How cataracts work');
-  if (all.includes('possible') || all.includes('full range'))topics.push("What's possible with today's lenses");
-  if (all.includes('focal point') || all.includes('presbyopia')) topics.push('Focal points explained');
-  if (all.includes('trifocal') || all.includes('panoptix'))  topics.push('Trifocal lens education');
-  if (all.includes('halo') || all.includes('adapt'))         topics.push('Halos and adaptation period');
-  if (all.includes('toric'))                                 topics.push('Toric monofocal education');
-  if (all.includes('astigmatism'))                           topics.push('Astigmatism correction');
-  if (all.includes('cost') || all.includes('insurance') || all.includes('covered')) topics.push('Cost and insurance coverage');
-  if (topics.length === 0)                                   topics.push('Lens options overview');
+  // ── Topics covered — comprehensive keyword matching ──
+  const TOPIC_MAP = [
+    { label: 'How cataracts work',              keys: ['cataract', 'clouding', 'natural lens', 'cloudy'] },
+    { label: "What's possible with today's lenses", keys: ['possible', 'full range', 'what is possible', 'opportunity'] },
+    { label: 'Focal points explained',          keys: ['focal point', 'presbyopia', 'focus', 'single focus'] },
+    { label: 'Trifocal lens education',         keys: ['trifocal', 'panoptix', 'three focal', 'three distances'] },
+    { label: 'Halos and adaptation period',     keys: ['halo', 'adapt', 'starburst', 'glare', 'night vision', 'dysphotopsia'] },
+    { label: 'Toric monofocal education',       keys: ['toric'] },
+    { label: 'Astigmatism correction',          keys: ['astigmatism', 'corneal irregularity', 'irregular'] },
+    { label: 'Standard monofocal education',    keys: ['standard monofocal', 'basic lens', 'covered lens'] },
+    { label: 'Cost and insurance coverage',     keys: ['cost', 'insurance', 'covered', 'out of pocket', 'premium', 'price', 'expense'] },
+    { label: 'Risks and side effects',          keys: ['risk', 'side effect', 'complication', 'concern', 'worry', 'problem', 'issue', 'dysphotopsia', 'visual disturbance'] },
+    { label: 'Lens material and optics',        keys: ['material', 'acrylic', 'abbe', 'chromatic', 'aberration', 'wavefront', 'aspheric', 'spherical'] },
+    { label: 'PCO and secondary cataract',      keys: ['pco', 'posterior capsule', 'secondary cataract', 'yag', 'clouding after'] },
+    { label: 'EDOF lens options',               keys: ['edof', 'extended depth', 'symfony', 'vivity', 'depth of focus'] },
+    { label: 'Blue light filtering',            keys: ['blue light', 'yellow tint', 'filter'] },
+    { label: 'Surgical process',                keys: ['surgery', 'procedure', 'operation', 'incision', 'recovery', 'heal'] },
+    { label: 'Glasses independence goals',      keys: ['glasses free', 'without glasses', 'no glasses', 'spectacle independence'] },
+  ];
 
+  const topics = TOPIC_MAP
+    .filter(t => t.keys.some(k => all.includes(k)))
+    .map(t => t.label);
+
+  if (topics.length === 0) topics.push('Lens options overview');
+
+  // ── Surgeon question — pulled from agent transcript ──
+  // Look for the last sentence the agent said that contains "ask your surgeon" or "bring to your appointment"
+  let surgeonQ = 'Ask your surgeon which lens your eye measurements and astigmatism level support best.';
+  const agentLines = transcriptLog.filter(t => t.role === 'agent').map(t => t.text);
+  for (let i = agentLines.length - 1; i >= 0; i--) {
+    const line = agentLines[i].toLowerCase();
+    if (line.includes('ask your surgeon') || line.includes('bring to your appointment') || line.includes('worth asking') || line.includes('good question for')) {
+      // Find the sentence containing the trigger phrase
+      const sentences = agentLines[i].split(/[.!?]+/).filter(Boolean);
+      for (const s of sentences) {
+        const sl = s.toLowerCase();
+        if (sl.includes('ask') || sl.includes('bring') || sl.includes('surgeon') || sl.includes('appointment')) {
+          const candidate = s.trim();
+          if (candidate.length > 20) { surgeonQ = candidate; break; }
+        }
+      }
+      break;
+    }
+  }
+
+  // ── Render ──
   const body = document.getElementById('summary-body');
   body.innerHTML = '';
 
@@ -387,7 +443,7 @@ function buildAndShowSummary() {
   s3.className = 'summary-card';
   let html = '<div class="summary-card-label">Topics covered</div><div class="checklist">';
   topics.forEach(t => { html += `<div class="check-row"><div class="check-icon">&#10003;</div><span>${t}</span></div>`; });
-  html += '</div><div class="surgeon-q-block"><div class="surgeon-q-label">Question for your surgeon</div><div class="surgeon-q-text">Ask which lens your eye measurements and astigmatism level support best.</div></div>';
+  html += `</div><div class="surgeon-q-block"><div class="surgeon-q-label">Question for your surgeon</div><div class="surgeon-q-text">${surgeonQ}</div></div>`;
   s3.innerHTML = html;
   body.appendChild(s3);
 
@@ -416,18 +472,19 @@ async function startConversation() {
       onConnect: () => {
         setStatus('idle', 'Connected — listening');
         startBtn.style.display = 'none';
-        endBtn.style.display   = 'inline-block';
+        document.getElementById('active-controls').style.display = 'flex';
         hint.style.display     = 'none';
       },
 
       onDisconnect: () => {
         setStatus('', 'Conversation ended');
-        endBtn.style.display   = 'none';
+        document.getElementById('active-controls').style.display = 'none';
         startBtn.style.display = 'inline-block';
         startBtn.disabled      = false;
         startBtn.textContent   = 'Start again';
         hint.textContent       = 'Conversation complete — see your summary below.';
         hint.style.display     = 'block';
+        isMuted = false;
         buildAndShowSummary();
       },
 
@@ -437,7 +494,7 @@ async function startConversation() {
         setStatus('', 'Error');
         startBtn.disabled    = false;
         startBtn.style.display = 'inline-block';
-        endBtn.style.display = 'none';
+        document.getElementById('active-controls').style.display = 'none';
       },
 
       onModeChange: ({ mode }) => {
@@ -482,27 +539,40 @@ async function endConversation() {
 function resetUI() {
   transcriptLog = [];
   currentStage  = 1;
-  document.getElementById('transcript-wrap').innerHTML  = '';
-  document.getElementById('summary').style.display      = 'none';
-  document.getElementById('voice-panel').style.display  = 'flex';
-  document.getElementById('start-btn').style.display    = 'inline-block';
-  document.getElementById('start-btn').disabled         = false;
-  document.getElementById('start-btn').textContent      = 'Begin conversation';
-  document.getElementById('end-btn').style.display      = 'none';
-  document.getElementById('hint').textContent           = 'Tap the button below to start your conversation with ClarityIQ';
-  document.getElementById('hint').style.display         = 'block';
+  isMuted       = false;
+  document.getElementById('transcript-wrap').innerHTML           = '';
+  document.getElementById('summary').style.display               = 'none';
+  document.getElementById('voice-panel').style.display           = 'flex';
+  document.getElementById('start-btn').style.display             = 'inline-block';
+  document.getElementById('start-btn').disabled                  = false;
+  document.getElementById('start-btn').textContent               = 'Begin conversation';
+  document.getElementById('active-controls').style.display       = 'none';
+  document.getElementById('mute-btn').textContent                = '🎤 Mute';
+  document.getElementById('mute-btn').classList.remove('muted');
+  document.getElementById('hint').textContent                    = 'Tap the button below to start your conversation with ClarityIQ';
+  document.getElementById('hint').style.display                  = 'block';
   hideError();
   setStatus('', 'Ready to begin');
   setProgress(1);
-  document.getElementById('progress-stage-label').textContent = 'Getting started';
-  document.getElementById('progress-step').textContent        = 'Step 1 of 6';
-  document.getElementById('progress-fill').style.width        = '10%';
+  document.getElementById('progress-stage-label').textContent    = 'Getting started';
+  document.getElementById('progress-step').textContent           = 'Step 1 of 6';
+  document.getElementById('progress-fill').style.width           = '10%';
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
-document.getElementById('start-btn').addEventListener('click',   startConversation);
-document.getElementById('end-btn').addEventListener('click',     endConversation);
+document.getElementById('start-btn').addEventListener('click', startConversation);
+document.getElementById('end-btn').addEventListener('click',   endConversation);
 document.getElementById('restart-btn').addEventListener('click', resetUI);
+
+document.getElementById('mute-btn').addEventListener('click', () => {
+  if (!conversation) return;
+  isMuted = !isMuted;
+  conversation.setMicMuted(isMuted);
+  const btn = document.getElementById('mute-btn');
+  btn.textContent = isMuted ? '🔇 Unmute' : '🎤 Mute';
+  btn.classList.toggle('muted', isMuted);
+  setStatus(isMuted ? 'connecting' : 'listening', isMuted ? 'Microphone muted' : 'Listening…');
+});
 </script>
 </body>
 </html>
