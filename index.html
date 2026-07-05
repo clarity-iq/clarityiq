@@ -281,6 +281,34 @@ let currentStage  = 1;
 let conversation  = null;
 let transcriptLog = [];
 let isMuted       = false;
+let summaryReady  = false;
+let progressTimer = null;
+
+// ── Time-based progress bar ───────────────────────────────────────────────────
+// Advances through stages on a realistic timer so the bar moves during demo
+// Stage durations in seconds (approximate real conversation timing)
+const STAGE_DURATIONS = [18, 35, 45, 90, 60, 0]; // stages 1-6
+
+function startProgressTimer() {
+  let stageIndex = 0;
+  progressTimer  = null;
+
+  function advanceStage() {
+    if (stageIndex >= STAGE_DURATIONS.length - 1) return;
+    stageIndex++;
+    setProgress(stageIndex + 1);
+    if (STAGE_DURATIONS[stageIndex] > 0) {
+      progressTimer = setTimeout(advanceStage, STAGE_DURATIONS[stageIndex] * 1000);
+    }
+  }
+
+  // Start from stage 1, advance to stage 2 after first duration
+  progressTimer = setTimeout(advanceStage, STAGE_DURATIONS[0] * 1000);
+}
+
+function stopProgressTimer() {
+  if (progressTimer) { clearTimeout(progressTimer); progressTimer = null; }
+}
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
 function setProgress(n) {
@@ -334,6 +362,21 @@ function stripMarkdown(text) {
     .trim();
 }
 
+// Phrases that signal agent is wrapping up — triggers button change only, no auto-end
+const FAREWELL_SIGNALS = [
+  'tap the button below',
+  'generate your summary',
+  'take a screenshot',
+  'bring this to your appointment',
+  'bring it to your appointment',
+  'your care team will have',
+  'your surgeon will review everything',
+  'best of luck',
+  'hope your surgery goes well',
+  'all the best with your',
+  'wishing you all the best',
+];
+
 function addTranscriptLine(role, text) {
   const clean = stripMarkdown(text);
   if (!clean) return;
@@ -344,12 +387,24 @@ function addTranscriptLine(role, text) {
   line.textContent = clean;
   wrap.appendChild(line);
   wrap.scrollTop = wrap.scrollHeight;
-  // Auto-advance stage
+
   const lower = clean.toLowerCase();
-  for (let i = STAGE_SIGNALS.length - 1; i >= 0; i--) {
-    if (STAGE_SIGNALS[i].keywords.some(k => lower.includes(k))) {
-      if (STAGE_SIGNALS[i].stage > currentStage) setProgress(STAGE_SIGNALS[i].stage);
-      break;
+
+  // Time-based stage progression handles the bar — no keyword detection needed here
+
+  // Dynamic button — change to "Generate my summary" when agent signals close
+  if (role === 'agent' && !summaryReady) {
+    const isFarewell = FAREWELL_SIGNALS.some(phrase => lower.includes(phrase));
+    if (isFarewell) {
+      summaryReady = true;
+      const endBtn = document.getElementById('end-btn');
+      endBtn.textContent                = '📋 Generate my summary';
+      endBtn.style.background           = '#1D9E75';
+      endBtn.style.color                = '#fff';
+      endBtn.style.borderColor          = '#1D9E75';
+      endBtn.style.fontSize             = '14px';
+      endBtn.style.padding              = '12px 24px';
+      endBtn.style.animation            = 'orb-pulse 1.5s ease-in-out 2';
     }
   }
 }
@@ -455,6 +510,8 @@ function buildAndShowSummary() {
 // ── Session control ───────────────────────────────────────────────────────────
 async function startConversation() {
   hideError();
+  summaryReady = false;
+  stopProgressTimer();
   const startBtn = document.getElementById('start-btn');
   const endBtn   = document.getElementById('end-btn');
   const hint     = document.getElementById('hint');
@@ -474,9 +531,11 @@ async function startConversation() {
         startBtn.style.display = 'none';
         document.getElementById('active-controls').style.display = 'flex';
         hint.style.display     = 'none';
+        startProgressTimer();
       },
 
       onDisconnect: () => {
+        stopProgressTimer();
         setStatus('', 'Conversation ended');
         document.getElementById('active-controls').style.display = 'none';
         startBtn.style.display = 'inline-block';
@@ -484,7 +543,8 @@ async function startConversation() {
         startBtn.textContent   = 'Start again';
         hint.textContent       = 'Conversation complete — see your summary below.';
         hint.style.display     = 'block';
-        isMuted = false;
+        isMuted      = false;
+        summaryReady = false;
         buildAndShowSummary();
       },
 
@@ -537,9 +597,11 @@ async function endConversation() {
 
 // ── Restart ───────────────────────────────────────────────────────────────────
 function resetUI() {
-  transcriptLog = [];
-  currentStage  = 1;
-  isMuted       = false;
+  stopProgressTimer();
+  transcriptLog      = [];
+  currentStage       = 1;
+  isMuted            = false;
+  summaryReady       = false;
   document.getElementById('transcript-wrap').innerHTML           = '';
   document.getElementById('summary').style.display               = 'none';
   document.getElementById('voice-panel').style.display           = 'flex';
@@ -549,14 +611,21 @@ function resetUI() {
   document.getElementById('active-controls').style.display       = 'none';
   document.getElementById('mute-btn').textContent                = '🎤 Mute';
   document.getElementById('mute-btn').classList.remove('muted');
+  const endBtn = document.getElementById('end-btn');
+  endBtn.textContent       = 'End conversation';
+  endBtn.style.background  = '';
+  endBtn.style.color       = '';
+  endBtn.style.borderColor = '';
+  endBtn.style.fontSize    = '';
+  endBtn.style.padding     = '';
+  endBtn.style.animation   = '';
   document.getElementById('hint').textContent                    = 'Tap the button below to start your conversation with ClarityIQ';
   document.getElementById('hint').style.display                  = 'block';
   hideError();
   setStatus('', 'Ready to begin');
-  setProgress(1);
+  document.getElementById('progress-fill').style.width           = '10%';
   document.getElementById('progress-stage-label').textContent    = 'Getting started';
   document.getElementById('progress-step').textContent           = 'Step 1 of 6';
-  document.getElementById('progress-fill').style.width           = '10%';
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
