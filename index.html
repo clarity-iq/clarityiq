@@ -55,36 +55,40 @@ body {
 #progress-track { height: 4px; background: #f0ede8; border-radius: 99px; overflow: hidden; }
 #progress-fill  { height: 100%; background: #1D9E75; border-radius: 99px; width: 0%; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
 
-/* ── Topic roadmap — 4 steps only ── */
+/* ── Topic roadmap — 6 dots, no labels ── */
 #roadmap {
-  padding: 10px 16px 8px;
+  padding: 8px 20px;
   border-bottom: 1px solid #f0ede8;
-  display: flex; gap: 0; align-items: flex-start;
-  flex-shrink: 0; background: #fafaf7;
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; flex-shrink: 0; background: #fafaf7;
 }
 .roadmap-step {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  flex: 1;
+  display: flex; align-items: center; justify-content: center;
 }
 .roadmap-dot {
-  width: 26px; height: 26px; border-radius: 50%;
+  width: 20px; height: 20px; border-radius: 50%;
   background: #f0ede8; border: 1.5px solid #d8d6ce;
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600; color: #a0a09a;
-  transition: all 0.4s; flex-shrink: 0;
+  font-size: 9px; font-weight: 700; color: #a0a09a;
+  transition: all 0.4s; flex-shrink: 0; cursor: default;
+  position: relative;
 }
-.roadmap-dot.active   { background: #1D9E75; border-color: #1D9E75; color: #fff; }
-.roadmap-dot.complete { background: #e1f5ee; border-color: #1D9E75; color: #1D9E75; }
-.roadmap-label {
-  font-size: 9px; color: #b4b2a9; text-align: center;
-  line-height: 1.3; transition: color 0.4s;
+.roadmap-dot.active {
+  background: #1D9E75; border-color: #1D9E75; color: #fff;
+  animation: dot-pulse 2s ease-in-out infinite;
 }
-.roadmap-label.active   { color: #1D9E75; font-weight: 600; }
-.roadmap-label.complete { color: #5f5e5a; }
+.roadmap-dot.complete {
+  background: #e1f5ee; border-color: #1D9E75; color: #1D9E75;
+  font-size: 10px;
+}
+@keyframes dot-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(29,158,117,0.4); }
+  50%      { box-shadow: 0 0 0 4px rgba(29,158,117,0); }
+}
 .roadmap-connector {
   height: 1.5px; background: #e4e2da;
-  margin-top: 12px; flex: 1;
-  transition: background 0.4s; min-width: 8px;
+  flex: 1; max-width: 40px; min-width: 12px;
+  transition: background 0.4s;
 }
 .roadmap-connector.complete { background: #1D9E75; }
 
@@ -332,27 +336,19 @@ body {
     <div id="progress-track"><div id="progress-fill"></div></div>
   </div>
 
-  <!-- Topic roadmap — 4 steps -->
+  <!-- Topic roadmap — 6 dots, no labels -->
   <div id="roadmap">
-    <div class="roadmap-step">
-      <div class="roadmap-dot active" id="rdot-1">1</div>
-      <div class="roadmap-label active" id="rlbl-1">IOL<br>Education</div>
-    </div>
+    <div class="roadmap-step"><div class="roadmap-dot active" id="rdot-1">1</div></div>
     <div class="roadmap-connector" id="rcon-1"></div>
-    <div class="roadmap-step">
-      <div class="roadmap-dot" id="rdot-2">2</div>
-      <div class="roadmap-label" id="rlbl-2">Your<br>Goals</div>
-    </div>
+    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-2">2</div></div>
     <div class="roadmap-connector" id="rcon-2"></div>
-    <div class="roadmap-step">
-      <div class="roadmap-dot" id="rdot-3">3</div>
-      <div class="roadmap-label" id="rlbl-3">Lens<br>Options</div>
-    </div>
+    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-3">3</div></div>
     <div class="roadmap-connector" id="rcon-3"></div>
-    <div class="roadmap-step">
-      <div class="roadmap-dot" id="rdot-4">4</div>
-      <div class="roadmap-label" id="rlbl-4">Your<br>Questions</div>
-    </div>
+    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-4">4</div></div>
+    <div class="roadmap-connector" id="rcon-4"></div>
+    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-5">5</div></div>
+    <div class="roadmap-connector" id="rcon-5"></div>
+    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-6">6</div></div>
   </div>
 
   <!-- Voice panel — scrollable -->
@@ -411,11 +407,9 @@ import { Conversation } from 'https://esm.sh/@elevenlabs/client';
 const AGENT_ID  = 'agent_1401kws7xzy8ev4ryzbwvza7mex5';
 const PROXY_URL = 'https://clarityiq-proxy.martindelapresa.workers.dev';
 
-// 4-step roadmap maps to internal stages 2-5
-const ROADMAP_MAP = { 1: 1, 2: 1, 3: 2, 4: 3, 5: 4, 6: 4 };
-
 const STAGES = [
   { label: 'Getting started', pct: 0   },
+  { label: 'Welcome',         pct: 5   },
   { label: 'IOL Education',   pct: 20  },
   { label: 'Your Goals',      pct: 40  },
   { label: 'Lens Options',    pct: 60  },
@@ -425,6 +419,7 @@ const STAGES = [
 
 // Semantic stage detection — agent phrases that signal each transition
 const STAGE_SIGNALS = [
+  { stage: 1, phrases: ["ready to get started", "ready to begin", "let's get started"] },
   { stage: 2, phrases: ["what's possible", "cataract is a clouding", "natural lens inside", "intraocular lens", "presbyopia", "full range of vision", "artificial lens called", "clouding of the natural"] },
   { stage: 3, phrases: ["how do you feel about your glasses", "first question", "hoping for after surgery", "feel about them day to day", "depend on them less", "glasses day to day", "scale of"] },
   { stage: 4, phrases: ["based on what you've shared", "trifocal lens", "panoptix", "toric monofocal", "standard monofocal", "lens class most aligned", "astigmatism correction", "nine out of ten", "9 in 10"] },
@@ -440,16 +435,22 @@ let isSpeakerMuted = false;
 let summaryReady   = false;
 
 // ── Roadmap ───────────────────────────────────────────────────────────────────
-function updateRoadmap(internalStage) {
-  const step = ROADMAP_MAP[internalStage] || 1;
-  for (let i = 1; i <= 4; i++) {
+function updateRoadmap(stage) {
+  for (let i = 1; i <= 6; i++) {
     const dot = document.getElementById('rdot-' + i);
-    const lbl = document.getElementById('rlbl-' + i);
     const con = document.getElementById('rcon-' + i);
     if (!dot) continue;
-    dot.className = 'roadmap-dot' + (i < step ? ' complete' : i === step ? ' active' : '');
-    lbl.className = 'roadmap-label' + (i < step ? ' complete' : i === step ? ' active' : '');
-    if (con) con.className = 'roadmap-connector' + (i < step ? ' complete' : '');
+    if (i < stage) {
+      dot.className   = 'roadmap-dot complete';
+      dot.textContent = '✓';
+    } else if (i === stage) {
+      dot.className   = 'roadmap-dot active';
+      dot.textContent = i;
+    } else {
+      dot.className   = 'roadmap-dot';
+      dot.textContent = i;
+    }
+    if (con) con.className = 'roadmap-connector' + (i < stage ? ' complete' : '');
   }
 }
 
@@ -463,7 +464,6 @@ function setProgress(n) {
   updateRoadmap(currentStage);
 }
 
-// Stage only advances forward, never back, and only if minimum previous stage is met
 // Stage only advances forward, never back
 function advanceStage(n) {
   if (n <= currentStage) return;
