@@ -424,12 +424,13 @@ const STAGES = [
 ];
 
 // Semantic stage detection — agent phrases that signal each transition
+// Phrases must be SPECIFIC to that stage and NOT appear in earlier messages
 const STAGE_SIGNALS = [
-  { stage: 2, phrases: ["what's possible", "cataract surgery", "natural lens", "clouding", "intraocular", "replace the lens", "artificial lens", "presbyopia", "full range of vision"] },
-  { stage: 3, phrases: ["how do you feel about your glasses", "first question", "hoping for after surgery", "wear glasses", "feel about them", "depend on them", "glasses day to day"] },
-  { stage: 4, phrases: ["based on what you've shared", "trifocal", "panoptix", "toric monofocal", "standard monofocal", "lens class", "most aligned", "astigmatism correction", "focal point"] },
-  { stage: 5, phrases: ["does that make sense", "any questions", "anything else", "want to know more", "questions about"] },
-  { stage: 6, phrases: ["tap the button below", "generate your summary", "bring this to your appointment", "bring it to your appointment", "care team will have", "screenshot"] },
+  { stage: 2, minPrev: 1, phrases: ["what's possible", "cataract is a clouding", "natural lens inside", "intraocular lens", "presbyopia", "full range of vision", "artificial lens called"] },
+  { stage: 3, minPrev: 2, phrases: ["how do you feel about your glasses", "first question", "hoping for after surgery", "feel about them day to day", "depend on them less", "glasses day to day", "scale of"] },
+  { stage: 4, minPrev: 3, phrases: ["based on what you've shared", "trifocal lens", "panoptix", "toric monofocal", "standard monofocal", "lens class most aligned", "astigmatism correction", "nine out of ten", "9 in 10"] },
+  { stage: 5, minPrev: 4, phrases: ["does that make sense so far", "do you have any questions about what we covered", "anything else about the surgery", "want to know more about"] },
+  { stage: 6, minPrev: 5, phrases: ["tap the button below to generate", "generate your summary", "care team will have a written summary"] },
 ];
 
 let currentStage   = 0;
@@ -463,9 +464,10 @@ function setProgress(n) {
   updateRoadmap(currentStage);
 }
 
-// Stage only advances forward, never back
-function advanceStage(n) {
+// Stage only advances forward, never back, and only if minimum previous stage is met
+function advanceStage(n, minPrev) {
   if (n <= currentStage) return;
+  if (minPrev && currentStage < minPrev) return;
   setProgress(n);
 }
 
@@ -506,12 +508,12 @@ function addTranscriptLine(role, text) {
 
   const lower = clean.toLowerCase();
 
-  // Semantic stage detection — agent messages only, stage only advances forward
+  // Semantic stage detection — agent messages only, stage only advances forward with gate
   if (role === 'agent') {
     for (let i = STAGE_SIGNALS.length - 1; i >= 0; i--) {
       const sig = STAGE_SIGNALS[i];
       if (sig.phrases.some(p => lower.includes(p))) {
-        advanceStage(sig.stage);
+        advanceStage(sig.stage, sig.minPrev);
         break;
       }
     }
