@@ -508,10 +508,11 @@ function addTranscriptLine(role, text) {
   const lower = clean.toLowerCase();
 
   // Semantic stage detection — agent messages only, stage only advances forward
+  // Iterate FORWARD so we catch the next stage in sequence, not the highest match
   if (role === 'agent') {
-    for (let i = STAGE_SIGNALS.length - 1; i >= 0; i--) {
+    for (let i = 0; i < STAGE_SIGNALS.length; i++) {
       const sig = STAGE_SIGNALS[i];
-      if (sig.phrases.some(p => lower.includes(p))) {
+      if (sig.stage > currentStage && sig.phrases.some(p => lower.includes(p))) {
         advanceStage(sig.stage);
         break;
       }
