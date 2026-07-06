@@ -418,18 +418,18 @@ const STAGES = [
   { label: 'Getting started', pct: 0   },
   { label: 'IOL Education',   pct: 20  },
   { label: 'Your Goals',      pct: 40  },
-  { label: 'Lens Options',    pct: 65  },
-  { label: 'Your Questions',  pct: 85  },
+  { label: 'Lens Options',    pct: 60  },
+  { label: 'Your Questions',  pct: 80  },
   { label: 'Summary ready',   pct: 100 },
 ];
 
-const FAREWELL_SIGNALS = [
-  'tap the button below', 'generate your summary',
-  'take a screenshot', 'bring this to your appointment',
-  'bring it to your appointment', 'your care team will have',
-  'your surgeon will review everything', 'best of luck',
-  'hope your surgery goes well', 'all the best with your',
-  'wishing you all the best',
+// Semantic stage detection — agent phrases that signal each transition
+const STAGE_SIGNALS = [
+  { stage: 2, phrases: ["what's possible", "cataract surgery", "natural lens", "clouding", "intraocular", "replace the lens", "artificial lens", "presbyopia", "full range of vision"] },
+  { stage: 3, phrases: ["how do you feel about your glasses", "first question", "hoping for after surgery", "wear glasses", "feel about them", "depend on them", "glasses day to day"] },
+  { stage: 4, phrases: ["based on what you've shared", "trifocal", "panoptix", "toric monofocal", "standard monofocal", "lens class", "most aligned", "astigmatism correction", "focal point"] },
+  { stage: 5, phrases: ["does that make sense", "any questions", "anything else", "want to know more", "questions about"] },
+  { stage: 6, phrases: ["tap the button below", "generate your summary", "bring this to your appointment", "bring it to your appointment", "care team will have", "screenshot"] },
 ];
 
 let currentStage   = 0;
@@ -438,7 +438,6 @@ let transcriptLog  = [];
 let isMicMuted     = false;
 let isSpeakerMuted = false;
 let summaryReady   = false;
-let progressTimer  = null;
 
 // ── Roadmap ───────────────────────────────────────────────────────────────────
 function updateRoadmap(internalStage) {
@@ -464,19 +463,10 @@ function setProgress(n) {
   updateRoadmap(currentStage);
 }
 
-const STAGE_DURATIONS = [0, 18, 35, 45, 90, 60];
-function startProgressTimer() {
-  let idx = 1;
-  function advance() {
-    if (idx >= STAGES.length - 1) return;
-    setProgress(idx);
-    idx++;
-    progressTimer = setTimeout(advance, STAGE_DURATIONS[idx] * 1000);
-  }
-  progressTimer = setTimeout(advance, STAGE_DURATIONS[1] * 1000);
-}
-function stopProgressTimer() {
-  if (progressTimer) { clearTimeout(progressTimer); progressTimer = null; }
+// Stage only advances forward, never back
+function advanceStage(n) {
+  if (n <= currentStage) return;
+  setProgress(n);
 }
 
 // ── Status / Orb ──────────────────────────────────────────────────────────────
@@ -514,9 +504,19 @@ function addTranscriptLine(role, text) {
   wrap.appendChild(line);
   wrap.scrollTop = wrap.scrollHeight;
 
-  if (role === 'agent' && !summaryReady) {
-    const lower = clean.toLowerCase();
-    if (FAREWELL_SIGNALS.some(p => lower.includes(p))) {
+  const lower = clean.toLowerCase();
+
+  // Semantic stage detection — agent messages only, stage only advances forward
+  if (role === 'agent') {
+    for (let i = STAGE_SIGNALS.length - 1; i >= 0; i--) {
+      const sig = STAGE_SIGNALS[i];
+      if (sig.phrases.some(p => lower.includes(p))) {
+        advanceStage(sig.stage);
+        break;
+      }
+    }
+    // Dynamic summary button — reuse stage 6 phrases
+    if (!summaryReady && STAGE_SIGNALS[STAGE_SIGNALS.length - 1].phrases.some(p => lower.includes(p))) {
       summaryReady = true;
       const btn = document.getElementById('end-btn');
       btn.textContent = '📋 Generate my summary';
@@ -601,7 +601,6 @@ async function buildAndShowSummary() {
 async function startConversation() {
   hideError();
   summaryReady = false;
-  stopProgressTimer();
   const beginBtn = document.getElementById('begin-btn');
   beginBtn.disabled = true;
   setStatus('connecting', 'Connecting…');
@@ -619,11 +618,9 @@ async function startConversation() {
         document.getElementById('speaker-btn').style.display = 'inline-block';
         document.getElementById('mic-btn').style.display     = 'inline-block';
         document.getElementById('end-btn').style.display     = 'inline-block';
-        startProgressTimer();
       },
 
       onDisconnect: () => {
-        stopProgressTimer();
         setStatus('', 'Conversation ended');
         if (document.getElementById('summary').style.display !== 'flex') {
           buildAndShowSummary();
@@ -666,7 +663,6 @@ async function startConversation() {
 }
 
 async function endConversation() {
-  stopProgressTimer();
   await buildAndShowSummary();
   if (conversation) {
     try { await conversation.endSession(); } catch(e) {}
@@ -681,7 +677,6 @@ async function endConversation() {
 }
 
 function resetUI() {
-  stopProgressTimer();
   transcriptLog  = [];
   currentStage   = 0;
   isMicMuted     = false;
