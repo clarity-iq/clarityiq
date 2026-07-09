@@ -304,10 +304,52 @@ body {
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Password gate ── */
+#gate {
+  position: absolute; inset: 0; z-index: 20;
+  background: #fff; border-radius: 20px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 32px;
+}
+#gate .logo-mark { width: 40px; height: 40px; margin-bottom: 4px; }
+#gate .logo-mark svg { width: 22px; height: 22px; }
+#gate-title { font-size: 17px; font-weight: 600; color: #1a1a18; }
+#gate-sub { font-size: 13px; color: #a0a09a; text-align: center; margin-top: -8px; margin-bottom: 6px; }
+#gate-input {
+  width: 100%; max-width: 260px;
+  padding: 12px 14px; font-size: 14px; font-family: inherit;
+  border: 1px solid #d8d6ce; border-radius: 10px;
+  text-align: center; outline: none;
+}
+#gate-input:focus { border-color: #1D9E75; }
+#gate-submit {
+  width: 100%; max-width: 260px;
+  padding: 12px; background: #1D9E75; color: #fff;
+  border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+#gate-submit:hover { background: #0f6e56; }
+#gate-error { font-size: 12.5px; color: #b91c1c; display: none; }
 </style>
 </head>
 <body>
 <div id="app">
+
+  <!-- Password gate -->
+  <div id="gate">
+    <div class="logo-mark">
+      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="9" cy="9" r="3.5" fill="white"/>
+        <path d="M9 2V4.5M9 13.5V16M2 9H4.5M13.5 9H16" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div id="gate-title">ClarityIQ</div>
+    <div id="gate-sub">Enter the password to continue</div>
+    <input id="gate-input" type="password" autocomplete="off" placeholder="Password" />
+    <button id="gate-submit">Continue</button>
+    <div id="gate-error">Incorrect password</div>
+  </div>
 
   <!-- Loading overlay -->
   <div id="summary-loading">
@@ -406,6 +448,36 @@ import { Conversation } from 'https://esm.sh/@elevenlabs/client';
 
 const AGENT_ID  = 'agent_1401kws7xzy8ev4ryzbwvza7mex5';
 const PROXY_URL = 'https://clarityiq-proxy.dlpventures13.workers.dev';
+const CLIENT_KEY = '58e955745eaf504e679cf0d00f8d63311cb8e5e486006a50';
+
+// ── Password gate ──────────────────────────────────────────────────────────────
+const GATE_HASH = '5944ae849448011ca08c3785f1de1a54c8a96d6c23f787f9d962b624edd4151d';
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkGatePassword() {
+  const input = document.getElementById('gate-input');
+  const hash  = await sha256Hex(input.value.trim().toLowerCase());
+  if (hash === GATE_HASH) {
+    sessionStorage.setItem('clarityiq_unlocked', '1');
+    document.getElementById('gate').style.display = 'none';
+  } else {
+    document.getElementById('gate-error').style.display = 'block';
+    input.value = '';
+    input.focus();
+  }
+}
+
+if (sessionStorage.getItem('clarityiq_unlocked') === '1') {
+  document.getElementById('gate').style.display = 'none';
+}
+document.getElementById('gate-submit').addEventListener('click', checkGatePassword);
+document.getElementById('gate-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') checkGatePassword();
+});
 
 const STAGES = [
   { label: 'Getting started', pct: 0   },
@@ -552,7 +624,7 @@ Extract and return ONLY valid JSON in this exact format (no markdown, no explana
 
   const res = await fetch(PROXY_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
     body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
   });
 
