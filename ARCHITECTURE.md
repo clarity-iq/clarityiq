@@ -1,0 +1,72 @@
+# ClarityIQ — Architecture & Systems Reference
+
+Companion to CLAUDE.md. This is the "how it all fits together" document — read this before touching anything related to the conversation flow, stage detection, or the ElevenLabs/proxy integration. Several things here are exact-match/fragile by design; the note on each explains why, so you don't "fix" something that's actually intentional.
+
+---
+
+## 1. How a session works, end to end
+
+1. Patient opens app.clarityiq.ai → static `index.html`.
+2. Patient clicks "Begin conversation" → connects to ElevenLabs via the browser SDK (`@elevenlabs/client`), which opens a live voice session with the configured Agent (see §2).
+3. As the agent talks, the frontend listens to the transcript stream and checks each agent line against the **anchor phrase registry** (§3) to detect which of the 6 stages the conversation has reached. This is how the on-screen progress bar/roadmap advances — it is NOT timed and NOT keyword-guessed, it's exact-phrase matching, forward-only.
+4. At Stage 6, the summary button activates. When clicked, the full transcript is sent to a **Cloudflare Worker proxy** (`clarityiq-proxy`), which calls the Anthropic API server-side (keeping the API key off the client) and returns a structured JSON summary.
+5. Summary is rendered on-screen and can be saved as an image.
+
+## 2. ElevenLabs configuration
+
+- **Agent ID:** `agent_1401kws7xzy8ev4ryzbwvza7mex5`
+- **Voice:** Eryn
+- **Underlying LLM:** Claude 4.5
+- **Turn detection:** Turn V3
+- **Interruption handling:** ON (patient can interrupt the agent mid-sentence)
+- **Where this lives:** ElevenLabs dashboard, not in the repo. If a task requires changing agent behavior (tone, pacing, new content), that's a dashboard-side change to the agent's system prompt/knowledge base — not something to try to replicate in frontend code.
+- **Knowledge Base:** this is where the FDA SSED-derived IOL patient-labeling content (Batch 3.1 in the build specs) needs to be uploaded — via the ElevenLabs dashboard, not committed to GitHub.
+
+## 3. Anchor phrase registry — exact sync required
+
+The agent is scripted to say specific sentences at the start of each stage. The frontend code listens for these exact phrases (lowercased, substring match) to advance the stage indicator. **If the agent's script ever changes in the ElevenLabs dashboard, this table must be updated in the code at the same time, or stage detection silently breaks.** This is the single most fragile coupling in the whole system — flag any task that touches either side of it.
+
+| Stage | Label | Progress % | Agent says exactly | Code matches on |
+|---|---|---|---|---|
+| 1 | Welcome | 5% | Scripted opening, no anchor | `"ready to get started"` / `"ready to begin"` |
+| 2 | IOL Education | 20% | "Let me start with a quick overview of how this works." | exact phrase |
+| 3 | Your Goals | 40% | "Now let's talk about your goals." | exact phrase (2 variants synced) |
+| 4 | Lens Options | 60% | "Based on what you've shared, let's talk about your lens options." | exact phrase |
+| 5 | Your Questions | 80% | "Now let's cover any questions you have." | exact phrase |
+| 6 | Summary | 100% | "We're ready to put together your summary." | exact phrase, also triggers the summary button |
+
+Detection logic: iterates forward through stages only — a patient can't accidentally trigger stage 2's phrase after already reaching stage 4 and have it count backwards. Matching is on agent messages only, never patient messages.
+
+**Any new content (Batch 1-4 tasks that touch Stage 1 or add new questions) must not collide with these phrases or disrupt this detection loop.** If a new question is being inserted into an existing stage (e.g., the age-band or population-filter questions), place it so the stage-opening anchor phrase still fires normally — test that the stage still advances correctly after the change.
+
+## 4. Cloudflare Worker proxy
+
+- **Purpose:** keeps the Anthropic API key server-side. The frontend never holds it directly.
+- **Current production URL:** `https://clarityiq-proxy.dlpventures13.workers.dev` — verified directly against `index.html` and the live Cloudflare account on July 9, 2026, following the account migration. (The old, pre-migration URL was `clarityiq-proxy.martindelapresa.workers.dev` — retired, do not use.)
+- **What it does:** receives the full transcript, sends a structured extraction prompt to the Anthropic API, returns JSON (vision goal, lens preference, topics covered, surgeon question — see summary v2 spec for the full field list).
+- **Secret stored here:** `ANTHROPIC_KEY`, as an encrypted Cloudflare environment variable — never in GitHub, never in the frontend code.
+- **Rate limiting (Batch 4.4)** gets added here — this is the natural chokepoint for abuse control since all summary-generation calls pass through it.
+
+## 5. Data & no-PHI architecture — locked decisions, not open questions
+
+These were deliberate decisions, made after evaluating alternatives. Do not treat them as gaps to "fix":
+
+- **No PHI collected or retained.** Zero/minimal retention — no audio or transcripts kept after the session ends server-side. The transcript exists client-side during the session and is sent once to the proxy for summary generation, not stored there.
+- **Anonymous learning data only**, fixed schema (this is what the telemetry in Batch 1 extends): topics asked, re-ask rates, variant IDs, clarity ratings, drop-off stage, duration, age band, track A/B/C. Enums and counts — no free text, no identifiers, by design.
+- **Patient owns their summary.** It's generated for them, on their device — not stored in a ClarityIQ-controlled database tied to their identity. The session code (Batch 1.2) is what allows joining telemetry + survey + summary for a single session without needing an email or account for the free tier.
+- **Clinical content sourcing rule:** all clinical content must trace back to FDA sources (SSED patient labeling, per Batch 3.1) — not personal clinical opinion, not invented. This is a decided rule, not a suggestion.
+
+## 6. Track routing logic (A/B/C)
+
+Conversation branches into three tracks based on how the patient responds during the goals stage (Stage 3). Roughly: ~20% of the conversation is fully scripted (opening, closing, guardrails, cost framing), ~40% is rules-based branching (which track, focal point questions, astigmatism depth), ~40% is freeform within system-prompt constraints (patient's own questions, follow-up depth). Track logic itself lives in the ElevenLabs agent's system prompt, not in the frontend — the frontend only records which track was ultimately used, for telemetry.
+
+## 7. Repos and hosting
+
+- `clarity-iq/clarityiq` → deploys to app.clarityiq.ai (the patient-facing prototype/app)
+- `clarity-iq/clarityiq-web` → deploys to clarityiq.ai (landing page — currently mid-split per Batch 3.5, becoming patient-facing, with practice content moving to practices.clarityiq.ai)
+- Hosting: GitHub Pages for both. DNS managed in Cloudflare (post-migration) for clarityiq.ai — Wix is legacy/no longer the DNS authority, don't reference it for new subdomain work.
+- No build step, no framework, static HTML/JS. Keep it that way unless a task specifically requires otherwise.
+
+## 8. If something here seems wrong or outdated
+
+This document reflects decisions as of July 9, 2026. If you find the live code contradicts something here (e.g., the proxy URL, the anchor phrases, the agent ID), don't assume the doc is right and the code is wrong, or vice versa — flag the discrepancy and ask before proceeding, since a mismatch here means something drifted out of sync and needs a human decision on which is correct.
