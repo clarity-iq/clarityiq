@@ -268,8 +268,12 @@ body {
 .surgeon-q-block { margin-top: 10px; background: #fffbf0; border: 1px solid #fac775; border-radius: 10px; padding: 10px 12px; }
 .surgeon-q-label { font-size: 11px; font-weight: 600; color: #854F0B; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
 .surgeon-q-text  { font-size: 13px; color: #4a3000; line-height: 1.5; }
+#summary-ref-code {
+  font-size: 10.5px; color: #b4b2a9; text-align: center;
+  letter-spacing: 0.03em; padding: 6px 16px 0; flex-shrink: 0;
+}
 #summary-footer {
-  padding: 12px 16px; border-top: 1px solid #e8e6de;
+  padding: 8px 16px 12px; border-top: 1px solid #e8e6de;
   background: #fff; flex-shrink: 0;
   display: flex; gap: 8px; align-items: center; justify-content: center;
 }
@@ -331,6 +335,52 @@ body {
 }
 #gate-submit:hover { background: #0f6e56; }
 #gate-error { font-size: 12.5px; color: #b91c1c; display: none; }
+
+/* ── Survey / email screens (pre-survey, post-survey, email gate) ── */
+.screen {
+  display: none;
+  position: absolute; inset: 0; z-index: 15;
+  background: #fff; border-radius: 20px;
+  flex-direction: column;
+  padding: 24px 22px;
+  overflow-y: auto;
+}
+.screen.active { display: flex; }
+.screen-title { font-size: 17px; font-weight: 600; color: #1a1a18; margin-bottom: 4px; }
+.screen-sub { font-size: 13px; color: #a0a09a; margin-bottom: 20px; line-height: 1.5; }
+.screen-question { margin-bottom: 22px; }
+.screen-question-label { font-size: 13.5px; font-weight: 600; color: #1a1a18; margin-bottom: 10px; line-height: 1.4; }
+.scale-row { display: flex; gap: 8px; }
+.scale-btn {
+  flex: 1; padding: 10px 0; text-align: center;
+  border: 1px solid #d8d6ce; border-radius: 10px;
+  font-size: 14px; font-weight: 600; color: #5f5e5a;
+  background: #fff; cursor: pointer; font-family: inherit;
+}
+.scale-btn.selected { background: #1D9E75; border-color: #1D9E75; color: #fff; }
+.scale-hint { display: flex; justify-content: space-between; font-size: 11px; color: #a0a09a; margin-top: 6px; }
+.choice-row { display: flex; flex-direction: column; gap: 8px; }
+.choice-btn {
+  padding: 12px 14px; text-align: left;
+  border: 1px solid #d8d6ce; border-radius: 10px;
+  font-size: 13.5px; color: #1a1a18; line-height: 1.4;
+  background: #fff; cursor: pointer; font-family: inherit;
+}
+.choice-btn.selected { background: #e1f5ee; border-color: #1D9E75; }
+.screen-submit {
+  margin-top: auto;
+  width: 100%; padding: 13px; background: #1D9E75; color: #fff;
+  border: none; border-radius: 12px;
+  font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.screen-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+.screen-submit:not(:disabled):hover { background: #0f6e56; }
+#email-input {
+  width: 100%; padding: 13px 14px; font-size: 15px; font-family: inherit;
+  border: 1px solid #d8d6ce; border-radius: 10px; margin-bottom: 12px; outline: none;
+}
+#email-input:focus { border-color: #1D9E75; }
+#email-gate-error { font-size: 12.5px; color: #b91c1c; margin-bottom: 10px; display: none; }
 </style>
 </head>
 <body>
@@ -349,6 +399,75 @@ body {
     <input id="gate-input" type="password" autocomplete="off" placeholder="Password" />
     <button id="gate-submit">Continue</button>
     <div id="gate-error">Incorrect password</div>
+  </div>
+
+  <!-- Pre-survey (Batch 2.1) -->
+  <div id="pre-survey" class="screen">
+    <div class="screen-title">Before we begin</div>
+    <div class="screen-sub">Two quick questions — this helps us understand how helpful this conversation actually is.</div>
+
+    <div class="screen-question">
+      <div class="screen-question-label">How confident do you feel right now about which lens is right for you?</div>
+      <div class="scale-row" id="pre-confidence-scale">
+        <button class="scale-btn" data-value="1">1</button>
+        <button class="scale-btn" data-value="2">2</button>
+        <button class="scale-btn" data-value="3">3</button>
+        <button class="scale-btn" data-value="4">4</button>
+        <button class="scale-btn" data-value="5">5</button>
+      </div>
+      <div class="scale-hint"><span>Not confident</span><span>Very confident</span></div>
+    </div>
+
+    <div class="screen-question">
+      <div class="screen-question-label">Right now, which best describes your leaning?</div>
+      <div class="choice-row" id="pre-leaning-choices">
+        <button class="choice-btn" data-value="standard">Probably the basic/standard lens</button>
+        <button class="choice-btn" data-value="upgraded">Probably an upgraded lens, less dependence on glasses</button>
+        <button class="choice-btn" data-value="glasses_free">Full glasses freedom, whatever that takes</button>
+        <button class="choice-btn" data-value="not_sure">Not sure yet</button>
+      </div>
+    </div>
+
+    <button class="screen-submit" id="pre-survey-submit" disabled>Continue</button>
+  </div>
+
+  <!-- Post-survey (Batch 2.1) -->
+  <div id="post-survey" class="screen">
+    <div class="screen-title">One more thing</div>
+    <div class="screen-sub">Same two questions, now that you've finished — this is how we measure whether the conversation actually helped.</div>
+
+    <div class="screen-question">
+      <div class="screen-question-label">How confident do you feel now about which lens is right for you?</div>
+      <div class="scale-row" id="post-confidence-scale">
+        <button class="scale-btn" data-value="1">1</button>
+        <button class="scale-btn" data-value="2">2</button>
+        <button class="scale-btn" data-value="3">3</button>
+        <button class="scale-btn" data-value="4">4</button>
+        <button class="scale-btn" data-value="5">5</button>
+      </div>
+      <div class="scale-hint"><span>Not confident</span><span>Very confident</span></div>
+    </div>
+
+    <div class="screen-question">
+      <div class="screen-question-label">Now, which best describes your leaning?</div>
+      <div class="choice-row" id="post-leaning-choices">
+        <button class="choice-btn" data-value="standard">Probably the basic/standard lens</button>
+        <button class="choice-btn" data-value="upgraded">Probably an upgraded lens, less dependence on glasses</button>
+        <button class="choice-btn" data-value="glasses_free">Full glasses freedom, whatever that takes</button>
+        <button class="choice-btn" data-value="not_sure">Not sure yet</button>
+      </div>
+    </div>
+
+    <button class="screen-submit" id="post-survey-submit" disabled>See my summary</button>
+  </div>
+
+  <!-- Email gate (Batch 2.3) — summary content does not render until this is submitted -->
+  <div id="email-gate" class="screen">
+    <div class="screen-title">Your summary is ready</div>
+    <div class="screen-sub">Enter your email to view and save your personal lens preference summary.</div>
+    <input id="email-input" type="email" autocomplete="email" placeholder="you@example.com" />
+    <div id="email-gate-error">Please enter a valid email address.</div>
+    <button class="screen-submit" id="email-gate-submit">Show my summary</button>
   </div>
 
   <!-- Loading overlay -->
@@ -394,7 +513,7 @@ body {
   </div>
 
   <!-- Voice panel — scrollable -->
-  <div id="voice-panel">
+  <div id="voice-panel" style="display:none">
     <div id="expect-card">
       <div id="expect-card-title">What to expect</div>
       <div class="expect-row"><div class="expect-icon">⏱</div><span>This conversation takes about 10 minutes</span></div>
@@ -421,7 +540,7 @@ body {
   </div>
 
   <!-- Fixed bottom action bar -->
-  <div id="action-bar">
+  <div id="action-bar" style="display:none">
     <button id="begin-btn">Begin conversation</button>
     <button id="speaker-btn">🔊 Speaker</button>
     <button id="mic-btn">🎤 Mic</button>
@@ -435,6 +554,7 @@ body {
       <p>Save this to bring to your appointment</p>
     </div>
     <div id="summary-body"></div>
+    <div id="summary-ref-code"></div>
     <div id="summary-footer">
       <button id="restart-btn">Start over</button>
       <button id="save-btn">⬇ Save summary</button>
@@ -450,6 +570,26 @@ const AGENT_ID  = 'agent_1401kws7xzy8ev4ryzbwvza7mex5';
 const PROXY_URL = 'https://clarityiq-proxy.dlpventures13.workers.dev';
 const CLIENT_KEY = '58e955745eaf504e679cf0d00f8d63311cb8e5e486006a50';
 
+// ── Tier model (Batch 2.4 / 2.5) ─────────────────────────────────────────────
+// No payment enforcement exists yet (that's fast-follow, out of scope here).
+// This is the structural seed: every feature that ships with a tier
+// requirement should be tagged in FEATURE_TIERS rather than hardcoded, so
+// premium features (full IOL catalog, enhanced summary sheet — Batch 3.2)
+// slot into this flag instead of a rewrite. CURRENT_TIER defaults everyone
+// to 'free' — there is no code path that upgrades it yet.
+const CURRENT_TIER = 'free';
+const FEATURE_TIERS = {
+  core_conversation: 'free',   // the six-stage voice walkthrough
+  pre_post_survey:   'free',   // Batch 2.1
+  summary_v2:        'free',   // Batch 2.2 — interests, concerns, resonating options, surgeon questions
+  // premium_summary_sheet: 'premium',  // Batch 3.2 — add when built
+  // full_iol_catalog:      'premium',  // add when built
+};
+function isFeatureAvailable(featureKey) {
+  const required = FEATURE_TIERS[featureKey];
+  return required === 'free' || required === CURRENT_TIER;
+}
+
 // ── Password gate ──────────────────────────────────────────────────────────────
 const GATE_HASH = '5944ae849448011ca08c3785f1de1a54c8a96d6c23f787f9d962b624edd4151d';
 
@@ -458,12 +598,19 @@ async function sha256Hex(text) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// ── Screen switching (pre-survey / post-survey / email gate) ────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  if (id) document.getElementById(id).classList.add('active');
+}
+
 async function checkGatePassword() {
   const input = document.getElementById('gate-input');
   const hash  = await sha256Hex(input.value.trim().toLowerCase());
   if (hash === GATE_HASH) {
     sessionStorage.setItem('clarityiq_unlocked', '1');
     document.getElementById('gate').style.display = 'none';
+    resetUI();
   } else {
     document.getElementById('gate-error').style.display = 'block';
     input.value = '';
@@ -473,6 +620,7 @@ async function checkGatePassword() {
 
 if (sessionStorage.getItem('clarityiq_unlocked') === '1') {
   document.getElementById('gate').style.display = 'none';
+  resetToPreSurvey();
 }
 document.getElementById('gate-submit').addEventListener('click', checkGatePassword);
 document.getElementById('gate-input').addEventListener('keydown', (e) => {
@@ -514,6 +662,14 @@ let populationFilter = null;   // set via record_population_filter client tool (
 let track             = null;  // set via record_track client tool (Batch 4.7 depends on this)
 let clarityTapCount  = 0;      // stubbed — no clarity-tap UI exists yet
 
+// ── Pre/post survey state (Batch 2.1) — joined onto the same telemetry record
+// via sessionCode, NOT a separate record. See sendTelemetry() below.
+let preConfidence  = null;
+let preLeaning     = null;
+let postConfidence = null;
+let postLeaning    = null;
+let pendingSummaryResult = null; // AI summary held here until email gate (2.3) clears it
+
 function generateSessionCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no ambiguous chars (0/O, 1/I)
   const bytes = crypto.getRandomValues(new Uint8Array(6));
@@ -536,6 +692,10 @@ async function sendTelemetry(extra = {}) {
     age_band: ageBand,
     population_filter: populationFilter,
     clarity_tap_count: clarityTapCount,
+    pre_confidence: preConfidence,
+    pre_leaning: preLeaning,
+    post_confidence: postConfidence,
+    post_leaning: postLeaning,
     ...extra,
   };
   try {
@@ -660,10 +820,10 @@ ${transcriptText}
 
 Extract and return ONLY valid JSON in this exact format (no markdown, no explanation):
 {
-  "vision_goal": "One sentence describing what the patient said they want for their vision after surgery. Base this on their actual stated preferences.",
-  "lens_preference": "The lens the patient expressed interest in based on their goals. If they said basic or standard, say standard monofocal. If glasses freedom, say trifocal lens (PanOptix). If sharp single-focus, say toric monofocal. Include focal point if discussed.",
-  "topics_covered": ["array", "of", "topics", "actually", "discussed"],
-  "surgeon_question": "The single most important unresolved question the patient should bring to their surgeon, based on their specific conversation."
+  "interests": "One to two sentences on what the patient said matters most to them for their vision after surgery — their own stated priorities, in their own terms.",
+  "concerns": "Worries, hesitations, or reservations the patient expressed or implied during the conversation (e.g. cost, adjustment period, dependence on glasses, surgery risk). This is inferred from how they talked, not a direct question that was asked — if truly nothing concerning came up, say so plainly rather than inventing one.",
+  "resonating_options": "The lens option(s) or approach that seemed to resonate with the patient based on their goals. If they said basic or standard, say standard monofocal. If glasses freedom, say trifocal lens (PanOptix). If sharp single-focus, say toric monofocal. Include focal point if discussed. Note more than one option if more than one genuinely resonated.",
+  "surgeon_questions": "The single most important unresolved question the patient should bring to their surgeon, based on their specific conversation."
 }`;
 
   const res = await fetch(PROXY_URL, {
@@ -679,63 +839,110 @@ Extract and return ONLY valid JSON in this exact format (no markdown, no explana
   return JSON.parse(clean);
 }
 
-function renderSummary(goal, lens, topics, surgeonQ) {
+// Summary v2 (Batch 2.2) — 4 content fields: interests, concerns,
+// resonating options, surgeon questions. Session code is tracking metadata,
+// not a content field — it's rendered in the footer (see showSummaryFooterCode),
+// never inline with these cards.
+function renderSummary(interests, concerns, resonatingOptions, surgeonQuestions) {
   const body = document.getElementById('summary-body');
   body.innerHTML = '';
 
-  if (sessionCode) {
-    const codeRow = document.createElement('div');
-    codeRow.style.cssText = 'font-size:11px;color:#a0a09a;text-align:center;letter-spacing:0.04em;';
-    codeRow.textContent = 'Reference code: ' + sessionCode;
-    body.appendChild(codeRow);
-  }
-
   const s1 = document.createElement('div');
   s1.className = 'summary-card';
-  s1.innerHTML = `<div class="summary-card-label">My vision goal</div><div class="summary-card-value">${goal}</div>`;
+  s1.innerHTML = `<div class="summary-card-label">My interests</div><div class="summary-card-value">${interests}</div>`;
   body.appendChild(s1);
 
   const s2 = document.createElement('div');
   s2.className = 'summary-card';
-  s2.innerHTML = `<div class="summary-card-label">Lens preference</div><div class="summary-card-value">${lens}</div>`;
+  s2.innerHTML = `<div class="summary-card-label">My concerns</div><div class="summary-card-value">${concerns}</div>`;
   body.appendChild(s2);
 
   const s3 = document.createElement('div');
   s3.className = 'summary-card';
-  let html = '<div class="summary-card-label">Topics covered</div><div class="checklist">';
-  (Array.isArray(topics)?topics:[]).forEach(t => { html += `<div class="check-row"><div class="check-icon">&#10003;</div><span>${t}</span></div>`; });
-  html += `</div><div class="surgeon-q-block"><div class="surgeon-q-label">Question for your surgeon</div><div class="surgeon-q-text">${surgeonQ}</div></div>`;
-  s3.innerHTML = html;
+  s3.innerHTML = `<div class="summary-card-label">Options that resonated</div><div class="summary-card-value">${resonatingOptions}</div>`;
   body.appendChild(s3);
+
+  const s4 = document.createElement('div');
+  s4.className = 'summary-card';
+  s4.innerHTML = `<div class="surgeon-q-block" style="margin-top:0"><div class="surgeon-q-label">Questions for your surgeon</div><div class="surgeon-q-text">${surgeonQuestions}</div></div>`;
+  body.appendChild(s4);
+
+  showSummaryFooterCode();
 }
 
+function showSummaryFooterCode() {
+  const el = document.getElementById('summary-ref-code');
+  if (el) el.textContent = sessionCode ? 'Ref: ' + sessionCode : '';
+}
+
+// Generates the summary, but does NOT reveal it — it's held in
+// pendingSummaryResult until the email gate (Batch 2.3) clears it.
+// This is what makes the email prompt the true last step, not a formality:
+// the actual summary content never touches the DOM before email is captured.
 async function buildAndShowSummary() {
+  document.getElementById('voice-panel').style.display = 'none';
+  document.getElementById('action-bar').style.display  = 'none';
   document.getElementById('summary-loading').style.display = 'flex';
   try {
     const result = await generateSummaryWithAI();
-    renderSummary(result.vision_goal, result.lens_preference, result.topics_covered, result.surgeon_question);
+    pendingSummaryResult = result;
   } catch(err) {
     console.error('AI summary failed:', err);
-    renderSummary('Vision goals discussed during conversation','To be confirmed with your surgeon',['Lens options overview'],'Ask your surgeon which lens best fits your eye measurements and vision goals.');
+    pendingSummaryResult = {
+      interests: 'Vision goals discussed during conversation.',
+      concerns: 'Not captured — please discuss any questions or hesitations directly with your surgeon.',
+      resonating_options: 'To be confirmed with your surgeon.',
+      surgeon_questions: 'Ask your surgeon which lens best fits your eye measurements and vision goals.',
+    };
   }
   document.getElementById('summary-loading').style.display = 'none';
-  document.getElementById('voice-panel').style.display     = 'none';
-  document.getElementById('action-bar').style.display      = 'none';
-  document.getElementById('summary').style.display         = 'flex';
   setProgress(5);
   sendTelemetry({ completed: currentStage >= 6 });
+  showScreen('email-gate');
+  document.getElementById('email-input').focus();
+}
+
+function isValidEmail(v) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+}
+
+async function submitEmailGate() {
+  const input = document.getElementById('email-input');
+  const email = input.value.trim();
+  if (!isValidEmail(email)) {
+    document.getElementById('email-gate-error').style.display = 'block';
+    return;
+  }
+  document.getElementById('email-gate-error').style.display = 'none';
+  const btn = document.getElementById('email-gate-submit');
+  btn.disabled = true;
+  try {
+    // Stored separately from the anonymous telemetry KV record — email is an
+    // identifier and the telemetry data is explicitly identifier-free by
+    // design (see ARCHITECTURE.md §5). Joined only by session_code if ever
+    // needed, never merged into the same record.
+    await fetch(PROXY_URL + '/email-capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+      body: JSON.stringify({ session_code: sessionCode, email }),
+    });
+  } catch (e) {
+    console.error('Email capture failed (non-blocking — still showing summary):', e);
+  }
+  btn.disabled = false;
+
+  const r = pendingSummaryResult;
+  renderSummary(r.interests, r.concerns, r.resonating_options, r.surgeon_questions);
+  showScreen(null);
+  document.getElementById('summary').style.display = 'flex';
 }
 
 // ── Session ───────────────────────────────────────────────────────────────────
 async function startConversation() {
   hideError();
   summaryReady   = false;
-  sessionCode    = generateSessionCode();
-  sessionStartedAt = Date.now();
-  ageBand          = null;
-  populationFilter = null;
-  track            = null;
-  clarityTapCount  = 0;
+  // sessionCode/sessionStartedAt are generated at pre-survey submit (2.1),
+  // before this ever runs — not regenerated here.
   const beginBtn = document.getElementById('begin-btn');
   beginBtn.disabled = true;
   setStatus('connecting', 'Connecting…');
@@ -784,9 +991,7 @@ async function startConversation() {
 
       onDisconnect: () => {
         setStatus('', 'Conversation ended');
-        if (document.getElementById('summary').style.display !== 'flex') {
-          buildAndShowSummary();
-        }
+        triggerPostSession();
       },
 
       onError: (err) => {
@@ -824,8 +1029,17 @@ async function startConversation() {
   }
 }
 
+// Guards against onDisconnect AND a manual "End conversation" click both
+// firing the post-session flow for the same session.
+let summaryFlowStarted = false;
+function triggerPostSession() {
+  if (summaryFlowStarted) return;
+  summaryFlowStarted = true;
+  showScreen('post-survey');
+}
+
 async function endConversation() {
-  await buildAndShowSummary();
+  triggerPostSession();
   if (conversation) {
     try { await conversation.endSession(); } catch(e) {}
     conversation = null;
@@ -844,16 +1058,30 @@ function resetUI() {
   isMicMuted     = false;
   isSpeakerMuted = false;
   summaryReady   = false;
+  summaryFlowStarted = false;
   sessionCode      = '';
   sessionStartedAt = 0;
   ageBand          = null;
   populationFilter = null;
   track            = null;
   clarityTapCount  = 0;
+  preConfidence  = null;
+  preLeaning     = null;
+  postConfidence = null;
+  postLeaning    = null;
+  pendingSummaryResult = null;
+  resetChoiceGroup('pre-confidence-scale');
+  resetChoiceGroup('pre-leaning-choices');
+  resetChoiceGroup('post-confidence-scale');
+  resetChoiceGroup('post-leaning-choices');
+  document.getElementById('pre-survey-submit').disabled  = true;
+  document.getElementById('post-survey-submit').disabled = true;
+  document.getElementById('email-input').value = '';
+  document.getElementById('email-gate-error').style.display = 'none';
   document.getElementById('transcript-wrap').innerHTML        = '';
   document.getElementById('summary').style.display            = 'none';
-  document.getElementById('voice-panel').style.display        = 'flex';
-  document.getElementById('action-bar').style.display         = 'flex';
+  document.getElementById('voice-panel').style.display        = 'none';
+  document.getElementById('action-bar').style.display         = 'none';
   document.getElementById('expect-card').style.display        = 'block';
   document.getElementById('begin-btn').style.display          = 'inline-block';
   document.getElementById('begin-btn').disabled               = false;
@@ -874,6 +1102,7 @@ function resetUI() {
   document.getElementById('progress-stage-label').textContent = 'Getting started';
   document.getElementById('progress-pct').textContent         = '0%';
   updateRoadmap(1);
+  showScreen('pre-survey');
 }
 
 // ── Save summary ──────────────────────────────────────────────────────────────
@@ -891,6 +1120,60 @@ async function saveSummaryImage() {
   }
   btn.disabled = false; btn.innerHTML = '⬇ Save summary';
 }
+
+// ── Pre/post survey wiring (Batch 2.1) ───────────────────────────────────────────
+function resetChoiceGroup(containerId) {
+  document.getElementById(containerId).querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+}
+
+function setupChoiceGroup(containerId, onSelect) {
+  document.getElementById(containerId).querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById(containerId).querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      onSelect(btn.dataset.value);
+    });
+  });
+}
+
+setupChoiceGroup('pre-confidence-scale', (v) => {
+  preConfidence = Number(v);
+  document.getElementById('pre-survey-submit').disabled = !(preConfidence && preLeaning);
+});
+setupChoiceGroup('pre-leaning-choices', (v) => {
+  preLeaning = v;
+  document.getElementById('pre-survey-submit').disabled = !(preConfidence && preLeaning);
+});
+setupChoiceGroup('post-confidence-scale', (v) => {
+  postConfidence = Number(v);
+  document.getElementById('post-survey-submit').disabled = !(postConfidence && postLeaning);
+});
+setupChoiceGroup('post-leaning-choices', (v) => {
+  postLeaning = v;
+  document.getElementById('post-survey-submit').disabled = !(postConfidence && postLeaning);
+});
+
+document.getElementById('pre-survey-submit').addEventListener('click', () => {
+  // Session code is generated HERE, at the true start of the session —
+  // before the conversation, before email — so the pre-survey answers are
+  // written under the exact same code everything else in this session uses.
+  sessionCode      = generateSessionCode();
+  sessionStartedAt = Date.now();
+  sendTelemetry({ stage: 0 });
+  showScreen(null);
+  document.getElementById('voice-panel').style.display = 'flex';
+  document.getElementById('action-bar').style.display  = 'flex';
+});
+
+document.getElementById('post-survey-submit').addEventListener('click', () => {
+  showScreen(null);
+  buildAndShowSummary();
+});
+
+document.getElementById('email-gate-submit').addEventListener('click', submitEmailGate);
+document.getElementById('email-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitEmailGate();
+});
 
 // ── Events ────────────────────────────────────────────────────────────────────
 document.getElementById('begin-btn').addEventListener('click', startConversation);
