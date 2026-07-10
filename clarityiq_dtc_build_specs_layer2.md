@@ -84,12 +84,13 @@ Generated from the Six Layer Tracker v2, July 9 2026. This is the hand-off docum
 ## BATCH 3 — Content-Dependent
 *Unblocked as of July 9 — inputs below are now available.*
 
-### 3.1 FDA SSED extraction for IOL knowledge base
+### 3.1 FDA SSED extraction for IOL knowledge base — UPDATED, scope superseded
 **Tracker row:** Layer 1 — IOL package inserts in Knowledge Base
 **Why it matters:** Previously blocked on an Alcon rep relationship. No longer — FDA's public SSED (Summary of Safety and Effectiveness Data) documents are a better source: FDA-reviewed, more rigorous than a manufacturer package insert.
-**Goal:** Search fda.gov (start at https://www.fda.gov/search?s=intraocular+lens) for relevant IOL PMAs (PanOptix, AcrySof/ReSTOR, Toric family, and others as found), extract the **patient labeling** sections specifically — not the full SSED, which is dense trial-methodology/adverse-event material written for FDA reviewers, not patients.
-**Acceptance criteria:** knowledge base populated with structured, clinically accurate indications/safety/patient-labeling info per lens; sourced from FDA documents, not manufacturer marketing material.
-**Non-goals:** don't dump raw SSED text into the KB — extract and structure the patient-relevant facts. Existing clinical guardrails govern how this gets translated into conversation language — don't bypass them.
+**Authoritative scope:** `clarityiq_master_iol_list.md` (committed to the repo root, July 9 session 5). Do not search FDA broadly or interpret "relevant IOLs" independently — use only the lenses listed in that file, respecting its Misc (no-pull) section.
+**Goal:** Per the master list's per-lens template and upload instructions — extract patient-labeling sections, structure per template, upload via the ElevenLabs Knowledge Base API (verified working as of this session) as one document per lens.
+**Acceptance criteria:** see acceptance criteria embedded in the master list file itself — knowledge base populated per lens, structured, sourced from FDA documents only, section 5 (side effects/visual disturbances) flagged for Martin's review per lens before finalizing.
+**Non-goals:** don't dump raw SSED text into the KB — extract and structure the patient-relevant facts per the template. Existing clinical guardrails govern how this gets translated into conversation language — don't bypass them.
 
 ### 3.2 Premium summary sheet (spec + build)
 **Tracker row:** Layer 1 — Premium summary sheet
