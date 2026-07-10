@@ -11,7 +11,7 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: #f0ede8;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   min-height: 100vh; min-height: 100dvh;
   padding: 20px;
 }
@@ -381,6 +381,21 @@ body {
 }
 #email-input:focus { border-color: #1D9E75; }
 #email-gate-error { font-size: 12.5px; color: #b91c1c; margin-bottom: 10px; display: none; }
+
+.notice-block { margin-bottom: 16px; }
+.notice-block-title { font-size: 15px; font-weight: 600; color: #1a1a18; margin-bottom: 8px; }
+.notice-block p { font-size: 13.5px; color: #5f5e5a; line-height: 1.55; }
+
+.consent-line { font-size: 11.5px; color: #a0a09a; line-height: 1.5; margin-top: 10px; text-align: center; }
+.consent-line a { color: #1D9E75; text-decoration: none; }
+.consent-line a:hover { text-decoration: underline; }
+
+.app-footer {
+  text-align: center; padding: 14px 0 0;
+  font-size: 11.5px; color: #b4b2a9;
+}
+.app-footer a { color: #b4b2a9; text-decoration: none; margin: 0 6px; }
+.app-footer a:hover { color: #5f5e5a; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -450,6 +465,24 @@ body {
     <button class="screen-submit" id="pre-survey-submit" disabled>Continue</button>
   </div>
 
+  <!-- Before You Begin: AI disclosure + educational disclaimer, combined.
+       A distinct required moment, shown once per session, right before the
+       conversation itself starts — not a line item buried in the Terms. -->
+  <div id="before-begin" class="screen">
+    <div class="screen-title">Before you begin</div>
+
+    <div class="notice-block">
+      <div class="notice-block-title">You're talking with an AI.</div>
+      <p>ClarityIQ uses an AI voice assistant, not a human, to walk you through cataract and lens education. It's built to give you accurate, general information — not medical advice, and not a substitute for your surgeon. Nothing it tells you is a diagnosis or a treatment recommendation specific to you. Your actual care decisions happen with your eye doctor, based on your own eyes and history.</p>
+    </div>
+
+    <div class="notice-block">
+      <p>ClarityIQ is an educational tool. It does not provide medical advice, diagnosis, or treatment recommendations. The information provided is general in nature and may not apply to your specific situation. Always consult a qualified eye care professional before making any decisions about your eye care or surgery. Use of ClarityIQ does not create a doctor-patient relationship between you and ClarityIQ or any individual associated with it.</p>
+    </div>
+
+    <button class="screen-submit" id="before-begin-continue">I understand, let's begin</button>
+  </div>
+
   <!-- Post-survey (Batch 2.1) -->
   <div id="post-survey" class="screen">
     <div class="screen-title">One more thing</div>
@@ -487,6 +520,7 @@ body {
     <input id="email-input" type="email" autocomplete="email" placeholder="you@example.com" />
     <div id="email-gate-error">Please enter a valid email address.</div>
     <button class="screen-submit" id="email-gate-submit">Show my summary</button>
+    <div class="consent-line">By continuing, you agree to our <a href="https://clarityiq.ai/terms.html" target="_blank" rel="noopener">Terms of Service</a> and <a href="https://clarityiq.ai/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</div>
   </div>
 
   <!-- Loading overlay -->
@@ -580,6 +614,10 @@ body {
     </div>
   </div>
 
+</div>
+
+<div class="app-footer">
+  <a href="https://clarityiq.ai/terms.html" target="_blank" rel="noopener">Terms of Service</a>·<a href="https://clarityiq.ai/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
 </div>
 
 <script type="module">
@@ -1179,6 +1217,10 @@ document.getElementById('pre-survey-submit').addEventListener('click', () => {
   sessionCode      = generateSessionCode();
   sessionStartedAt = Date.now();
   sendTelemetry({ stage: 0 });
+  showScreen('before-begin');
+});
+
+document.getElementById('before-begin-continue').addEventListener('click', () => {
   showScreen(null);
   document.getElementById('voice-panel').style.display = 'flex';
   document.getElementById('action-bar').style.display  = 'flex';
