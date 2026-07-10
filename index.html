@@ -404,7 +404,26 @@ body {
   <!-- Pre-survey (Batch 2.1) -->
   <div id="pre-survey" class="screen">
     <div class="screen-title">Before we begin</div>
-    <div class="screen-sub">Two quick questions — this helps us understand how helpful this conversation actually is.</div>
+    <div class="screen-sub">A few quick questions — this helps us understand how helpful this conversation actually is.</div>
+
+    <div class="screen-question">
+      <div class="screen-question-label">Which age range are you in?</div>
+      <div class="choice-row" id="pre-age-band-choices">
+        <button class="choice-btn" data-value="under_55">Under 55</button>
+        <button class="choice-btn" data-value="55_64">55 to 64</button>
+        <button class="choice-btn" data-value="65_74">65 to 74</button>
+        <button class="choice-btn" data-value="75_plus">75 and older</button>
+      </div>
+    </div>
+
+    <div class="screen-question">
+      <div class="screen-question-label">Do you currently have a cataract consultation scheduled, or has an eye doctor mentioned you may need one?</div>
+      <div class="choice-row" id="pre-population-choices">
+        <button class="choice-btn" data-value="scheduled_consult">Yes, I have one scheduled</button>
+        <button class="choice-btn" data-value="referred_no_date">An eye doctor mentioned it, no date set yet</button>
+        <button class="choice-btn" data-value="neither">Neither of these</button>
+      </div>
+    </div>
 
     <div class="screen-question">
       <div class="screen-question-label">How confident do you feel right now about which lens is right for you?</div>
@@ -657,8 +676,8 @@ let summaryReady   = false;
 // ── Telemetry state (Batch 1.1 / 1.2 / 1.3 / 1.4) ──────────────────────────────
 let sessionCode      = '';
 let sessionStartedAt = 0;
-let ageBand          = null;   // set via record_age_band client tool (1.3)
-let populationFilter = null;   // set via record_population_filter client tool (1.4)
+let ageBand          = null;   // set via pre-survey tap/select (1.3, moved from voice)
+let populationFilter = null;   // set via pre-survey tap/select (1.4, moved from voice)
 let track             = null;  // set via record_track client tool (Batch 4.7 depends on this)
 let clarityTapCount  = 0;      // stubbed — no clarity-tap UI exists yet
 
@@ -953,23 +972,14 @@ async function startConversation() {
     conversation = await Conversation.startSession({
       agentId: AGENT_ID,
 
-      // Client tools the agent can call mid-conversation to report structured
-      // answers (age band, population filter, track) back to the frontend.
-      // NOTE: these tools must also be defined in the ElevenLabs dashboard
-      // (name, description, parameter schema) and the agent's script must be
-      // told to call them — that side isn't in this repo. See Batch 1 hand-off
-      // notes for the exact tool schemas/script text to add there.
+      // record_age_band/record_population_filter moved to the pre-survey UI
+      // (tap/select, not voice) — the Stage 1 spoken Q&A felt clunky. Only
+      // record_track remains a live client tool, since track genuinely
+      // depends on how the conversation unfolds in Stage 3 and can't be
+      // known up front. This tool must still be defined in the ElevenLabs
+      // dashboard with the agent's script calling it — that side isn't in
+      // this repo.
       clientTools: {
-        record_age_band: async ({ band }) => {
-          ageBand = band;
-          sendTelemetry();
-          return 'recorded';
-        },
-        record_population_filter: async ({ status }) => {
-          populationFilter = status;
-          sendTelemetry();
-          return 'recorded';
-        },
         record_track: async ({ track: t }) => {
           track = t;
           sendTelemetry();
@@ -1070,6 +1080,8 @@ function resetUI() {
   postConfidence = null;
   postLeaning    = null;
   pendingSummaryResult = null;
+  resetChoiceGroup('pre-age-band-choices');
+  resetChoiceGroup('pre-population-choices');
   resetChoiceGroup('pre-confidence-scale');
   resetChoiceGroup('pre-leaning-choices');
   resetChoiceGroup('post-confidence-scale');
@@ -1136,14 +1148,21 @@ function setupChoiceGroup(containerId, onSelect) {
   });
 }
 
-setupChoiceGroup('pre-confidence-scale', (v) => {
-  preConfidence = Number(v);
-  document.getElementById('pre-survey-submit').disabled = !(preConfidence && preLeaning);
-});
-setupChoiceGroup('pre-leaning-choices', (v) => {
-  preLeaning = v;
-  document.getElementById('pre-survey-submit').disabled = !(preConfidence && preLeaning);
-});
+// Pre-survey now also captures age band + population filter directly via
+// tap/select (moved here from a Stage 1 voice Q&A, which felt clunky).
+// These write straight into the same ageBand/populationFilter vars that used
+// to be set by the record_age_band/record_population_filter client tools —
+// same telemetry fields, different source. record_track is unaffected: it
+// still fires live from Stage 3 since track depends on how the conversation
+// actually unfolds, not something choosable up front.
+function checkPreSurveyComplete() {
+  document.getElementById('pre-survey-submit').disabled =
+    !(preConfidence && preLeaning && ageBand && populationFilter);
+}
+setupChoiceGroup('pre-age-band-choices', (v) => { ageBand = v; checkPreSurveyComplete(); });
+setupChoiceGroup('pre-population-choices', (v) => { populationFilter = v; checkPreSurveyComplete(); });
+setupChoiceGroup('pre-confidence-scale', (v) => { preConfidence = Number(v); checkPreSurveyComplete(); });
+setupChoiceGroup('pre-leaning-choices', (v) => { preLeaning = v; checkPreSurveyComplete(); });
 setupChoiceGroup('post-confidence-scale', (v) => {
   postConfidence = Number(v);
   document.getElementById('post-survey-submit').disabled = !(postConfidence && postLeaning);
