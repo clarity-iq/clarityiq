@@ -84,20 +84,16 @@ Generated from the Six Layer Tracker v2, July 9 2026. This is the hand-off docum
 ## BATCH 3 — Content-Dependent
 *Unblocked as of July 9 — inputs below are now available.*
 
-### 3.1 FDA SSED extraction for IOL knowledge base — UPDATED, scope superseded
+### 3.1 FDA SSED extraction for IOL knowledge base — UPDATED, workflow changed (July 10, session 6)
 **Tracker row:** Layer 1 — IOL package inserts in Knowledge Base
 **Why it matters:** Previously blocked on an Alcon rep relationship. No longer — FDA's public SSED (Summary of Safety and Effectiveness Data) documents are a better source: FDA-reviewed, more rigorous than a manufacturer package insert.
 **Authoritative scope:** `clarityiq_master_iol_list.md` (committed to the repo root, July 9 session 5). Do not search FDA broadly or interpret "relevant IOLs" independently — use only the lenses listed in that file, respecting its Misc (no-pull) section.
-**Goal:** Per the master list's per-lens template and upload instructions — extract patient-labeling sections, structure per template, upload via the ElevenLabs Knowledge Base API (verified working as of this session) as one document per lens.
+**Workflow (changed):** direct fda.gov/accessdata.fda.gov access from Code's sandboxed environment is unreliable — confirmed blocked/inconsistent even after adding both domains to the environment's network allowlist (`www.fda.gov` connects cleanly; `www.accessdata.fda.gov`, the actual PMA document host, does not). Martin will do the FDA lookups directly and hand Code clean, structured source text per lens. Code's job is to format that text per the master list's per-lens template and upload via the ElevenLabs Knowledge Base API (verified working) — not to fetch FDA source content itself.
 **Acceptance criteria:** see acceptance criteria embedded in the master list file itself — knowledge base populated per lens, structured, sourced from FDA documents only, section 5 (side effects/visual disturbances) flagged for Martin's review per lens before finalizing.
 **Non-goals:** don't dump raw SSED text into the KB — extract and structure the patient-relevant facts per the template. Existing clinical guardrails govern how this gets translated into conversation language — don't bypass them.
 
-### 3.2 Premium summary sheet (spec + build)
-**Tracker row:** Layer 1 — Premium summary sheet
-**Why it matters:** The paid tier's flagship feature, and a second distribution channel — a patient who pays for this and hands it to any surgeon at any practice is a bottom-up wedge into future practice sales, independent of any BD effort.
-**Goal:** Enhanced summary including patient's stated goals, IOL selection/leaning, and "what's important to you" — surgeon-ready format.
-**Acceptance criteria:** tagged `premium` per 2.4; not yet gated behind actual payment (that's fast-follow) but structurally separate from the free v2 summary.
-**Non-goals:** payment enforcement — build the feature, not the paywall.
+### 3.2 Premium summary sheet — CLOSED, merged into 2.2
+**Status (per Martin, July 10 session 6):** merged into 2.2 (Summary v2) — closed as a separate item. No standalone premium summary sheet is being built. Tier-tagging (`premium` vs `free`) for any future gated content stays available via the `FEATURE_TIERS` structure from 2.4 if a distinct premium artifact gets scoped later.
 
 ### 3.3 Consumer legal pages (ToS, Privacy, Refund, AI-disclosure)
 **Tracker row:** Layer 6 — Consumer ToS/Privacy/medical disclaimer, AI-disclosure moment, Refund policy
