@@ -64,7 +64,7 @@ Conversation branches into three tracks based on how the patient responds during
 
 - `clarity-iq/clarityiq` → deploys to app.clarityiq.ai (the patient-facing prototype/app)
 - `clarity-iq/clarityiq-web` → deploys to clarityiq.ai (landing page — currently mid-split per Batch 3.5, becoming patient-facing, with practice content moving to practices.clarityiq.ai)
-- Hosting: GitHub Pages for both. DNS managed in Cloudflare (post-migration) for clarityiq.ai — Wix is legacy/no longer the DNS authority, don't reference it for new subdomain work.
+- Hosting: GitHub Pages for both. **DNS authority correction (July 10, 2026): Cloudflare is NOT yet the live DNS authority for clarityiq.ai, despite earlier notes in this doc suggesting otherwise.** The domain is under an ICANN 60-day transfer lock until **September 4, 2026**. A Cloudflare zone exists for clarityiq.ai but shows status `pending` — its assigned nameservers have not been applied at the registrar, and the domain's actual nameservers are still `ns8.wixdns.net` / `ns9.wixdns.net`. Any Cloudflare-side DNS changes made before the transfer completes have no live effect. Confirmed working as of this date: both `clarityiq.ai` and `app.clarityiq.ai` resolve correctly via Wix's DNS to GitHub Pages — the site itself is unaffected. Wix's own DNS panel does support adding custom MX/TXT records directly, without a nameserver change, if email needs to go live before the transfer clears. Don't treat Cloudflare as the DNS authority for any new subdomain/record work until this is confirmed resolved.
 - No build step, no framework, static HTML/JS. Keep it that way unless a task specifically requires otherwise.
 
 ## 8. If something here seems wrong or outdated
