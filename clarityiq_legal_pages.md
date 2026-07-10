@@ -2,11 +2,13 @@
 
 Contact address used throughout: support@clarityiq.ai
 
+**Implementation status update (July 10, 2026):** Sections 1 (AI Disclosure) and 2 (Educational Disclaimer) below were originally built as standalone pages on clarityiq.ai. They've since been removed from there and combined into a single "Before you begin" in-app gate screen in `clarity-iq/clarityiq` (`index.html`), shown after the pre-survey and before the voice conversation can start. The content below is left as-is for reference/source text — the code, not this doc, is the source of truth for current wording. Sections 3 (Terms of Service) and 4 (Privacy Policy) are unaffected — those remain live as standalone pages on clarityiq.ai, linked from the app's footer and email-capture consent line.
+
 ---
 
-## 1. AI Disclosure Notice
+## 1. AI Disclosure Notice — now in-app, not a clarityiq.ai page (see status note above)
 
-**Placement:** shown clearly before or at the start of a session — a distinct moment, not a line item inside the Terms.
+**Original placement note:** shown clearly before or at the start of a session — a distinct moment, not a line item inside the Terms.
 
 > **You're talking with an AI.**
 >
@@ -14,7 +16,7 @@ Contact address used throughout: support@clarityiq.ai
 
 ---
 
-## 2. Educational Disclaimer
+## 2. Educational Disclaimer — now in-app, not a clarityiq.ai page (see status note above)
 
 > ClarityIQ is an educational tool. It does not provide medical advice, diagnosis, or treatment recommendations. The information provided is general in nature and may not apply to your specific situation. Always consult a qualified eye care professional before making any decisions about your eye care or surgery. Use of ClarityIQ does not create a doctor-patient relationship between you and ClarityIQ or any individual associated with it.
 
