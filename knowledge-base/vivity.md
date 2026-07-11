@@ -4,25 +4,36 @@
 - Lens: Clareon® Vivity® Extended Vision Hydrophobic IOL (non-toric) and Clareon® Vivity® Toric Extended Vision Hydrophobic IOL, in lens-case and AutonoMe pre-loaded delivery configurations
 - Manufacturer: Alcon Laboratories, LLC
 - Category: Non-diffractive extended depth of focus (EDOF) IOL; toric model additionally corrects corneal astigmatism
-- PMA: P190018, Supplement S013 (decided 2022-01-26)
-- FDA characterization: approved via the Real-Time Process supplement pathway ("Change Design/Components/Specifications/Material") as an addition to the Clareon platform, not as a standalone new-device PMA
-- A later supplement, S027 (decided 2024-05-21), expanded the dioptric power range available — same lens, not a design change
-- Source: FDA openFDA structured PMA record (`api.fda.gov/device/pma.json`, `pma_number=P190018`, `supplement_number=S013`)
+- PMA: P190018, Supplement S013 (decided 2022-01-26) — see note below on sourcing
+- FDA characterization: approved via the Real-Time Process supplement pathway ("Change Design/Components/Specifications/Material") as an addition to the Clareon platform
+- Source for §3–6 below: **not FDA** — no independently published FDA SSED or patient brochure exists for this supplement (verified directly against FDA's document server). Per Martin's direction, sourced instead from a peer-reviewed pivotal clinical trial: **Bala C, et al. "Multicountry clinical outcomes of a new nondiffractive presbyopia-correcting IOL." Journal of Cataract & Refractive Surgery. 2022;48(2):136–143.** JCRS is the official peer-reviewed journal of ASCRS/ESCRS. The study evaluated "DFT015 IOL" (the AcrySof IQ Vivity Extended Vision IOL, same optical design later carried into the Clareon material) against the SN60WF aspheric monofocal IOL as a control.
 
 **2. Indications**
 Capsular bag implantation to replace the natural lens after cataract removal, in adults. Toric model for patients who also need corneal astigmatism correction, selected based on the amount present.
 
 **3. How it works**
-FDA's own record does not include a technical description of the optical design (see note below). Alcon's own technical description (manufacturer-sourced, not FDA): Vivity uses a non-diffractive, wavefront-shaping optical design — unlike PanOptix's diffractive rings, it stretches a single focal point into an extended range rather than splitting light across multiple discrete focal points. Positioned as providing improved intermediate and near vision versus a monofocal lens, while aiming to keep distance vision comparable to a monofocal.
+Per Bala et al., Vivity uses "X-WAVE" nondiffractive wavefront-shaping technology — not diffractive rings like PanOptix. The lens surface has two smooth transition elements: one is a slightly elevated plateau (~1 μm) that delays part of the wavefront passing through the lens relative to the rest, stretching the wavefront as it reaches the retina (the delayed portion forms the near-end image, the advanced portion the far-end image); the second is a small curvature change that shifts the wavefront forward to make fuller use of the extended focal range. To the naked eye, the lens surface looks similar to a standard monofocal lens.
 
 **4. Expected visual outcomes**
-**No independently published FDA SSED or patient brochure was found for this supplement** — checked directly against FDA's own document server, not just search results. The only SSED on file for this PMA family (`P190018B.pdf`) covers the original 2020 base Clareon monofocal/toric approval, which predates Vivity's 2022 addition and does not cover it. Vivity's own pivotal trial data likely exists in Alcon's submission to FDA but isn't in a public document I was able to locate — do not cite specific outcome percentages for this lens without a verified primary source. Flagging for Martin: if a specific FDA-sourced outcome stat is needed here, it may require requesting the underlying data directly rather than relying on what's publicly posted.
+From Bala et al. 2022 (randomized, multicenter, patient/assessor-masked trial; 19 sites, 4 countries; DFT015 n=159 randomized/152 completed, SN60WF monofocal control n=123 randomized/118 completed), at 6 months:
+- Monocular intermediate vision (DCIVA, 66cm): 0.161 logMAR (Vivity) vs. 0.300 logMAR (monofocal) — statistically significant, P<.001; 62.7% of Vivity patients vs. 33.1% of monofocal patients achieved 0.2 logMAR or better
+- Monocular near vision (DCNVA, 40cm): 0.414 logMAR (Vivity) vs. 0.513 logMAR (monofocal) — P<.001
+- Distance vision: noninferior to monofocal (both groups achieved a mean binocular CDVA better than 20/20)
+- Spectacle independence: never needing glasses for any purpose — 30.2% (Vivity) vs. 10.0% (monofocal); for intermediate tasks — 75.5% vs. 53.8%; for near tasks — 29.2% vs. 8.8%; for distance tasks, both groups were similar (91.5% vs. 90.0%)
+- Depth of focus exceeded ANSI's EDOF-lens criteria, at least 0.5D greater than the monofocal control
+
+Population-level trial data — not a guarantee of any individual patient's outcome.
 
 **5. Known side effects / visual disturbances** *(flagged for Martin's review — not auto-approved)*
-Same gap as above — no FDA-published disturbance-rate data located for this specific lens. Independent/manufacturer sources generally describe Vivity's non-diffractive design as associated with a lower rate of halos/glare/starbursts than diffractive multifocal/trifocal lenses (i.e., "more monofocal-like"), but this is not confirmed here against a primary FDA document, so treat as unverified until a real source is found.
+From the same trial's Quality of Vision questionnaire (n=106 Vivity, n=80 monofocal control, at 6 months) — rates were low and broadly similar between the two lens types:
+- Rated "severe": glare 3.8% (Vivity) vs. 2.5% (monofocal); halos 0.9% vs. 0%; starbursts 3.8% vs. 2.5%
+- Rated "very bothersome": glare 3.8% vs. 5.0%; halos 0.9% vs. 0%; starbursts 1.9% vs. 2.5%
+- Rated "not at all bothered": glare 73.6% vs. 57.5%; halos 75.5% vs. 77.5%; starbursts 72.6% vs. 63.8%
+
+Contrast sensitivity was slightly reduced for Vivity vs. the monofocal control, generally at higher spatial frequencies, though differences were under 0.3 log units at every spatial frequency tested (noninferiority was not strictly met at one specific measure — monocular mesopic contrast sensitivity at 12 cycles/degree). Safety: adverse event rates were below the relevant ISO safety threshold; one surgical reintervention in the Vivity group was for IOL repositioning after a YAG posterior capsulotomy, unrelated to the lens's optical properties; no deaths reported.
 
 **6. Contraindications / poor-candidate factors**
-Not independently confirmed for this supplement. Standard EDOF/multifocal-class precautions (irregular astigmatism, pre-existing retinal disease reducing benefit) likely apply by extension from the lens category, but this is inference, not a confirmed FDA statement for this specific device — flag before using as a specific claim.
+Not independently confirmed by FDA for this supplement. From the trial context: patients were excluded if their IOL power calculation fell outside the study's supply range; general cataract-surgery precautions (pre-existing retinal disease, irregular astigmatism affecting benefit) likely apply by extension from the EDOF lens category, but this is inference, not a device-specific confirmed finding — flag before using as a specific claim.
 
 **7. Source citation**
-PMA P190018, Supplement S013. FDA record (openFDA API): `api.fda.gov/device/pma.json?search=pma_number:P190018+AND+supplement_number:S013`. Base platform SSED (predates Vivity, does not cover it): `https://www.accessdata.fda.gov/cdrh_docs/pdf19/P190018B.pdf`. §3's technical description is manufacturer-sourced, not FDA — flagged accordingly.
+PMA P190018, Supplement S013 (metadata only — no clinical data available from FDA for this supplement). Clinical data source: Bala C, Poyales F, Guarro M, et al. Multicountry clinical outcomes of a new nondiffractive presbyopia-correcting IOL. *J Cataract Refract Surg.* 2022;48(2):136–143. Full text: `https://pmc.ncbi.nlm.nih.gov/articles/PMC8845530/`. Note: this trial evaluated the AcrySof-material Vivity (DFT015); Clareon Vivity carries the same optical design (X-WAVE) into Alcon's newer lens material — treat outcomes as applicable to the optic, not independently re-validated for the Clareon material specifically.
