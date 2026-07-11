@@ -16,13 +16,13 @@ Per Bala et al., Vivity uses "X-WAVE" nondiffractive wavefront-shaping technolog
 
 **4. Expected visual outcomes**
 From Bala et al. 2022 (randomized, multicenter, patient/assessor-masked trial; 19 sites, 4 countries; DFT015 n=159 randomized/152 completed, SN60WF monofocal control n=123 randomized/118 completed), at 6 months:
-- Monocular intermediate vision (DCIVA, 66cm): 0.161 logMAR (Vivity) vs. 0.300 logMAR (monofocal) — statistically significant, P<.001; 62.7% of Vivity patients vs. 33.1% of monofocal patients achieved 0.2 logMAR or better
-- Monocular near vision (DCNVA, 40cm): 0.414 logMAR (Vivity) vs. 0.513 logMAR (monofocal) — P<.001
+- Monocular intermediate vision (DCIVA, 66cm): ≈20/29 Snellen (Vivity) vs. ≈20/40 Snellen (monofocal) — statistically significant, P<.001; 62.7% of Vivity patients vs. 33.1% of monofocal patients achieved 20/32 or better
+- Monocular near vision (DCNVA, 40cm): ≈20/52 Snellen (Vivity) vs. ≈20/65 Snellen (monofocal) — P<.001
 - Distance vision: noninferior to monofocal (both groups achieved a mean binocular CDVA better than 20/20)
 - Spectacle independence: never needing glasses for any purpose — 30.2% (Vivity) vs. 10.0% (monofocal); for intermediate tasks — 75.5% vs. 53.8%; for near tasks — 29.2% vs. 8.8%; for distance tasks, both groups were similar (91.5% vs. 90.0%)
 - Depth of focus exceeded ANSI's EDOF-lens criteria, at least 0.5D greater than the monofocal control
 
-Population-level trial data — not a guarantee of any individual patient's outcome.
+Population-level trial data — not a guarantee of any individual patient's outcome. Snellen values above (marked ≈) are calculated equivalents of the trial's published logMAR results, not figures reported directly in the source paper — standard clinical conversion, but noted for transparency.
 
 **5. Known side effects / visual disturbances** *(flagged for Martin's review — not auto-approved)*
 From the same trial's Quality of Vision questionnaire (n=106 Vivity, n=80 monofocal control, at 6 months) — rates were low and broadly similar between the two lens types:

@@ -16,8 +16,8 @@ An ultraviolet- and violet-light-absorbing posterior chamber IOL. The posterior 
 
 **4. Expected visual outcomes**
 From the FDA pivotal trial (Synergy n=135 vs. monofocal control n=137, first eyes, 6 months post-op; 131 Synergy and 131 control eyes analyzed):
-- Near vision at 40cm (monocular, distance-corrected): 0.104 logMAR (Synergy) vs. 0.522 logMAR (monofocal) — a 4.2-line improvement, P<.0001; met the trial's primary effectiveness endpoint
-- Near vision at 33cm (monocular, distance-corrected): 0.154 logMAR (Synergy) vs. 0.608 logMAR (monofocal) — a 4.5-line improvement, P<.0001
+- Near vision at 40cm (monocular, distance-corrected): 20/25 Snellen (Synergy) vs. 20/67 Snellen (monofocal) — a 4.2-line improvement, P<.0001; met the trial's primary effectiveness endpoint
+- Near vision at 33cm (monocular, distance-corrected): 20/29 Snellen (Synergy) vs. 20/81 Snellen (monofocal) — a 4.5-line improvement, P<.0001
 - Distance vision: comparable between groups (non-inferiority endpoint met)
 - Spectacle independence: 87.8% of Synergy patients (115/131) reported wearing glasses "none of the time" across all four conditions (distance, intermediate, near, overall vision) at 6 months, vs. 3.1% of monofocal patients (4/131) — an 84.7 percentage-point difference, P<.0001
 
