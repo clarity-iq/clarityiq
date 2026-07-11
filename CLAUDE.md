@@ -25,3 +25,16 @@ Clinical accuracy and legal/consumer-safety guardrails already exist and are con
 
 ## When something isn't specified
 If a task requires a business, legal, pricing, or clinical judgment call that isn't covered in the task description, stop and ask rather than deciding it yourself.
+
+## Session Start & Task Handoff Protocol
+- Before starting any new task or batch from clarityiq_dtc_build_specs_layer2.md,
+  state your current understanding of that item's status first — what's already
+  built, what the spec says, any known blockers — and wait for Martin's
+  confirmation before proceeding. Do not assume silence means go-ahead.
+- If you make any correction to CLAUDE.md, ARCHITECTURE.md, or the build specs
+  doc during a session — not just at the end — say so explicitly in your
+  response. These files are also referenced from separate strategy sessions,
+  and silent corrections cause those sessions to work from stale information.
+- If asked to summarize your current progress or understanding, do so from the
+  actual current file/repo state, not from memory of what was originally
+  planned — plans in these docs get revised.
