@@ -16,9 +16,10 @@ An ultraviolet- and violet-light-absorbing posterior chamber IOL. The posterior 
 
 **4. Expected visual outcomes**
 From the FDA pivotal trial (Synergy n=135 vs. monofocal control n=137, first eyes, 6 months post-op; 131 Synergy and 131 control eyes analyzed):
-- Near vision at 40cm (monocular, distance-corrected): 20/25 Snellen (Synergy) vs. 20/67 Snellen (monofocal) — a 4.2-line improvement, P<.0001; met the trial's primary effectiveness endpoint
-- Near vision at 33cm (monocular, distance-corrected): 20/29 Snellen (Synergy) vs. 20/81 Snellen (monofocal) — a 4.5-line improvement, P<.0001
-- Distance vision: comparable between groups (non-inferiority endpoint met)
+- Near vision at 40cm (monocular, distance-corrected): mean 20/25 Snellen (Synergy) vs. 20/67 Snellen (monofocal) — a 4.2-line improvement, P<.0001; met the trial's primary effectiveness endpoint. **20/20 or better: 33.6% of Synergy eyes vs. 1.5% of monofocal eyes.**
+- Near vision at 33cm (monocular, distance-corrected): mean 20/29 Snellen (Synergy) vs. 20/81 Snellen (monofocal) — a 4.5-line improvement, P<.0001
+- Intermediate vision at 66cm (monocular, distance-corrected): mean 20/23 Snellen (Synergy) vs. 20/43 Snellen (monofocal) — a 2.8-line improvement, P<.0001; met the trial's secondary effectiveness endpoint. **20/20 or better: 55.0% of Synergy eyes vs. 6.2% of monofocal eyes.**
+- Distance vision (monocular, best-corrected): 20/20 or better in 80.2% of Synergy eyes vs. 88.5% of monofocal eyes — Synergy trades a modest amount of best-corrected distance performance for its intermediate/near gains; the trial's non-inferiority endpoint for distance vision was still met (both groups' BCDVA 20/40-or-better rates were effectively 100%)
 - Spectacle independence: 87.8% of Synergy patients (115/131) reported wearing glasses "none of the time" across all four conditions (distance, intermediate, near, overall vision) at 6 months, vs. 3.1% of monofocal patients (4/131) — an 84.7 percentage-point difference, P<.0001
 
 Population-level trial data — not a guarantee of any individual patient's outcome.

@@ -18,7 +18,7 @@ Per Bala et al., Vivity uses "X-WAVE" nondiffractive wavefront-shaping technolog
 From Bala et al. 2022 (randomized, multicenter, patient/assessor-masked trial; 19 sites, 4 countries; DFT015 n=159 randomized/152 completed, SN60WF monofocal control n=123 randomized/118 completed), at 6 months:
 - Monocular intermediate vision (DCIVA, 66cm): ≈20/29 Snellen (Vivity) vs. ≈20/40 Snellen (monofocal) — statistically significant, P<.001; 62.7% of Vivity patients vs. 33.1% of monofocal patients achieved 20/32 or better
 - Monocular near vision (DCNVA, 40cm): ≈20/52 Snellen (Vivity) vs. ≈20/65 Snellen (monofocal) — P<.001
-- Distance vision: noninferior to monofocal (both groups achieved a mean binocular CDVA better than 20/20)
+- Distance vision (best-corrected): noninferior to monofocal — mean monocular CDVA ≈20/20 (Vivity) vs. ≈20/18 (monofocal); binocular CDVA ≈20/17 (Vivity) vs. ≈20/16 (monofocal) — both groups averaged slightly better than 20/20. The paper did not report a percentage-threshold breakdown (e.g., "% achieving 20/20 or better") in its text or tables — only a cumulative-distribution chart, which isn't extractable as exact figures — so this is presented as means only, unlike the FDA-table-sourced percentage breakdowns available for the J&J lenses in this knowledge base.
 - Spectacle independence: never needing glasses for any purpose — 30.2% (Vivity) vs. 10.0% (monofocal); for intermediate tasks — 75.5% vs. 53.8%; for near tasks — 29.2% vs. 8.8%; for distance tasks, both groups were similar (91.5% vs. 90.0%)
 - Depth of focus exceeded ANSI's EDOF-lens criteria, at least 0.5D greater than the monofocal control
 
