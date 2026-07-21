@@ -628,13 +628,14 @@ const PROXY_URL = 'https://clarityiq-proxy.dlpventures13.workers.dev';
 const CLIENT_KEY = '58e955745eaf504e679cf0d00f8d63311cb8e5e486006a50';
 
 // ── Tier model (Batch 2.4 / 2.5) ─────────────────────────────────────────────
-// No payment enforcement exists yet (that's fast-follow, out of scope here).
 // This is the structural seed: every feature that ships with a tier
 // requirement should be tagged in FEATURE_TIERS rather than hardcoded, so
 // premium features (full IOL catalog, enhanced summary sheet — Batch 3.2)
-// slot into this flag instead of a rewrite. CURRENT_TIER defaults everyone
-// to 'free' — there is no code path that upgrades it yet.
-const CURRENT_TIER = 'free';
+// slot into this flag instead of a rewrite. CURRENT_TIER defaults to 'free'
+// and is upgraded by verifyAndApplyPurchase() below if a valid Stripe
+// purchase is found (Batch 3.5 payment wiring).
+let CURRENT_TIER = 'free';
+let purchaseInfo = null; // { checkout_session_id, tier, expires_at } once verified
 const FEATURE_TIERS = {
   core_conversation: 'free',   // the six-stage voice walkthrough
   pre_post_survey:   'free',   // Batch 2.1
@@ -646,6 +647,82 @@ function isFeatureAvailable(featureKey) {
   const required = FEATURE_TIERS[featureKey];
   return required === 'free' || required === CURRENT_TIER;
 }
+
+// ── Purchase verification (Batch 3.5 — Stripe Checkout wiring) ──────────────
+// A customer arrives here one of two ways: (1) fresh from Stripe Checkout,
+// with ?checkout_session_id=... in the URL, or (2) returning within their
+// access window with no query param — in which case we fall back to the ID
+// saved in localStorage on their first successful verification. Either way
+// /verify-purchase is the source of truth; it's read-only (safe to call on
+// every load / refresh) — consumption of the Starter tier's single use only
+// happens via /consume-starter, called from startConversation() itself.
+const PURCHASE_STORAGE_KEY = 'clarityiq_purchase_id';
+
+async function verifyAndApplyPurchase() {
+  const url = new URL(window.location.href);
+  const fromQuery = url.searchParams.get('checkout_session_id');
+  const checkoutSessionId = fromQuery || localStorage.getItem(PURCHASE_STORAGE_KEY);
+  if (!checkoutSessionId) return;
+
+  // If arriving fresh from Checkout, the webhook that writes the KV record
+  // may not have landed yet — retry briefly rather than failing immediately.
+  const maxAttempts = fromQuery ? 4 : 1;
+  let result = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      const res = await fetch(
+        `${PROXY_URL}/verify-purchase?checkout_session_id=${encodeURIComponent(checkoutSessionId)}`,
+        { headers: { 'X-ClarityIQ-Key': CLIENT_KEY } }
+      );
+      result = await res.json();
+    } catch (err) {
+      result = { valid: false, reason: 'network_error' };
+    }
+    if (result.valid || result.reason !== 'not_found') break;
+    if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1500));
+  }
+
+  if (result && result.valid) {
+    CURRENT_TIER = result.tier;
+    purchaseInfo = {
+      checkout_session_id: checkoutSessionId,
+      tier: result.tier,
+      expires_at: result.expires_at || null,
+    };
+    localStorage.setItem(PURCHASE_STORAGE_KEY, checkoutSessionId);
+    if (fromQuery) {
+      // Don't leave the checkout session id sitting in a shareable/bookmarkable URL.
+      url.searchParams.delete('checkout_session_id');
+      window.history.replaceState({}, '', url.toString());
+    }
+  } else if (result && (result.reason === 'expired' || result.reason === 'already_used')) {
+    // Dead token — stop re-checking it on future loads.
+    localStorage.removeItem(PURCHASE_STORAGE_KEY);
+  }
+}
+
+// Consumes the Starter tier's single use. Only called at the moment a
+// conversation actually starts (not on page load) — see startConversation().
+// Fails closed only on a confirmed "already used"; any other failure
+// (network hiccup, etc.) lets a paying customer through rather than
+// blocking them over a transient error.
+async function consumeStarterIfNeeded() {
+  if (CURRENT_TIER !== 'starter' || !purchaseInfo) return true;
+  try {
+    const res = await fetch(`${PROXY_URL}/consume-starter`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+      body: JSON.stringify({ checkout_session_id: purchaseInfo.checkout_session_id }),
+    });
+    const data = await res.json();
+    if (data.reason === 'already_used') return false;
+    return true;
+  } catch (err) {
+    return true; // fail open — see comment above
+  }
+}
+
+verifyAndApplyPurchase();
 
 // ── Password gate ──────────────────────────────────────────────────────────────
 const GATE_HASH = '5944ae849448011ca08c3785f1de1a54c8a96d6c23f787f9d962b624edd4151d';
@@ -1003,6 +1080,14 @@ async function startConversation() {
   const beginBtn = document.getElementById('begin-btn');
   beginBtn.disabled = true;
   setStatus('connecting', 'Connecting…');
+
+  const canProceed = await consumeStarterIfNeeded();
+  if (!canProceed) {
+    setStatus('idle', '');
+    beginBtn.disabled = false;
+    showError('This IOL Clarity Starter session has already been used. Each Starter purchase covers a single session.');
+    return;
+  }
 
   try {
     await navigator.mediaDevices.getUserMedia({ audio: true });
