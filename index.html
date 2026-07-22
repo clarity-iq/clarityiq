@@ -336,6 +336,30 @@ body {
 #gate-submit:hover { background: #0f6e56; }
 #gate-error { font-size: 12.5px; color: #b91c1c; display: none; }
 
+/* ── Access code confirmation (shown once, right after a fresh purchase) ── */
+#access-code-modal {
+  position: absolute; inset: 0; z-index: 25;
+  background: #fff; border-radius: 20px;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 32px; text-align: center;
+}
+#access-code-modal.show { display: flex; }
+#access-code-title { font-size: 17px; font-weight: 600; color: #1a1a18; }
+#access-code-sub { font-size: 13px; color: #a0a09a; max-width: 280px; margin-bottom: 6px; }
+#access-code-value {
+  font-size: 30px; font-weight: 700; letter-spacing: 4px; font-family: monospace;
+  color: #1a1a18; background: #f5f4f0; border-radius: 10px;
+  padding: 14px 20px; margin-bottom: 4px;
+}
+#access-code-note { font-size: 12.5px; color: #a0a09a; max-width: 280px; margin-bottom: 10px; }
+#access-code-continue {
+  width: 100%; max-width: 260px;
+  padding: 12px; background: #1D9E75; color: #fff;
+  border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+#access-code-continue:hover { background: #0f6e56; }
+
 /* ── Survey / email screens (pre-survey, post-survey, email gate) ── */
 .screen {
   display: none;
@@ -414,6 +438,16 @@ body {
     <input id="gate-input" type="password" autocomplete="off" placeholder="Password or access code" />
     <button id="gate-submit">Continue</button>
     <div id="gate-error">Incorrect password or access code</div>
+  </div>
+
+  <!-- Access code confirmation — shown once, right after a fresh purchase.
+       Covers customers regardless of whether the emailed copy lands. -->
+  <div id="access-code-modal">
+    <div id="access-code-title">You're all set — save this code</div>
+    <div id="access-code-sub">You'll need it if you return on a different device or after clearing your browser.</div>
+    <div id="access-code-value"></div>
+    <div id="access-code-note"></div>
+    <button id="access-code-continue">Got it, continue</button>
   </div>
 
   <!-- Pre-survey (Batch 2.1) -->
@@ -721,6 +755,11 @@ async function verifyAndApplyPurchase() {
       // Don't leave the checkout session id sitting in a shareable/bookmarkable URL.
       url.searchParams.delete('checkout_session_id');
       window.history.replaceState({}, '', url.toString());
+      // Fresh from Stripe: this is the one moment the customer has full
+      // attention and the code in hand regardless of whether the emailed
+      // copy lands (Resend's shared sending domain has delivery
+      // restrictions until a verified clarityiq.ai domain is live).
+      showAccessCodeModal(result);
     }
   } else if (result && (result.reason === 'expired' || result.reason === 'already_used')) {
     // Dead code — stop re-checking it on future loads.
@@ -812,6 +851,19 @@ if (sessionStorage.getItem('clarityiq_unlocked') === '1') {
 document.getElementById('gate-submit').addEventListener('click', checkGatePassword);
 document.getElementById('gate-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') checkGatePassword();
+});
+
+// Shown once, right after a fresh purchase — see verifyAndApplyPurchase().
+function showAccessCodeModal(result) {
+  document.getElementById('access-code-value').textContent = result.access_code;
+  const note = result.tier === 'session'
+    ? `Unlocks your IOL Clarity Session for 12 months, and you can return to it as many times as you'd like during that window.`
+    : `Unlocks your IOL Clarity Starter — a single session.`;
+  document.getElementById('access-code-note').textContent = note;
+  document.getElementById('access-code-modal').classList.add('show');
+}
+document.getElementById('access-code-continue').addEventListener('click', () => {
+  document.getElementById('access-code-modal').classList.remove('show');
 });
 
 const STAGES = [
