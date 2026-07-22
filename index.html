@@ -1159,11 +1159,22 @@ async function submitEmailGate() {
     // Stored separately from the anonymous telemetry KV record — email is an
     // identifier and the telemetry data is explicitly identifier-free by
     // design (see ARCHITECTURE.md §5). Joined only by session_code if ever
-    // needed, never merged into the same record.
+    // needed, never merged into the same record. Summary content rides
+    // along in this same call for the emailed copy, but the Worker never
+    // persists it alongside the lead record.
     await fetch(PROXY_URL + '/email-capture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
-      body: JSON.stringify({ session_code: sessionCode, email }),
+      body: JSON.stringify({
+        session_code: sessionCode,
+        email,
+        summary: {
+          interests: pendingSummaryResult.interests,
+          concerns: pendingSummaryResult.concerns,
+          resonating_options: pendingSummaryResult.resonating_options,
+          surgeon_questions: pendingSummaryResult.surgeon_questions,
+        },
+      }),
     });
   } catch (e) {
     console.error('Email capture failed (non-blocking — still showing summary):', e);
