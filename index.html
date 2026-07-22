@@ -410,10 +410,10 @@ body {
       </svg>
     </div>
     <div id="gate-title">ClarityIQ</div>
-    <div id="gate-sub">Enter the password to continue</div>
-    <input id="gate-input" type="password" autocomplete="off" placeholder="Password" />
+    <div id="gate-sub">Enter your password or access code to continue</div>
+    <input id="gate-input" type="password" autocomplete="off" placeholder="Password or access code" />
     <button id="gate-submit">Continue</button>
-    <div id="gate-error">Incorrect password</div>
+    <div id="gate-error">Incorrect password or access code</div>
   </div>
 
   <!-- Pre-survey (Batch 2.1) -->
@@ -635,7 +635,7 @@ const CLIENT_KEY = '58e955745eaf504e679cf0d00f8d63311cb8e5e486006a50';
 // and is upgraded by verifyAndApplyPurchase() below if a valid Stripe
 // purchase is found (Batch 3.5 payment wiring).
 let CURRENT_TIER = 'free';
-let purchaseInfo = null; // { checkout_session_id, tier, expires_at } once verified
+let purchaseInfo = null; // { access_code, tier, expires_at } once verified
 const FEATURE_TIERS = {
   core_conversation: 'free',   // the six-stage voice walkthrough
   pre_post_survey:   'free',   // Batch 2.1
@@ -648,57 +648,97 @@ function isFeatureAvailable(featureKey) {
   return required === 'free' || required === CURRENT_TIER;
 }
 
-// ── Purchase verification (Batch 3.5 — Stripe Checkout wiring) ──────────────
-// A customer arrives here one of two ways: (1) fresh from Stripe Checkout,
-// with ?checkout_session_id=... in the URL, or (2) returning within their
-// access window with no query param — in which case we fall back to the ID
-// saved in localStorage on their first successful verification. Either way
-// /verify-purchase is the source of truth; it's read-only (safe to call on
-// every load / refresh) — consumption of the Starter tier's single use only
-// happens via /consume-starter, called from startConversation() itself.
-const PURCHASE_STORAGE_KEY = 'clarityiq_purchase_id';
+// ── Purchase verification (Batch 3.5 — Stripe Checkout wiring; Batch 3.6 —
+// access-code recovery) ──────────────────────────────────────────────────
+// A customer reaches a valid tier one of three ways:
+//  1. Fresh from Stripe Checkout: ?checkout_session_id=... in the URL. This
+//     is the only identifier Stripe's success_url can template — the access
+//     code doesn't exist yet at redirect time (it's generated in the
+//     webhook, after payment), so this path always resolves by session id.
+//  2. Returning on the same browser: the access code saved locally on a
+//     prior successful verification (Batch 3.5's checkout-session-id
+//     localStorage entry is gone — the code is now the durable identifier).
+//  3. Returning on a new device/cleared browser: manual entry through the
+//     gate (see checkGatePassword), using the code emailed at purchase time.
+// /verify-purchase is the source of truth for all three; it's read-only
+// (safe to call on every load/refresh) — consumption of the Starter tier's
+// single use only happens via /consume-starter, called from
+// startConversation() itself.
+const ACCESS_CODE_STORAGE_KEY = 'clarityiq_access_code';
 
+async function callVerifyPurchase(params) {
+  try {
+    const res = await fetch(
+      `${PROXY_URL}/verify-purchase?${new URLSearchParams(params).toString()}`,
+      { headers: { 'X-ClarityIQ-Key': CLIENT_KEY } }
+    );
+    return await res.json();
+  } catch (err) {
+    return { valid: false, reason: 'network_error' };
+  }
+}
+
+function applyVerifiedPurchase(result) {
+  CURRENT_TIER = result.tier;
+  purchaseInfo = {
+    access_code: result.access_code || null,
+    tier: result.tier,
+    expires_at: result.expires_at || null,
+  };
+  if (result.access_code) {
+    localStorage.setItem(ACCESS_CODE_STORAGE_KEY, result.access_code);
+  }
+}
+
+// Auto path, run unconditionally at load: URL checkout_session_id (fresh
+// from Stripe) or a stored access code (returning, same browser). On
+// success this bypasses the gate entirely — zero manual entry.
 async function verifyAndApplyPurchase() {
   const url = new URL(window.location.href);
   const fromQuery = url.searchParams.get('checkout_session_id');
-  const checkoutSessionId = fromQuery || localStorage.getItem(PURCHASE_STORAGE_KEY);
-  if (!checkoutSessionId) return;
+  const storedCode = localStorage.getItem(ACCESS_CODE_STORAGE_KEY);
 
-  // If arriving fresh from Checkout, the webhook that writes the KV record
-  // may not have landed yet — retry briefly rather than failing immediately.
-  const maxAttempts = fromQuery ? 4 : 1;
   let result = null;
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const res = await fetch(
-        `${PROXY_URL}/verify-purchase?checkout_session_id=${encodeURIComponent(checkoutSessionId)}`,
-        { headers: { 'X-ClarityIQ-Key': CLIENT_KEY } }
-      );
-      result = await res.json();
-    } catch (err) {
-      result = { valid: false, reason: 'network_error' };
+
+  if (fromQuery) {
+    // Webhook may not have landed yet if this is called immediately post-redirect.
+    const maxAttempts = 4;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      result = await callVerifyPurchase({ checkout_session_id: fromQuery });
+      if (result.valid || result.reason !== 'not_found') break;
+      if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1500));
     }
-    if (result.valid || result.reason !== 'not_found') break;
-    if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1500));
+  } else if (storedCode) {
+    result = await callVerifyPurchase({ access_code: storedCode });
+  } else {
+    return;
   }
 
   if (result && result.valid) {
-    CURRENT_TIER = result.tier;
-    purchaseInfo = {
-      checkout_session_id: checkoutSessionId,
-      tier: result.tier,
-      expires_at: result.expires_at || null,
-    };
-    localStorage.setItem(PURCHASE_STORAGE_KEY, checkoutSessionId);
+    applyVerifiedPurchase(result);
+    unlockApp();
     if (fromQuery) {
       // Don't leave the checkout session id sitting in a shareable/bookmarkable URL.
       url.searchParams.delete('checkout_session_id');
       window.history.replaceState({}, '', url.toString());
     }
   } else if (result && (result.reason === 'expired' || result.reason === 'already_used')) {
-    // Dead token — stop re-checking it on future loads.
-    localStorage.removeItem(PURCHASE_STORAGE_KEY);
+    // Dead code — stop re-checking it on future loads.
+    localStorage.removeItem(ACCESS_CODE_STORAGE_KEY);
   }
+}
+
+// Manual path: gate input treated as an access code once it fails to match
+// the static password. Returns true/false so checkGatePassword knows
+// whether to unlock or show the error state.
+async function tryApplyAccessCode(code) {
+  if (!code) return false;
+  const result = await callVerifyPurchase({ access_code: code });
+  if (result && result.valid) {
+    applyVerifiedPurchase(result);
+    return true;
+  }
+  return false;
 }
 
 // Consumes the Starter tier's single use. Only called at the moment a
@@ -712,7 +752,7 @@ async function consumeStarterIfNeeded() {
     const res = await fetch(`${PROXY_URL}/consume-starter`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
-      body: JSON.stringify({ checkout_session_id: purchaseInfo.checkout_session_id }),
+      body: JSON.stringify({ access_code: purchaseInfo.access_code }),
     });
     const data = await res.json();
     if (data.reason === 'already_used') return false;
@@ -738,23 +778,36 @@ function showScreen(id) {
   if (id) document.getElementById(id).classList.add('active');
 }
 
+// Shared by both unlock paths: the static internal/beta password and a
+// verified purchase (auto-applied or manually entered as an access code).
+function unlockApp() {
+  sessionStorage.setItem('clarityiq_unlocked', '1');
+  document.getElementById('gate').style.display = 'none';
+  resetUI();
+}
+
 async function checkGatePassword() {
   const input = document.getElementById('gate-input');
-  const hash  = await sha256Hex(input.value.trim().toLowerCase());
+  const value = input.value.trim();
+  const hash  = await sha256Hex(value.toLowerCase());
   if (hash === GATE_HASH) {
-    sessionStorage.setItem('clarityiq_unlocked', '1');
-    document.getElementById('gate').style.display = 'none';
-    resetUI();
-  } else {
-    document.getElementById('gate-error').style.display = 'block';
-    input.value = '';
-    input.focus();
+    unlockApp();
+    return;
   }
+  // Not the static password — try it as a purchase access code.
+  const applied = await tryApplyAccessCode(value);
+  if (applied) {
+    unlockApp();
+    return;
+  }
+  document.getElementById('gate-error').style.display = 'block';
+  input.value = '';
+  input.focus();
 }
 
 if (sessionStorage.getItem('clarityiq_unlocked') === '1') {
   document.getElementById('gate').style.display = 'none';
-  resetToPreSurvey();
+  resetUI();
 }
 document.getElementById('gate-submit').addEventListener('click', checkGatePassword);
 document.getElementById('gate-input').addEventListener('keydown', (e) => {
