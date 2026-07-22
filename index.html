@@ -1161,13 +1161,16 @@ async function submitEmailGate() {
     // design (see ARCHITECTURE.md §5). Joined only by session_code if ever
     // needed, never merged into the same record. Summary content rides
     // along in this same call for the emailed copy, but the Worker never
-    // persists it alongside the lead record.
+    // persists it alongside the lead record. access_code (when present —
+    // i.e. a paid purchase, not a password-gate/tester session) tells the
+    // Worker to also save the summary onto that purchase's durable record.
     await fetch(PROXY_URL + '/email-capture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
       body: JSON.stringify({
         session_code: sessionCode,
         email,
+        access_code: purchaseInfo ? purchaseInfo.access_code : null,
         summary: {
           interests: pendingSummaryResult.interests,
           concerns: pendingSummaryResult.concerns,
