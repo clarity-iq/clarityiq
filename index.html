@@ -279,6 +279,9 @@ body {
 .summary-card { background: #f8f8f4; border: 1px solid #e8e6de; border-radius: 14px; padding: 13px 15px; }
 .summary-card-label { font-size: 11px; font-weight: 600; color: #a0a09a; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
 .summary-card-value { font-size: 14px; color: #1a1a18; line-height: 1.55; }
+.summary-card-subline { font-size: 13px; color: #5f5e5a; line-height: 1.5; margin-top: 6px; }
+.summary-topics-list { margin: 0; padding-left: 18px; font-size: 14px; color: #1a1a18; line-height: 1.7; }
+.summary-card-note { font-size: 12.5px; color: #a0a09a; line-height: 1.5; }
 .checklist { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
 .check-row { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #4a4a48; line-height: 1.45; }
 .check-icon { width: 17px; height: 17px; border-radius: 50%; background: #e1f5ee; color: #1D9E75; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; font-size: 10px; font-weight: 600; }
@@ -1222,57 +1225,71 @@ function addTranscriptLine(role, text) {
 }
 
 // ── AI Summary via proxy ──────────────────────────────────────────────────────
-// Track A's decision isn't a near/far focal-point choice like B and C —
-// it's a range-vs-side-effects tradeoff (see the conversation script's
-// Track A "STANDARD ELICITATION" and "FOCAL-POINT / RANGE CONFIRMATION").
-// Ground the AI extraction in the actual preferred_track state (known
-// reliably from record_preferred_track) rather than asking it to infer
-// which lens category applies from loose keyword cues.
-const TRACK_NAMES = {
-  A: 'the advanced technology track (multiple focal points / extended range)',
-  B: 'the toric track (single focal point with astigmatism correction)',
-  C: 'the basic monofocal track (single focal point)',
-};
-function describePreferredTrack() {
-  if (!convoState || !convoState.preferred_track) return 'Not captured during the conversation.';
-  const t = convoState.preferred_track;
-  return TRACK_NAMES[t] || t; // "A"/"B"/"C" expands to a name; the patient's own words pass through as-is
-}
 
+// Patient Summary Artifact — see clarityiq_artifact_generation_prompt_update_v0_1.md.
+// Replaces the old 4-field "Summary v2" schema (interests/concerns/
+// resonating options/questions), which predated the commercial
+// conversation redesign. tier and preferred_track are passed in as
+// already-known, reliable values — not re-derived from the transcript —
+// same reasoning as everywhere else in this build: re-inferring something
+// already reliably recorded is strictly worse than just reading it, and
+// risks the two-places-same-data drift this build has avoided throughout.
 async function generateSummaryWithAI() {
   const transcriptText = transcriptLog
     .map(t => (t.role === 'agent' ? 'ClarityIQ: ' : 'Patient: ') + t.text)
     .join('\n');
 
+  // Final, effective tier — already reflects any mid-conversation upgrade,
+  // since check_upgrade_status mutates convoState.tier in place on confirm.
   const tier = convoState ? convoState.tier : 'starter';
-  const preferredTrack = convoState ? convoState.preferred_track : null;
-  const trackContext = tier === 'session' && preferredTrack
-    ? `\nConfirmed during the conversation: this patient's preferred track is ${describePreferredTrack()}.\n`
-    : '';
-  const resonatingInstructions = preferredTrack === 'A'
-    ? 'Describe the advanced technology lens option. This track\'s decision is a RANGE-vs-SIDE-EFFECTS tradeoff, not a near/far focal point — extract the patient\'s stated preference from the standard elicitation question (full reading vision vs. fewer visual side effects like halos/glare) and their confirmed answer, not a near/far distinction.'
-    : preferredTrack === 'B' || preferredTrack === 'C'
-    ? 'Describe the lens option (toric or basic monofocal) and the patient\'s confirmed single focal point preference (near vs. far) from the disambiguation question.'
-    : 'The lens option(s) or approach that seemed to resonate with the patient based on their goals, in their own terms — if a preferred track was never confirmed during the conversation (e.g. Starter tier without an upgrade), say so plainly rather than inventing one.';
+  const preferredTrack = tier === 'session' && convoState ? convoState.preferred_track : null;
 
-  const prompt = `You are extracting structured data from a cataract surgery IOL education conversation.
-Analyze the conversation carefully and extract ONLY what the patient actually expressed — not what was explained to them.
-${trackContext}
+  const knownValues = tier === 'session'
+    ? `- tier: "session"\n- preferred_track: "${preferredTrack || 'not captured'}"`
+    : `- tier: "starter"`;
+
+  const prompt = `You are extracting a patient summary from a completed ClarityIQ conversation transcript. This summary will be read by the patient and shown to their surgeon, so accuracy and using the patient's own language matters more than polish.
+
+You will be given the transcript along with two known values: the patient's tier ("starter" or "session," reflecting their final status — already accounts for any mid-conversation upgrade) and, for session-tier patients, their preferred track. Use these as given facts — do not re-derive tier or track from the transcript yourself.
+
+Known values (already recorded, do not re-derive):
+${knownValues}
+
+SOURCE OF TRUTH RULE: Stage 6 contains an explicit confirmation moment where the agent states back its understanding of the patient's goal and track, and the patient confirms or corrects it. If the patient corrected anything at that point, the confirmed/corrected version is authoritative — use it, not earlier statements in the conversation that were later corrected.
+
+vision_goal: Extract the patient's stated goal in their own words, as confirmed in Stage 6. Do not paraphrase into different language than what the patient actually said.
+
+preferred_focal_point: If the given preferred track is B or C, extract the patient's stated near/far preference in plain language. If the given preferred track is A, extract their stated tradeoff preference (range vs. visual side effects) in plain language — phrase this naturally, it is not a near/far answer and should not be forced into that shape. If the patient is starter tier and this was never discussed, omit the field entirely.
+
+monovision_history: If the transcript indicates the patient has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A".
+
+topics_covered: List the specific topics actually discussed in this conversation, in the patient's session — not a generic list. For session-tier patients, include which track(s) were explored. For starter-tier patients, list the foundational topics covered (do not list track content, since starter-tier patients did not receive it).
+
+lens_category_interest: Session tier only — omit entirely for starter tier. Start from the given preferred track, translated to plain language ("advanced technology," "toric," or "basic monofocal"). If the transcript shows the patient specifically asked about or dove deep into a named lens (e.g. Vivity, PanOptix, IC-8, LAL) during that track's deep-dive content, append that lens name to the field.
+
+surgeon_question: Extract the polished version of the patient's surgeon question from Stage 5 — the version the agent phrased and the patient confirmed, not their raw first attempt and not a new re-summarization of it now. Carry it forward as close to verbatim as possible.
+
+starter_scope_note: Starter tier only. Generate one honest, brief sentence noting that this summary reflects the starter session, and that full lens category comparison was outside its scope. Omit entirely for session-tier patients.
+
 Conversation transcript:
 ${transcriptText}
 
-Extract and return ONLY valid JSON in this exact format (no markdown, no explanation):
+Return only the JSON object below, no other text — omit any field per the rules above rather than returning null, empty string, or a placeholder:
+
 {
-  "interests": "One to two sentences on what the patient said matters most to them for their vision after surgery — their own stated priorities, in their own terms.",
-  "concerns": "Worries, hesitations, or reservations the patient expressed or implied during the conversation (e.g. cost, adjustment period, dependence on glasses, surgery risk). This is inferred from how they talked, not a direct question that was asked — if truly nothing concerning came up, say so plainly rather than inventing one.",
-  "resonating_options": "${resonatingInstructions}",
-  "surgeon_questions": "The polished, consult-ready version of the one thing the patient said they most want their surgeon to address, confirmed back to them in Stage 5 — use that confirmed version if present in the transcript, not their raw first attempt."
+  "vision_goal": "...",
+  "preferred_focal_point": "...",
+  "monovision_history": "...",
+  "topics_covered": ["..."],
+  "lens_category_interest": "...",
+  "surgeon_question": "...",
+  "starter_scope_note": "..."
 }`;
 
   const res = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 700, messages: [{ role: 'user', content: prompt }] })
   });
 
   if (!res.ok) throw new Error('API error ' + res.status);
@@ -1282,33 +1299,63 @@ Extract and return ONLY valid JSON in this exact format (no markdown, no explana
   return JSON.parse(clean);
 }
 
-// Summary v2 (Batch 2.2) — 4 content fields: interests, concerns,
-// resonating options, surgeon questions. Session code is tracking metadata,
-// not a content field — it's rendered in the footer (see showSummaryFooterCode),
-// never inline with these cards.
-function renderSummary(interests, concerns, resonatingOptions, surgeonQuestions) {
+function escapeHtmlClient(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Patient Summary Artifact — replaces the old 4-field "Summary v2" cards
+// entirely. vision_goal, preferred_focal_point, and monovision_history
+// render together under one "My vision goal" card as sub-lines, not
+// separate cards — a deliberate grouping decision (they're all facets of
+// what the patient told us about their own vision), not a shortcut. Every
+// other field may legitimately be absent per the extraction prompt's
+// omission rules — the rendered summary should look tier-native, never
+// showing an empty/placeholder card for a field that doesn't apply.
+function renderSummary(summary) {
   const body = document.getElementById('summary-body');
   body.innerHTML = '';
 
-  const s1 = document.createElement('div');
-  s1.className = 'summary-card';
-  s1.innerHTML = `<div class="summary-card-label">My interests</div><div class="summary-card-value">${interests}</div>`;
-  body.appendChild(s1);
+  const goalCard = document.createElement('div');
+  goalCard.className = 'summary-card';
+  let goalHtml = `<div class="summary-card-label">My vision goal</div><div class="summary-card-value">${escapeHtmlClient(summary.vision_goal)}</div>`;
+  if (summary.preferred_focal_point) {
+    goalHtml += `<div class="summary-card-subline">${escapeHtmlClient(summary.preferred_focal_point)}</div>`;
+  }
+  if (summary.monovision_history) {
+    goalHtml += `<div class="summary-card-subline">${escapeHtmlClient(summary.monovision_history)}</div>`;
+  }
+  goalCard.innerHTML = goalHtml;
+  body.appendChild(goalCard);
 
-  const s2 = document.createElement('div');
-  s2.className = 'summary-card';
-  s2.innerHTML = `<div class="summary-card-label">My concerns</div><div class="summary-card-value">${concerns}</div>`;
-  body.appendChild(s2);
+  if (summary.topics_covered && summary.topics_covered.length) {
+    const topicsCard = document.createElement('div');
+    topicsCard.className = 'summary-card';
+    const items = summary.topics_covered.map(t => `<li>${escapeHtmlClient(t)}</li>`).join('');
+    topicsCard.innerHTML = `<div class="summary-card-label">Topics covered</div><ul class="summary-topics-list">${items}</ul>`;
+    body.appendChild(topicsCard);
+  }
 
-  const s3 = document.createElement('div');
-  s3.className = 'summary-card';
-  s3.innerHTML = `<div class="summary-card-label">Options that resonated</div><div class="summary-card-value">${resonatingOptions}</div>`;
-  body.appendChild(s3);
+  if (summary.lens_category_interest) {
+    const lensCard = document.createElement('div');
+    lensCard.className = 'summary-card';
+    lensCard.innerHTML = `<div class="summary-card-label">Lens category interest</div><div class="summary-card-value">${escapeHtmlClient(summary.lens_category_interest)}</div>`;
+    body.appendChild(lensCard);
+  }
 
-  const s4 = document.createElement('div');
-  s4.className = 'summary-card';
-  s4.innerHTML = `<div class="surgeon-q-block" style="margin-top:0"><div class="surgeon-q-label">Questions for your surgeon</div><div class="surgeon-q-text">${surgeonQuestions}</div></div>`;
-  body.appendChild(s4);
+  if (summary.surgeon_question) {
+    const qCard = document.createElement('div');
+    qCard.className = 'summary-card';
+    qCard.innerHTML = `<div class="surgeon-q-block" style="margin-top:0"><div class="surgeon-q-label">Questions for your surgeon</div><div class="surgeon-q-text">${escapeHtmlClient(summary.surgeon_question)}</div></div>`;
+    body.appendChild(qCard);
+  }
+
+  if (summary.starter_scope_note) {
+    const noteCard = document.createElement('div');
+    noteCard.className = 'summary-card';
+    noteCard.innerHTML = `<div class="summary-card-note">${escapeHtmlClient(summary.starter_scope_note)}</div>`;
+    body.appendChild(noteCard);
+  }
 
   showSummaryFooterCode();
 }
@@ -1331,11 +1378,12 @@ async function buildAndShowSummary() {
     pendingSummaryResult = result;
   } catch(err) {
     console.error('AI summary failed:', err);
+    const fallbackTier = convoState ? convoState.tier : 'starter';
     pendingSummaryResult = {
-      interests: 'Vision goals discussed during conversation.',
-      concerns: 'Not captured — please discuss any questions or hesitations directly with your surgeon.',
-      resonating_options: 'To be confirmed with your surgeon.',
-      surgeon_questions: 'Ask your surgeon which lens best fits your eye measurements and vision goals.',
+      vision_goal: 'Vision goals discussed during conversation — extraction unavailable, please discuss directly with your surgeon.',
+      surgeon_question: 'Ask your surgeon which lens best fits your eye measurements and vision goals.',
+      ...(fallbackTier === 'session' ? { lens_category_interest: 'To be confirmed with your surgeon.' } : {}),
+      ...(fallbackTier === 'starter' ? { starter_scope_note: 'This summary reflects your starter session — full lens category comparison was outside its scope.' } : {}),
     };
   }
   document.getElementById('summary-loading').style.display = 'none';
@@ -1374,12 +1422,10 @@ async function submitEmailGate() {
         session_code: sessionCode,
         email,
         access_code: purchaseInfo ? purchaseInfo.access_code : null,
-        summary: {
-          interests: pendingSummaryResult.interests,
-          concerns: pendingSummaryResult.concerns,
-          resonating_options: pendingSummaryResult.resonating_options,
-          surgeon_questions: pendingSummaryResult.surgeon_questions,
-        },
+        // pendingSummaryResult already matches the artifact schema exactly
+        // (from generateSummaryWithAI() or its fallback) — passed through
+        // directly rather than reconstructed field-by-field.
+        summary: pendingSummaryResult,
       }),
     });
   } catch (e) {
@@ -1387,8 +1433,7 @@ async function submitEmailGate() {
   }
   btn.disabled = false;
 
-  const r = pendingSummaryResult;
-  renderSummary(r.interests, r.concerns, r.resonating_options, r.surgeon_questions);
+  renderSummary(pendingSummaryResult);
   showScreen(null);
   document.getElementById('summary').style.display = 'flex';
 }
