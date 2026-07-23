@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>ClarityIQ — Patient Lens Education</title>
+<title>ClarityIQ — Lens Education</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1055,7 +1055,7 @@ function checkReadinessPrecondition() {
 function applyStageTransition(toStage) {
   checkStageTransition(toStage);
   // Implicit decline: reaching readiness as starter with no outcome ever
-  // set means the patient declined at the tier gate without attempting an
+  // set means the person declined at the tier gate without attempting an
   // upgrade at all — there's no dedicated tool call for a pure decline
   // (only the upgrade-attempt outcomes are tool-driven), so this is
   // inferred from the state itself.
@@ -1134,7 +1134,7 @@ function generateSessionCode() {
 }
 
 // Fire-and-forget telemetry write. Never blocks or breaks the conversation UX —
-// a failed telemetry call should not surface an error to the patient.
+// a failed telemetry call should not surface an error to the person.
 async function sendTelemetry(extra = {}) {
   if (!sessionCode) return;
   const payload = {
@@ -1254,7 +1254,7 @@ function addTranscriptLine(role, text) {
 
 // ── AI Summary via proxy ──────────────────────────────────────────────────────
 
-// Patient Summary Artifact — see clarityiq_artifact_generation_prompt_update_v0_1.md.
+// Summary Artifact — see clarityiq_artifact_generation_prompt_update_v0_2.md.
 // Replaces the old 4-field "Summary v2" schema (interests/concerns/
 // resonating options/questions), which predated the commercial
 // conversation redesign. tier and preferred_track are passed in as
@@ -1264,7 +1264,7 @@ function addTranscriptLine(role, text) {
 // risks the two-places-same-data drift this build has avoided throughout.
 async function generateSummaryWithAI() {
   const transcriptText = transcriptLog
-    .map(t => (t.role === 'agent' ? 'ClarityIQ: ' : 'Patient: ') + t.text)
+    .map(t => (t.role === 'agent' ? 'ClarityIQ: ' : 'Person: ') + t.text)
     .join('\n');
 
   // Final, effective tier — already reflects any mid-conversation upgrade,
@@ -1336,7 +1336,7 @@ function escapeHtmlClient(s) {
 const SESSION_ACCESS_NOTE = "Your access to this conversation is good for six months from today — you're welcome to start a new conversation anytime during that window if new questions come up.";
 const REASSURANCE_NOTE = "It's completely normal to still have questions at this point — that's what your surgical consultation is for. Bring this summary with you.";
 
-// Patient Summary Artifact — v0.2 field order: vision_goal (with
+// Summary Artifact — v0.2 field order: vision_goal (with
 // monovision_history nested as a sub-line) -> topics_covered ->
 // lens_category_interest (now includes focal point / tradeoff preference
 // inline) -> surgeon_questions -> session_access_note (session only) ->
@@ -1469,6 +1469,9 @@ async function submitEmailGate() {
         session_code: sessionCode,
         email,
         access_code: purchaseInfo ? purchaseInfo.access_code : null,
+        // Final, effective tier — known value, not re-derived by the Worker
+        // from summary field presence.
+        tier: convoState ? convoState.tier : 'starter',
         // pendingSummaryResult already matches the artifact schema exactly
         // (from generateSummaryWithAI() or its fallback) — passed through
         // directly rather than reconstructed field-by-field.
