@@ -898,7 +898,7 @@ document.getElementById('gate-input').addEventListener('keydown', (e) => {
 function showAccessCodeModal(result) {
   document.getElementById('access-code-value').textContent = result.access_code;
   const note = result.tier === 'session'
-    ? `Unlocks your IOL Clarity Session for 12 months, and you can return to it as many times as you'd like during that window.`
+    ? `Unlocks your IOL Clarity Session for 6 months, and you can return to it as many times as you'd like during that window.`
     : `Unlocks your IOL Clarity Starter — a single session.`;
   document.getElementById('access-code-note').textContent = note;
   document.getElementById('access-code-modal').classList.add('show');
