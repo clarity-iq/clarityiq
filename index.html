@@ -291,6 +291,11 @@ body {
 .surgeon-q-block { margin-top: 10px; background: #fffbf0; border: 1px solid #fac775; border-radius: 10px; padding: 10px 12px; }
 .surgeon-q-label { font-size: 11px; font-weight: 600; color: #854F0B; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
 .surgeon-q-text  { font-size: 13px; color: #4a3000; line-height: 1.5; }
+.surgeon-q-list  { margin: 0; padding-left: 18px; font-size: 13px; color: #4a3000; line-height: 1.6; }
+.summary-closing-note {
+  font-size: 12.5px; color: #5f5e5a; line-height: 1.5; text-align: center;
+  font-style: italic; padding: 6px 4px 2px;
+}
 #summary-ref-code {
   font-size: 10.5px; color: #b4b2a9; text-align: center;
   letter-spacing: 0.03em; padding: 6px 16px 0; flex-shrink: 0;
@@ -1271,28 +1276,28 @@ async function generateSummaryWithAI() {
     ? `- tier: "session"\n- preferred_track: "${preferredTrack || 'not captured'}"`
     : `- tier: "starter"`;
 
-  const prompt = `You are extracting a patient summary from a completed ClarityIQ conversation transcript. This summary will be read by the patient and shown to their surgeon, so accuracy and using the patient's own language matters more than polish.
+  const prompt = `You are extracting a summary from a completed ClarityIQ conversation transcript. This summary will be read by the person and shown to their surgeon, so accuracy and using the person's own language matters more than polish.
 
-You will be given the transcript along with two known values: the patient's tier ("starter" or "session," reflecting their final status — already accounts for any mid-conversation upgrade) and, for session-tier patients, their preferred track. Use these as given facts — do not re-derive tier or track from the transcript yourself.
+You will be given the transcript along with two known values: the person's tier ("starter" or "session," reflecting their final status — already accounts for any mid-conversation upgrade) and, for session-tier people, their preferred track. Use these as given facts — do not re-derive tier or track from the transcript yourself.
 
 Known values (already recorded, do not re-derive):
 ${knownValues}
 
-SOURCE OF TRUTH RULE: Stage 6 contains an explicit confirmation moment where the agent states back its understanding of the patient's goal and track, and the patient confirms or corrects it. If the patient corrected anything at that point, the confirmed/corrected version is authoritative — use it, not earlier statements in the conversation that were later corrected.
+SOURCE OF TRUTH RULE: Stage 6 contains an explicit confirmation moment where the agent states back its understanding of the person's goal and track, and the person confirms or corrects it. If the person corrected anything at that point, the confirmed/corrected version is authoritative — use it, not earlier statements in the conversation that were later corrected.
 
-vision_goal: Extract the patient's stated goal in their own words, as confirmed in Stage 6. Do not paraphrase into different language than what the patient actually said.
+vision_goal: Extract the person's stated goal in their own words, as confirmed in Stage 6. Do not paraphrase into different language than what the person actually said.
 
-preferred_focal_point: If the given preferred track is B or C, extract the patient's stated near/far preference in plain language. If the given preferred track is A, extract their stated tradeoff preference (range vs. visual side effects) in plain language — phrase this naturally, it is not a near/far answer and should not be forced into that shape. If the patient is starter tier and this was never discussed, omit the field entirely.
+monovision_history: If the transcript indicates the person has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A". This can apply regardless of tier.
 
-monovision_history: If the transcript indicates the patient has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A".
+topics_covered: List the specific topics actually discussed in this conversation, in this person's session — not a generic list. For session-tier people, include which track(s) were explored. For starter-tier people, list the foundational topics covered (do not list track content, since starter-tier people did not receive it).
 
-topics_covered: List the specific topics actually discussed in this conversation, in the patient's session — not a generic list. For session-tier patients, include which track(s) were explored. For starter-tier patients, list the foundational topics covered (do not list track content, since starter-tier patients did not receive it).
+lens_category_interest: Session tier only — omit entirely for starter tier. Start from the given preferred track, translated to plain language ("advanced technology," "toric," or "basic monofocal"). Then add the person's specific preference within that track: for Track A, their stated range-vs-side-effects tradeoff preference, phrased naturally. For Track B or C, their stated near/far focal point preference. If the transcript shows the person specifically asked about or dove deep into a named lens (e.g. Vivity, PanOptix, IC-8, LAL) during that track's deep-dive content, append that lens name as well.
 
-lens_category_interest: Session tier only — omit entirely for starter tier. Start from the given preferred track, translated to plain language ("advanced technology," "toric," or "basic monofocal"). If the transcript shows the patient specifically asked about or dove deep into a named lens (e.g. Vivity, PanOptix, IC-8, LAL) during that track's deep-dive content, append that lens name to the field.
+surgeon_questions: Extract the polished version of each surgeon question raised in Stage 5 — the version the agent phrased and the person confirmed, not their raw first attempts and not new re-summarizations of them now. There will be between 1 and 3. Preserve the order they were raised in. Carry each forward as close to verbatim as possible.
 
-surgeon_question: Extract the polished version of the patient's surgeon question from Stage 5 — the version the agent phrased and the patient confirmed, not their raw first attempt and not a new re-summarization of it now. Carry it forward as close to verbatim as possible.
+starter_scope_note: Starter tier only. Generate one honest, brief sentence noting that this summary reflects the starter session, and that full lens category comparison was outside its scope. Omit entirely for session-tier people.
 
-starter_scope_note: Starter tier only. Generate one honest, brief sentence noting that this summary reflects the starter session, and that full lens category comparison was outside its scope. Omit entirely for session-tier patients.
+session_access_note and reassurance_note: these are NOT extracted from the transcript — they are fixed boilerplate text applied at render time based on tier, not generated by this prompt. Do not include them in the JSON you return.
 
 Conversation transcript:
 ${transcriptText}
@@ -1301,11 +1306,10 @@ Return only the JSON object below, no other text — omit any field per the rule
 
 {
   "vision_goal": "...",
-  "preferred_focal_point": "...",
   "monovision_history": "...",
   "topics_covered": ["..."],
   "lens_category_interest": "...",
-  "surgeon_question": "...",
+  "surgeon_questions": ["..."],
   "starter_scope_note": "..."
 }`;
 
@@ -1327,24 +1331,28 @@ function escapeHtmlClient(s) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Patient Summary Artifact — replaces the old 4-field "Summary v2" cards
-// entirely. vision_goal, preferred_focal_point, and monovision_history
-// render together under one "My vision goal" card as sub-lines, not
-// separate cards — a deliberate grouping decision (they're all facets of
-// what the patient told us about their own vision), not a shortcut. Every
-// other field may legitimately be absent per the extraction prompt's
-// omission rules — the rendered summary should look tier-native, never
-// showing an empty/placeholder card for a field that doesn't apply.
+// Fixed boilerplate, not model-generated — applied at render time based on
+// final effective tier (see clarityiq_artifact_generation_prompt_update_v0_2.md §1, §2).
+const SESSION_ACCESS_NOTE = "Your access to this conversation is good for six months from today — you're welcome to start a new conversation anytime during that window if new questions come up.";
+const REASSURANCE_NOTE = "It's completely normal to still have questions at this point — that's what your surgical consultation is for. Bring this summary with you.";
+
+// Patient Summary Artifact — v0.2 field order: vision_goal (with
+// monovision_history nested as a sub-line) -> topics_covered ->
+// lens_category_interest (now includes focal point / tradeoff preference
+// inline) -> surgeon_questions -> session_access_note (session only) ->
+// starter_scope_note (starter only) -> reassurance_note (always last).
+// Every field but reassurance_note may legitimately be absent per the
+// extraction prompt's omission rules — the rendered summary should look
+// tier-native, never showing an empty/placeholder card for a field that
+// doesn't apply.
 function renderSummary(summary) {
   const body = document.getElementById('summary-body');
   body.innerHTML = '';
+  const tier = convoState ? convoState.tier : 'starter';
 
   const goalCard = document.createElement('div');
   goalCard.className = 'summary-card';
   let goalHtml = `<div class="summary-card-label">My vision goal</div><div class="summary-card-value">"${escapeHtmlClient(summary.vision_goal)}"</div>`;
-  if (summary.preferred_focal_point) {
-    goalHtml += `<div class="summary-card-subline">${escapeHtmlClient(summary.preferred_focal_point)}</div>`;
-  }
   if (summary.monovision_history) {
     goalHtml += `<div class="summary-card-subline">${escapeHtmlClient(summary.monovision_history)}</div>`;
   }
@@ -1366,11 +1374,22 @@ function renderSummary(summary) {
     body.appendChild(lensCard);
   }
 
-  if (summary.surgeon_question) {
+  if (summary.surgeon_questions && summary.surgeon_questions.length) {
     const qCard = document.createElement('div');
     qCard.className = 'summary-card';
-    qCard.innerHTML = `<div class="surgeon-q-block" style="margin-top:0"><div class="surgeon-q-label">Questions for your surgeon</div><div class="surgeon-q-text">${escapeHtmlClient(summary.surgeon_question)}</div></div>`;
+    const qs = summary.surgeon_questions;
+    const inner = qs.length === 1
+      ? `<div class="surgeon-q-text">${escapeHtmlClient(qs[0])}</div>`
+      : `<ol class="surgeon-q-list">${qs.map(q => `<li>${escapeHtmlClient(q)}</li>`).join('')}</ol>`;
+    qCard.innerHTML = `<div class="surgeon-q-block" style="margin-top:0"><div class="surgeon-q-label">Questions for your surgeon</div>${inner}</div>`;
     body.appendChild(qCard);
+  }
+
+  if (tier === 'session') {
+    const accessCard = document.createElement('div');
+    accessCard.className = 'summary-card';
+    accessCard.innerHTML = `<div class="summary-card-label">Your access</div><div class="summary-card-value">${escapeHtmlClient(SESSION_ACCESS_NOTE)}</div>`;
+    body.appendChild(accessCard);
   }
 
   if (summary.starter_scope_note) {
@@ -1379,6 +1398,11 @@ function renderSummary(summary) {
     noteCard.innerHTML = `<div class="summary-card-note">${escapeHtmlClient(summary.starter_scope_note)}</div>`;
     body.appendChild(noteCard);
   }
+
+  const closing = document.createElement('div');
+  closing.className = 'summary-closing-note';
+  closing.textContent = REASSURANCE_NOTE;
+  body.appendChild(closing);
 
   showSummaryFooterCode();
 }
@@ -1404,7 +1428,7 @@ async function buildAndShowSummary() {
     const fallbackTier = convoState ? convoState.tier : 'starter';
     pendingSummaryResult = {
       vision_goal: 'Vision goals discussed during conversation — extraction unavailable, please discuss directly with your surgeon.',
-      surgeon_question: 'Ask your surgeon which lens best fits your eye measurements and vision goals.',
+      surgeon_questions: ['Ask your surgeon which lens best fits your eye measurements and vision goals.'],
       ...(fallbackTier === 'session' ? { lens_category_interest: 'To be confirmed with your surgeon.' } : {}),
       ...(fallbackTier === 'starter' ? { starter_scope_note: 'This summary reflects your starter session — full lens category comparison was outside its scope.' } : {}),
     };
