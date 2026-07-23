@@ -1711,17 +1711,51 @@ function resetUI() {
 }
 
 // ── Save summary ──────────────────────────────────────────────────────────────
+// html2canvas captures the live element exactly as rendered — #summary-body
+// scrolls internally (overflow-y: auto) inside a height-constrained flex
+// chain, so capturing it directly only grabs whatever happened to be
+// scrolled into view, not the full summary. Fix: capture an off-screen
+// clone at natural content height instead, with scrolling/height
+// constraints stripped, then discard the clone.
 async function saveSummaryImage() {
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
+
+  const original = document.getElementById('summary');
+  const clone = original.cloneNode(true);
+  const cloneBody = clone.querySelector('#summary-body');
+
+  // Strip every id before the clone ever touches the live DOM — avoids
+  // duplicate-id collisions with the real #summary/#summary-body while
+  // both exist simultaneously. JS references above stay valid regardless.
+  clone.removeAttribute('id');
+  clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+  clone.style.position  = 'fixed';
+  clone.style.top       = '0';
+  clone.style.left      = '-99999px';
+  clone.style.display   = 'flex';
+  clone.style.height    = 'auto';
+  clone.style.maxHeight = 'none';
+  clone.style.overflow  = 'visible';
+  clone.style.width     = original.offsetWidth + 'px';
+  if (cloneBody) {
+    cloneBody.style.overflow  = 'visible';
+    cloneBody.style.maxHeight = 'none';
+    cloneBody.style.flex      = 'none';
+  }
+  document.body.appendChild(clone);
+
   try {
-    const canvas = await html2canvas(document.getElementById('summary'), { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
     const link = document.createElement('a');
     link.download = 'clarityiq-summary.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
   } catch(e) {
     alert('Could not save image. Please take a screenshot manually.');
+  } finally {
+    document.body.removeChild(clone);
   }
   btn.disabled = false; btn.innerHTML = '⬇ Save summary';
 }
