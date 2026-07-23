@@ -1196,9 +1196,16 @@ function setStatus(state, text) {
 }
 
 function stripMarkdown(text) {
-  return (text||'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1')
+  return (text||'')
+    // ElevenLabs expressive/delivery tags (e.g. [happy], [warmly], [sighs])
+    // are spoken-performance directives, not literal text — strip before
+    // they ever reach the transcript (and, downstream, the summary prompt).
+    .replace(/\[[^\]]*\]/g,'')
+    .replace(/\*\*(.+?)\*\*/g,'$1').replace(/\*(.+?)\*/g,'$1')
     .replace(/__(.+?)__/g,'$1').replace(/_(.+?)_/g,'$1')
-    .replace(/#{1,6}\s+/g,'').replace(/`(.+?)`/g,'$1').trim();
+    .replace(/#{1,6}\s+/g,'').replace(/`(.+?)`/g,'$1')
+    .replace(/\s{2,}/g,' ')
+    .trim();
 }
 
 function showError(msg) { const b=document.getElementById('error-box'); b.textContent=msg; b.style.display='block'; }
@@ -1767,37 +1774,22 @@ function resetUI() {
 // scrolled into view, not the full summary. Fix: capture an off-screen
 // clone at natural content height instead, with scrolling/height
 // constraints stripped, then discard the clone.
+// html2canvas computes what to capture from the target's on-screen
+// coordinates — an off-screen clone (position: fixed; left: -99999px) is
+// outside that coordinate space and renders blank/clipped, which is why
+// the previous attempt at this still didn't produce a full image. Reusing
+// the "Full view" un-scrolling (see body.summary-expanded rules above)
+// keeps the element on-screen, in its normal position, just briefly at
+// full natural height, which html2canvas handles correctly.
 async function saveSummaryImage() {
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.textContent = 'Saving…';
 
-  const original = document.getElementById('summary');
-  const clone = original.cloneNode(true);
-  const cloneBody = clone.querySelector('#summary-body');
-
-  // Strip every id before the clone ever touches the live DOM — avoids
-  // duplicate-id collisions with the real #summary/#summary-body while
-  // both exist simultaneously. JS references above stay valid regardless.
-  clone.removeAttribute('id');
-  clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
-
-  clone.style.position  = 'fixed';
-  clone.style.top       = '0';
-  clone.style.left      = '-99999px';
-  clone.style.display   = 'flex';
-  clone.style.height    = 'auto';
-  clone.style.maxHeight = 'none';
-  clone.style.overflow  = 'visible';
-  clone.style.width     = original.offsetWidth + 'px';
-  if (cloneBody) {
-    cloneBody.style.overflow  = 'visible';
-    cloneBody.style.maxHeight = 'none';
-    cloneBody.style.flex      = 'none';
-  }
-  document.body.appendChild(clone);
+  const wasExpanded = document.body.classList.contains('summary-expanded');
+  if (!wasExpanded) document.body.classList.add('summary-expanded');
 
   try {
-    const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+    const canvas = await html2canvas(document.getElementById('summary'), { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
     const link = document.createElement('a');
     link.download = 'clarityiq-summary.png';
     link.href = canvas.toDataURL('image/png');
@@ -1805,7 +1797,7 @@ async function saveSummaryImage() {
   } catch(e) {
     alert('Could not save image. Please take a screenshot manually.');
   } finally {
-    document.body.removeChild(clone);
+    if (!wasExpanded) document.body.classList.remove('summary-expanded');
   }
   btn.disabled = false; btn.innerHTML = '⬇ Save summary';
 }
