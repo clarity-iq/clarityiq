@@ -312,6 +312,23 @@ body {
 }
 #save-btn:hover { background: #0f6e56; }
 #save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+#expand-btn {
+  padding: 10px 14px; background: transparent; color: #5f5e5a;
+  border: 1px solid #d8d6ce; border-radius: 10px;
+  font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
+  transition: all 0.15s;
+}
+#expand-btn:hover { background: #f5f5f0; }
+
+/* Full-view mode: lets the summary flow in normal page scroll (instead of
+   a small fixed-height inner box) so a phone's native full-page screenshot
+   tool can capture the whole thing. */
+body.summary-expanded { align-items: flex-start; }
+body.summary-expanded #app {
+  height: auto; max-height: none; overflow: visible;
+}
+body.summary-expanded #summary { overflow: visible; }
+body.summary-expanded #summary-body { overflow: visible; max-height: none; flex: none; }
 
 /* ── Loading overlay ── */
 #summary-loading {
@@ -659,6 +676,7 @@ body {
     <div id="summary-ref-code"></div>
     <div id="summary-footer">
       <button id="restart-btn">Start over</button>
+      <button id="expand-btn">⤢ Full view</button>
       <button id="save-btn">⬇ Save summary</button>
     </div>
   </div>
@@ -1685,6 +1703,8 @@ function resetUI() {
   document.getElementById('email-gate-error').style.display = 'none';
   document.getElementById('transcript-wrap').innerHTML        = '';
   document.getElementById('summary').style.display            = 'none';
+  document.body.classList.remove('summary-expanded');
+  document.getElementById('expand-btn').textContent           = '⤢ Full view';
   document.getElementById('voice-panel').style.display        = 'none';
   document.getElementById('action-bar').style.display         = 'none';
   document.getElementById('expect-card').style.display        = 'block';
@@ -1830,6 +1850,11 @@ document.getElementById('begin-btn').addEventListener('click', startConversation
 document.getElementById('end-btn').addEventListener('click', endConversation);
 document.getElementById('restart-btn').addEventListener('click', resetUI);
 document.getElementById('save-btn').addEventListener('click', saveSummaryImage);
+document.getElementById('expand-btn').addEventListener('click', () => {
+  const expanded = document.body.classList.toggle('summary-expanded');
+  document.getElementById('expand-btn').textContent = expanded ? '✕ Collapse' : '⤢ Full view';
+  if (expanded) document.getElementById('summary').scrollIntoView({ block: 'start' });
+});
 
 document.getElementById('speaker-btn').addEventListener('click', () => {
   if (!conversation) return;
