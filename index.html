@@ -141,6 +141,23 @@ body {
 #status-pill.speaking   #status-dot { background: #1D9E75; }
 #status-pill.idle       #status-dot { background: #1D9E75; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+#upgrade-link-banner {
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 16px 20px; margin: 4px 0;
+  background: #e1f5ee; border: 1px solid #1D9E75; border-radius: 14px;
+  text-align: center; animation: upgrade-pulse 2.2s ease-in-out infinite;
+}
+#upgrade-link-text { font-size: 13px; color: #0f6e56; font-weight: 500; }
+#upgrade-link-btn {
+  display: inline-block; padding: 11px 20px;
+  background: #1D9E75; color: #fff; text-decoration: none;
+  border-radius: 10px; font-size: 14px; font-weight: 600;
+}
+#upgrade-link-btn:hover { background: #0f6e56; }
+@keyframes upgrade-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(29,158,117,0.15); }
+  50%     { box-shadow: 0 0 0 6px rgba(29,158,117,0); }
+}
 
 /* ── Orb ── */
 #orb {
@@ -584,20 +601,9 @@ body {
     <div id="progress-track"><div id="progress-fill"></div></div>
   </div>
 
-  <!-- Topic roadmap — 6 dots, no labels -->
-  <div id="roadmap">
-    <div class="roadmap-step"><div class="roadmap-dot active" id="rdot-1">1</div></div>
-    <div class="roadmap-connector" id="rcon-1"></div>
-    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-2">2</div></div>
-    <div class="roadmap-connector" id="rcon-2"></div>
-    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-3">3</div></div>
-    <div class="roadmap-connector" id="rcon-3"></div>
-    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-4">4</div></div>
-    <div class="roadmap-connector" id="rcon-4"></div>
-    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-5">5</div></div>
-    <div class="roadmap-connector" id="rcon-5"></div>
-    <div class="roadmap-step"><div class="roadmap-dot" id="rdot-6">6</div></div>
-  </div>
+  <!-- Topic roadmap — 5 or 6 dots depending on tier, no labels. Populated
+       entirely by renderRoadmap() — see the anchor state machine section. -->
+  <div id="roadmap"></div>
 
   <!-- Voice panel — scrollable -->
   <div id="voice-panel" style="display:none">
@@ -609,6 +615,12 @@ body {
     </div>
 
     <div id="status-pill"><div id="status-dot"></div><span id="status-text">Ready to begin</span></div>
+
+    <!-- Inline tappable upgrade payment link — present_upgrade_link client tool -->
+    <div id="upgrade-link-banner" style="display:none">
+      <div id="upgrade-link-text">Complete your upgrade to the full IOL Clarity Session</div>
+      <a id="upgrade-link-btn" href="#" target="_blank" rel="noopener">Complete upgrade — $400</a>
+    </div>
 
     <div id="orb">
       <svg id="orb-icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -866,27 +878,196 @@ document.getElementById('access-code-continue').addEventListener('click', () => 
   document.getElementById('access-code-modal').classList.remove('show');
 });
 
-const STAGES = [
-  { label: 'Getting started', pct: 0   },
-  { label: 'Welcome',         pct: 5   },
-  { label: 'IOL Education',   pct: 20  },
-  { label: 'Your Goals',      pct: 40  },
-  { label: 'Lens Options',    pct: 60  },
-  { label: 'Your Questions',  pct: 80  },
-  { label: 'Summary ready',   pct: 100 },
+// ── Anchor-phrase state machine (commercial build) ──────────────────────────
+// Replaces the prototype's linear 1-6 counter — see
+// clarityiq_anchor_state_machine_spec_v0_1.md §1 for why: tier skip, track
+// switching, and mid-conversation tier change are all non-linear movements
+// a forward-only counter can't represent. Each phrase match now updates a
+// state object (§2) instead of incrementing an index.
+//
+// tier_gate is a real stage value but not a tracker dot — it's a
+// sub-moment within the Vision Goals -> Tracks transition (§7).
+const STAGE_ORDER  = ['welcome', 'foundations', 'vision_goals', 'tier_gate', 'lens_options', 'readiness', 'summary'];
+const STAGE_LABELS = {
+  welcome: 'Welcome', foundations: 'Foundations', vision_goals: 'Vision Goals',
+  lens_options: 'Tracks', readiness: 'Readiness', summary: 'Summary',
+};
+// Dot sequence per tier — lens_options (Tracks) only appears for session tier
+// or after a mid-conversation upgrade (§7: dot count 5 vs 6, recomputed live).
+function dotStagesFor(tier) {
+  return tier === 'session'
+    ? ['welcome', 'foundations', 'vision_goals', 'lens_options', 'readiness', 'summary']
+    : ['welcome', 'foundations', 'vision_goals', 'readiness', 'summary'];
+}
+
+// §3 anchor phrase table — exact match against the commercial script.
+// Welcome is initialized directly at session start (fixed first-message
+// field, not live LLM generation) rather than detected here — see §3 note.
+const ANCHOR_PHRASES = [
+  { phrase: "let's start with the basics of cataracts and lens options.", to: 'foundations' },
+  { phrase: "now let's talk about your goals and your day-to-day life.", to: 'vision_goals' },
+  { phrase: "let's talk about what comes next.", to: 'tier_gate' },
+  { phrase: "based on what you've shared, let's talk about your lens options.", to: 'lens_options' },
+  { phrase: "let's get you ready for your appointment.", to: 'readiness' },
+  { phrase: "let's make sure i've got everything right before we wrap up.", to: 'summary' },
+];
+const TRACK_ENTRY_PHRASES = [
+  { phrase: "let's talk about your advanced technology lens options.", track: 'A' },
+  { phrase: "let's talk about your toric lens options.", track: 'B' },
+  { phrase: "let's talk about your basic lens option.", track: 'C' },
 ];
 
-// Semantic stage detection — exact anchor phrases the agent is instructed to say
-const STAGE_SIGNALS = [
-  { stage: 1, phrases: ["ready to get started", "ready to begin"] },
-  { stage: 2, phrases: ["let me start with a quick overview of how this works"] },
-  { stage: 3, phrases: ["now let's talk about your goals", "now let's talk about your vision goals"] },
-  { stage: 4, phrases: ["based on what you've shared, let's talk about your lens options"] },
-  { stage: 5, phrases: ["now let's cover any questions you have"] },
-  { stage: 6, phrases: ["we're ready to put together your summary"] },
-];
+// §5 valid stage transitions. Two conditional exceptions (checked
+// separately below): vision_goals -> lens_options only valid when
+// tier === 'session' (session skips tier_gate entirely); vision_goals ->
+// readiness only valid when tier_gate_outcome === 'declined' (Starter
+// skips lens_options entirely).
+const VALID_LINEAR_TRANSITIONS = {
+  welcome: ['foundations'], foundations: ['vision_goals'], vision_goals: ['tier_gate'],
+  tier_gate: ['lens_options'], lens_options: ['readiness'], readiness: ['summary'],
+};
 
-let currentStage   = 0;
+const STALE_STATE_THRESHOLD_MS = 10 * 60 * 1000; // §6 — recommended starting point, tunable
+
+let convoState = null; // the state object itself — see initConvoState()
+let staleLogged = false;
+
+// Testers/beta access (password gate, no purchase) default to full
+// "session" tier behavior — richest content, exercises both the tier
+// gate skip and everything downstream. This app has no public "free"
+// tier per CLAUDE.md; CURRENT_TIER === 'free' here only ever means a
+// gate/tester session, never a real customer.
+function initConvoState() {
+  const machineTier = (CURRENT_TIER === 'starter') ? 'starter' : 'session';
+  convoState = {
+    tier: machineTier,
+    current_stage: 'welcome',
+    current_track: null,
+    routed_track: null,
+    tracks_visited: [],
+    tracks_completed: [],
+    track_switch_log: [],
+    preferred_track: null,
+    tier_gate_outcome: null,
+    session_start_time: Date.now(),
+    last_state_change_time: Date.now(),
+  };
+  staleLogged = false;
+}
+
+async function logAnomaly(severity, type, detail) {
+  try {
+    await fetch(PROXY_URL + '/log-anomaly', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+      body: JSON.stringify({ session_code: sessionCode, severity, type, detail }),
+    });
+  } catch (e) {
+    console.error('Anomaly log failed (non-blocking):', e);
+  }
+}
+
+// §6 — stale state is expected behavior in this design (Foundations and
+// Stage 4 tracks are meant to be lingered in), not a failure signal. Log
+// once for review, never interrupt the session.
+setInterval(() => {
+  if (!convoState || staleLogged) return;
+  if (Date.now() - convoState.last_state_change_time > STALE_STATE_THRESHOLD_MS) {
+    staleLogged = true;
+    logAnomaly('anomaly', 'stale_state', { current_stage: convoState.current_stage, minutes_since_change: Math.round((Date.now() - convoState.last_state_change_time) / 60000) });
+  }
+}, 60000);
+
+function touchState() {
+  convoState.last_state_change_time = Date.now();
+  staleLogged = false;
+}
+
+// §5 stage-transition validity + anomaly logging. Called on every anchor
+// phrase match, before applying the transition.
+function checkStageTransition(toStage) {
+  const from = convoState.current_stage;
+  if (from === toStage) return; // re-fired phrase for the stage already active — not a jump, ignore
+
+  const linearlyValid = (VALID_LINEAR_TRANSITIONS[from] || []).includes(toStage);
+  const sessionSkipsTierGate = (from === 'vision_goals' && toStage === 'lens_options' && convoState.tier === 'session');
+  const starterDeclinedSkipsTracks = (from === 'vision_goals' && toStage === 'readiness' && convoState.tier_gate_outcome === 'declined');
+  const midConvoUpgradeReachesTracks = (from === 'tier_gate' && toStage === 'lens_options'); // covered by linearlyValid already, kept explicit for clarity
+
+  if (linearlyValid || sessionSkipsTierGate || starterDeclinedSkipsTracks || midConvoUpgradeReachesTracks) return;
+
+  // Anomalous: phrase fired when current stage doesn't logically precede it.
+  logAnomaly('anomaly', 'unexpected_stage_transition', { from, to: toStage });
+}
+
+function checkTrackEntryAnomaly(track) {
+  if (convoState.tier === 'starter' && convoState.tier_gate_outcome !== 'upgraded') {
+    logAnomaly('anomaly', 'starter_reached_track_content', { track });
+  }
+}
+
+// Hard precondition (§5) — not a soft anomaly. The guarantee depends on at
+// least one track genuinely completed before Stage 5. Logged at higher
+// severity since it represents the guarantee's core condition possibly
+// unmet for this session. This only logs/flags — it does not block the
+// UI; the conversation script itself is what enforces the requirement
+// live (§4 "EXITING STAGE 4 — MINIMUM REQUIREMENT").
+function checkReadinessPrecondition() {
+  if (convoState.tier === 'session' && convoState.tracks_completed.length === 0) {
+    logAnomaly('hard_precondition', 'readiness_without_completed_track', { tracks_visited: convoState.tracks_visited });
+  }
+}
+
+function applyStageTransition(toStage) {
+  checkStageTransition(toStage);
+  // Implicit decline: reaching readiness as starter with no outcome ever
+  // set means the patient declined at the tier gate without attempting an
+  // upgrade at all — there's no dedicated tool call for a pure decline
+  // (only the upgrade-attempt outcomes are tool-driven), so this is
+  // inferred from the state itself.
+  if (toStage === 'readiness' && convoState.tier === 'starter' && convoState.tier_gate_outcome === null) {
+    convoState.tier_gate_outcome = 'declined';
+  }
+  if (toStage === 'readiness') checkReadinessPrecondition();
+  convoState.current_stage = toStage;
+  touchState();
+  renderRoadmap();
+  updateProgressBar();
+  sendTelemetry();
+}
+
+// ── Progress tracker (§7) ────────────────────────────────────────────────
+// Dynamically rendered, not static markup — dot count depends on tier and
+// must update live on a mid-conversation upgrade (§7, Tier Logic build
+// note). Keeps the existing compact numbered-dot visual style; only the
+// count and mapping are new.
+function renderRoadmap() {
+  const dots = dotStagesFor(convoState.tier);
+  const container = document.getElementById('roadmap');
+  container.innerHTML = '';
+  const currentIdx = dots.indexOf(convoState.current_stage);
+  // tier_gate has no dot of its own — while active, treat vision_goals as
+  // still the current dot (the sub-moment hasn't left Vision Goals yet).
+  const effectiveIdx = currentIdx === -1 ? dots.indexOf('vision_goals') : currentIdx;
+
+  dots.forEach((stageKey, i) => {
+    const step = document.createElement('div');
+    step.className = 'roadmap-step';
+    const dot = document.createElement('div');
+    if (i < effectiveIdx)       { dot.className = 'roadmap-dot complete'; dot.textContent = '✓'; }
+    else if (i === effectiveIdx){ dot.className = 'roadmap-dot active';   dot.textContent = i + 1; }
+    else                        { dot.className = 'roadmap-dot';          dot.textContent = i + 1; }
+    dot.title = STAGE_LABELS[stageKey];
+    step.appendChild(dot);
+    container.appendChild(step);
+    if (i < dots.length - 1) {
+      const con = document.createElement('div');
+      con.className = 'roadmap-connector' + (i < effectiveIdx ? ' complete' : '');
+      container.appendChild(con);
+    }
+  });
+}
+
 let conversation   = null;
 let transcriptLog  = [];
 let isMicMuted     = false;
@@ -898,8 +1079,9 @@ let sessionCode      = '';
 let sessionStartedAt = 0;
 let ageBand          = null;   // set via pre-survey tap/select (1.3, moved from voice)
 let populationFilter = null;   // set via pre-survey tap/select (1.4, moved from voice)
-let track             = null;  // set via record_track client tool (Batch 4.7 depends on this)
 let clarityTapCount  = 0;      // stubbed — no clarity-tap UI exists yet
+let upgradeCheckoutSessionId = null; // in-progress upgrade Checkout Session, if any
+let upgradeCheckAttempts     = 0;
 
 // ── Pre/post survey state (Batch 2.1) — joined onto the same telemetry record
 // via sessionCode, NOT a separate record. See sendTelemetry() below.
@@ -923,11 +1105,18 @@ async function sendTelemetry(extra = {}) {
   if (!sessionCode) return;
   const payload = {
     session_code: sessionCode,
-    stage: currentStage,
+    tier: convoState ? convoState.tier : null,
+    current_stage: convoState ? convoState.current_stage : null,
+    current_track: convoState ? convoState.current_track : null,
+    routed_track: convoState ? convoState.routed_track : null,
+    tracks_visited: convoState ? convoState.tracks_visited : [],
+    tracks_completed: convoState ? convoState.tracks_completed : [],
+    track_switch_log: convoState ? convoState.track_switch_log : [],
+    preferred_track: convoState ? convoState.preferred_track : null,
+    tier_gate_outcome: convoState ? convoState.tier_gate_outcome : null,
     started_at: sessionStartedAt ? new Date(sessionStartedAt).toISOString() : null,
     updated_at: new Date().toISOString(),
     duration_ms: sessionStartedAt ? Date.now() - sessionStartedAt : 0,
-    track,
     age_band: ageBand,
     population_filter: populationFilter,
     clarity_tap_count: clarityTapCount,
@@ -948,41 +1137,17 @@ async function sendTelemetry(extra = {}) {
   }
 }
 
-// ── Roadmap ───────────────────────────────────────────────────────────────────
-function updateRoadmap(stage) {
-  for (let i = 1; i <= 6; i++) {
-    const dot = document.getElementById('rdot-' + i);
-    const con = document.getElementById('rcon-' + i);
-    if (!dot) continue;
-    if (i < stage) {
-      dot.className   = 'roadmap-dot complete';
-      dot.textContent = '✓';
-    } else if (i === stage) {
-      dot.className   = 'roadmap-dot active';
-      dot.textContent = i;
-    } else {
-      dot.className   = 'roadmap-dot';
-      dot.textContent = i;
-    }
-    if (con) con.className = 'roadmap-connector' + (i < stage ? ' complete' : '');
-  }
-}
-
-// ── Progress ──────────────────────────────────────────────────────────────────
-function setProgress(n) {
-  currentStage = Math.max(currentStage, n);
-  const s = STAGES[Math.min(currentStage, STAGES.length - 1)];
-  document.getElementById('progress-fill').style.width        = s.pct + '%';
-  document.getElementById('progress-stage-label').textContent = s.label;
-  document.getElementById('progress-pct').textContent         = s.pct + '%';
-  updateRoadmap(currentStage);
-}
-
-// Stage only advances forward, never back
-function advanceStage(n) {
-  if (n <= currentStage) return;
-  setProgress(n);
-  sendTelemetry();
+// ── Progress bar (percentage strip above the dot roadmap) ──────────────────
+// Derived from position within the current tier's dot sequence — no longer
+// a fixed 7-entry table, since the sequence itself now varies by tier.
+function updateProgressBar() {
+  const dots = dotStagesFor(convoState.tier);
+  const currentIdx = dots.indexOf(convoState.current_stage);
+  const effectiveIdx = currentIdx === -1 ? dots.indexOf('vision_goals') : currentIdx;
+  const pct = Math.round((effectiveIdx / (dots.length - 1)) * 100);
+  document.getElementById('progress-fill').style.width        = pct + '%';
+  document.getElementById('progress-stage-label').textContent = STAGE_LABELS[dots[effectiveIdx]];
+  document.getElementById('progress-pct').textContent         = pct + '%';
 }
 
 // ── Status / Orb ──────────────────────────────────────────────────────────────
@@ -1022,19 +1187,30 @@ function addTranscriptLine(role, text) {
 
   const lower = clean.toLowerCase();
 
-  // Semantic stage detection — agent messages only, stage only advances forward
-  // Iterate FORWARD so we catch the next stage in sequence, not the highest match
-  if (role === 'agent') {
-    for (let i = 0; i < STAGE_SIGNALS.length; i++) {
-      const sig = STAGE_SIGNALS[i];
-      if (sig.stage > currentStage && sig.phrases.some(p => lower.includes(p))) {
-        advanceStage(sig.stage);
+  // Anchor-phrase detection — agent messages only. See
+  // clarityiq_anchor_state_machine_spec_v0_1.md §3 for the phrase table.
+  if (role === 'agent' && convoState) {
+    for (const entry of ANCHOR_PHRASES) {
+      if (lower.includes(entry.phrase)) {
+        applyStageTransition(entry.to);
         break;
       }
     }
-    // Dynamic summary button — fires on Stage 6 anchor or tap instruction
+    for (const entry of TRACK_ENTRY_PHRASES) {
+      if (lower.includes(entry.phrase)) {
+        checkTrackEntryAnomaly(entry.track);
+        convoState.current_track = entry.track;
+        if (!convoState.tracks_visited.includes(entry.track)) {
+          convoState.tracks_visited.push(entry.track); // set semantics — no duplicates on re-entry
+        }
+        touchState();
+        sendTelemetry();
+        break;
+      }
+    }
+    // Dynamic summary button — fires on the Stage 6 anchor or tap instruction
     if (!summaryReady && (
-      STAGE_SIGNALS[STAGE_SIGNALS.length - 1].phrases.some(p => lower.includes(p)) ||
+      lower.includes("let's make sure i've got everything right before we wrap up.") ||
       lower.includes("tap the button below")
     )) {
       summaryReady = true;
@@ -1046,14 +1222,42 @@ function addTranscriptLine(role, text) {
 }
 
 // ── AI Summary via proxy ──────────────────────────────────────────────────────
+// Track A's decision isn't a near/far focal-point choice like B and C —
+// it's a range-vs-side-effects tradeoff (see the conversation script's
+// Track A "STANDARD ELICITATION" and "FOCAL-POINT / RANGE CONFIRMATION").
+// Ground the AI extraction in the actual preferred_track state (known
+// reliably from record_preferred_track) rather than asking it to infer
+// which lens category applies from loose keyword cues.
+const TRACK_NAMES = {
+  A: 'the advanced technology track (multiple focal points / extended range)',
+  B: 'the toric track (single focal point with astigmatism correction)',
+  C: 'the basic monofocal track (single focal point)',
+};
+function describePreferredTrack() {
+  if (!convoState || !convoState.preferred_track) return 'Not captured during the conversation.';
+  const t = convoState.preferred_track;
+  return TRACK_NAMES[t] || t; // "A"/"B"/"C" expands to a name; the patient's own words pass through as-is
+}
+
 async function generateSummaryWithAI() {
   const transcriptText = transcriptLog
     .map(t => (t.role === 'agent' ? 'ClarityIQ: ' : 'Patient: ') + t.text)
     .join('\n');
 
+  const tier = convoState ? convoState.tier : 'starter';
+  const preferredTrack = convoState ? convoState.preferred_track : null;
+  const trackContext = tier === 'session' && preferredTrack
+    ? `\nConfirmed during the conversation: this patient's preferred track is ${describePreferredTrack()}.\n`
+    : '';
+  const resonatingInstructions = preferredTrack === 'A'
+    ? 'Describe the advanced technology lens option. This track\'s decision is a RANGE-vs-SIDE-EFFECTS tradeoff, not a near/far focal point — extract the patient\'s stated preference from the standard elicitation question (full reading vision vs. fewer visual side effects like halos/glare) and their confirmed answer, not a near/far distinction.'
+    : preferredTrack === 'B' || preferredTrack === 'C'
+    ? 'Describe the lens option (toric or basic monofocal) and the patient\'s confirmed single focal point preference (near vs. far) from the disambiguation question.'
+    : 'The lens option(s) or approach that seemed to resonate with the patient based on their goals, in their own terms — if a preferred track was never confirmed during the conversation (e.g. Starter tier without an upgrade), say so plainly rather than inventing one.';
+
   const prompt = `You are extracting structured data from a cataract surgery IOL education conversation.
 Analyze the conversation carefully and extract ONLY what the patient actually expressed — not what was explained to them.
-
+${trackContext}
 Conversation transcript:
 ${transcriptText}
 
@@ -1061,8 +1265,8 @@ Extract and return ONLY valid JSON in this exact format (no markdown, no explana
 {
   "interests": "One to two sentences on what the patient said matters most to them for their vision after surgery — their own stated priorities, in their own terms.",
   "concerns": "Worries, hesitations, or reservations the patient expressed or implied during the conversation (e.g. cost, adjustment period, dependence on glasses, surgery risk). This is inferred from how they talked, not a direct question that was asked — if truly nothing concerning came up, say so plainly rather than inventing one.",
-  "resonating_options": "The lens option(s) or approach that seemed to resonate with the patient based on their goals. If they said basic or standard, say standard monofocal. If glasses freedom, say trifocal lens (PanOptix). If sharp single-focus, say toric monofocal. Include focal point if discussed. Note more than one option if more than one genuinely resonated.",
-  "surgeon_questions": "The single most important unresolved question the patient should bring to their surgeon, based on their specific conversation."
+  "resonating_options": "${resonatingInstructions}",
+  "surgeon_questions": "The polished, consult-ready version of the one thing the patient said they most want their surgeon to address, confirmed back to them in Stage 5 — use that confirmed version if present in the transcript, not their raw first attempt."
 }`;
 
   const res = await fetch(PROXY_URL, {
@@ -1135,8 +1339,7 @@ async function buildAndShowSummary() {
     };
   }
   document.getElementById('summary-loading').style.display = 'none';
-  setProgress(5);
-  sendTelemetry({ completed: currentStage >= 6 });
+  sendTelemetry({ completed: convoState ? convoState.current_stage === 'summary' : false });
   showScreen('email-gate');
   document.getElementById('email-input').focus();
 }
@@ -1215,15 +1418,106 @@ async function startConversation() {
       agentId: AGENT_ID,
 
       // record_age_band/record_population_filter moved to the pre-survey UI
-      // (tap/select, not voice) — the Stage 1 spoken Q&A felt clunky. Only
-      // record_track remains a live client tool, since track genuinely
-      // depends on how the conversation unfolds in Stage 3 and can't be
-      // known up front. This tool must still be defined in the ElevenLabs
-      // dashboard with the agent's script calling it — that side isn't in
-      // this repo.
+      // (tap/select, not voice) — the Stage 1 spoken Q&A felt clunky.
+      // record_track and the five commercial-build tools below are all
+      // registered on the agent to match — see
+      // clarityiq_anchor_state_machine_spec_v0_1.md §4.
       clientTools: {
         record_track: async ({ track: t }) => {
-          track = t;
+          // Sets the Stage 3 routing signal only — NOT current_track,
+          // that's a Stage 4 concept set by the track-entry anchor phrases.
+          convoState.routed_track = t;
+          touchState();
+          sendTelemetry();
+          return 'recorded';
+        },
+
+        present_upgrade_link: async () => {
+          upgradeCheckAttempts = 0;
+          try {
+            const res = await fetch(PROXY_URL + '/create-upgrade-checkout-session', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+              body: JSON.stringify({ access_code: purchaseInfo ? purchaseInfo.access_code : null }),
+            });
+            const data = await res.json();
+            if (!res.ok || !data.url) {
+              return { ok: false, error: data.error || 'could_not_create_link' };
+            }
+            upgradeCheckoutSessionId = data.checkout_session_id;
+            document.getElementById('upgrade-link-btn').href = data.url;
+            document.getElementById('upgrade-link-banner').style.display = 'flex';
+            return { ok: true };
+          } catch (e) {
+            return { ok: false, error: 'network_error' };
+          }
+        },
+
+        check_upgrade_status: async () => {
+          if (!upgradeCheckoutSessionId) return { status: 'error' };
+          upgradeCheckAttempts++;
+          try {
+            const res = await fetch(PROXY_URL + '/check-upgrade-status', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+              body: JSON.stringify({ checkout_session_id: upgradeCheckoutSessionId }),
+            });
+            const data = await res.json();
+
+            if (data.status === 'confirmed') {
+              document.getElementById('upgrade-link-banner').style.display = 'none';
+              CURRENT_TIER = 'session';
+              convoState.tier = 'session';
+              convoState.tier_gate_outcome = 'upgraded';
+              if (purchaseInfo) purchaseInfo.tier = 'session';
+              touchState();
+              renderRoadmap();
+              updateProgressBar();
+              sendTelemetry();
+              return { status: 'confirmed' };
+            }
+
+            // Spec §4: not confirmed after retries -> declined. Two calls
+            // (this one plus the one before it) matches the conversation
+            // script's "wait briefly, check again" -> give-up sequence.
+            if (upgradeCheckAttempts >= 2) {
+              document.getElementById('upgrade-link-banner').style.display = 'none';
+              convoState.tier_gate_outcome = 'declined';
+              touchState();
+              sendTelemetry();
+              return { status: 'declined' };
+            }
+            return { status: 'pending' };
+          } catch (e) {
+            // Tool failure, not a processing delay — spec §4 treats this as
+            // an immediate decline, not a retry.
+            document.getElementById('upgrade-link-banner').style.display = 'none';
+            convoState.tier_gate_outcome = 'declined';
+            touchState();
+            sendTelemetry();
+            return { status: 'error' };
+          }
+        },
+
+        record_track_switch: async ({ from_track, to_track }) => {
+          convoState.track_switch_log.push({ from: from_track, to: to_track, timestamp: Date.now() });
+          convoState.current_track = to_track;
+          if (!convoState.tracks_visited.includes(to_track)) convoState.tracks_visited.push(to_track);
+          touchState();
+          sendTelemetry();
+          return 'recorded';
+        },
+
+        mark_track_complete: async ({ track: t }) => {
+          if (!convoState.tracks_completed.includes(t)) convoState.tracks_completed.push(t);
+          touchState();
+          sendTelemetry();
+          return 'recorded';
+        },
+
+        record_preferred_track: async ({ track: t }) => {
+          convoState.preferred_track = t;
+          touchState();
           sendTelemetry();
           return 'recorded';
         },
@@ -1231,8 +1525,9 @@ async function startConversation() {
 
       onConnect: () => {
         setStatus('idle', 'Connected — listening');
-        currentStage = 1;
-        setProgress(1);
+        initConvoState();
+        renderRoadmap();
+        updateProgressBar();
         sendTelemetry();
         beginBtn.style.display                                = 'none';
         document.getElementById('expect-card').style.display = 'none';
@@ -1306,7 +1601,10 @@ async function endConversation() {
 
 function resetUI() {
   transcriptLog  = [];
-  currentStage   = 0;
+  convoState     = null;
+  staleLogged    = false;
+  upgradeCheckoutSessionId = null;
+  upgradeCheckAttempts     = 0;
   isMicMuted     = false;
   isSpeakerMuted = false;
   summaryReady   = false;
@@ -1315,13 +1613,13 @@ function resetUI() {
   sessionStartedAt = 0;
   ageBand          = null;
   populationFilter = null;
-  track            = null;
   clarityTapCount  = 0;
   preConfidence  = null;
   preLeaning     = null;
   postConfidence = null;
   postLeaning    = null;
   pendingSummaryResult = null;
+  document.getElementById('upgrade-link-banner').style.display = 'none';
   resetChoiceGroup('pre-age-band-choices');
   resetChoiceGroup('pre-population-choices');
   resetChoiceGroup('pre-confidence-scale');
@@ -1355,7 +1653,7 @@ function resetUI() {
   document.getElementById('progress-fill').style.width        = '0%';
   document.getElementById('progress-stage-label').textContent = 'Getting started';
   document.getElementById('progress-pct').textContent         = '0%';
-  updateRoadmap(1);
+  document.getElementById('roadmap').innerHTML = ''; // rebuilt by renderRoadmap() once the next conversation starts
   showScreen('pre-survey');
 }
 
@@ -1465,8 +1763,9 @@ document.getElementById('mic-btn').addEventListener('click', () => {
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
-setProgress(0);
-updateRoadmap(1);
+// Progress bar / roadmap are rendered once the conversation actually starts
+// (onConnect -> initConvoState() -> renderRoadmap()/updateProgressBar()) —
+// there's no state object to render from before that.
 setStatus('', 'Ready to begin');
 </script>
 </body>
