@@ -1305,7 +1305,7 @@ vision_goal: Extract the person's stated goal in their own words, as confirmed i
 
 monovision_history: If the transcript indicates the person has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A". This can apply regardless of tier.
 
-topics_covered: List the specific topics actually discussed in this conversation, in this person's session — not a generic list. For session-tier people, include which track(s) were explored. For starter-tier people, list the foundational topics covered (do not list track content, since starter-tier people did not receive it).
+topics_covered: List the specific topics actually discussed in this conversation, in this person's session — not a generic list. This field must never be empty or omitted, even for a short or fast-moving conversation — at minimum, list the foundational topics from earlier stages (everyone reaches these regardless of pacing). For session-tier people, also include which track(s) were explored. For starter-tier people, list the foundational topics covered (do not list track content, since starter-tier people did not receive it).
 
 lens_category_interest: Session tier only — omit entirely for starter tier. Start from the given preferred track, translated to plain language ("advanced technology," "toric," or "basic monofocal"). Then add the person's specific preference within that track: for Track A, their stated range-vs-side-effects tradeoff preference, phrased naturally. For Track B or C, their stated near/far focal point preference. If the transcript shows the person specifically asked about or dove deep into a named lens (e.g. Vivity, PanOptix, IC-8, LAL) during that track's deep-dive content, append that lens name as well.
 
@@ -1339,7 +1339,28 @@ Return only the JSON object below, no other text — omit any field per the rule
   const data  = await res.json();
   const raw   = data.content?.map(b => b.text||'').join('').trim();
   const clean = raw.replace(/```json|```/g,'').trim();
-  return JSON.parse(clean);
+  const parsed = JSON.parse(clean);
+
+  // Safety net: despite the prompt instruction that this field must never
+  // be empty, a fast/rushed conversation has occasionally come back with it
+  // omitted. Fall back to known state rather than let the section vanish —
+  // still accurate (everyone reaches the foundational stages regardless of
+  // pacing), just generic instead of transcript-specific.
+  if (!parsed.topics_covered || !parsed.topics_covered.length) {
+    parsed.topics_covered = fallbackTopicsFromState();
+  }
+  return parsed;
+}
+
+const TRACK_LABELS = { A: 'Advanced technology lens options', B: 'Toric lens options', C: 'Basic lens option' };
+function fallbackTopicsFromState() {
+  const topics = ['Cataracts and lens options — the basics', 'Your vision goals and daily routine'];
+  if (convoState) {
+    convoState.tracks_visited.forEach(t => {
+      if (TRACK_LABELS[t]) topics.push(TRACK_LABELS[t]);
+    });
+  }
+  return topics;
 }
 
 function escapeHtmlClient(s) {
@@ -1444,6 +1465,7 @@ async function buildAndShowSummary() {
     const fallbackTier = convoState ? convoState.tier : 'starter';
     pendingSummaryResult = {
       vision_goal: 'Vision goals discussed during conversation — extraction unavailable, please discuss directly with your surgeon.',
+      topics_covered: fallbackTopicsFromState(),
       surgeon_questions: ['Ask your surgeon which lens best fits your eye measurements and vision goals.'],
       ...(fallbackTier === 'session' ? { lens_category_interest: 'To be confirmed with your surgeon.' } : {}),
       ...(fallbackTier === 'starter' ? { starter_scope_note: 'This summary reflects your starter session — full lens category comparison was outside its scope.' } : {}),
