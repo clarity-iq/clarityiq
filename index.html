@@ -633,9 +633,9 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
   <div id="voice-panel" style="display:none">
     <div id="expect-card">
       <div id="expect-card-title">What to expect</div>
-      <div class="expect-row"><div class="expect-icon">⏱</div><span>This conversation takes about 10 minutes</span></div>
+      <div class="expect-row"><div class="expect-icon">⏱</div><span>About 20-30 minutes, more if you have questions</span></div>
       <div class="expect-row"><div class="expect-icon">🎤</div><span>Speak naturally — ClarityIQ will guide you through each step</span></div>
-      <div class="expect-row"><div class="expect-icon">📋</div><span>You'll receive a personal summary to bring to your appointment</span></div>
+      <div class="expect-row"><div class="expect-icon">📋</div><span>You'll receive a personal summary</span></div>
     </div>
 
     <div id="status-pill"><div id="status-dot"></div><span id="status-text">Ready to begin</span></div>
@@ -924,9 +924,9 @@ document.getElementById('access-code-continue').addEventListener('click', () => 
 const STAGE_ORDER  = ['welcome', 'foundations', 'vision_goals', 'tier_gate', 'lens_options', 'readiness', 'summary'];
 const STAGE_LABELS = {
   welcome: 'Welcome', foundations: 'Foundations', vision_goals: 'Vision Goals',
-  lens_options: 'Tracks', readiness: 'Readiness', summary: 'Summary',
+  lens_options: 'Lens Options', readiness: 'Readiness', summary: 'Summary',
 };
-// Dot sequence per tier — lens_options (Tracks) only appears for session tier
+// Dot sequence per tier — lens_options (Lens Options) only appears for session tier
 // or after a mid-conversation upgrade (§7: dot count 5 vs 6, recomputed live).
 function dotStagesFor(tier) {
   return tier === 'session'
