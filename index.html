@@ -1236,6 +1236,15 @@ function addTranscriptLine(role, text) {
     }
     for (const entry of TRACK_ENTRY_PHRASES) {
       if (lower.includes(entry.phrase)) {
+        // Self-heal: track content is only reachable via lens_options, so if
+        // the stage counter lagged behind — e.g. the agent moved straight
+        // into track content without speaking the Stage 3->4 anchor
+        // verbatim, which can happen if the person pushes it to move
+        // faster — catch it up now. Never regresses: only fires if the
+        // stage is still earlier in the sequence than lens_options.
+        if (STAGE_ORDER.indexOf(convoState.current_stage) < STAGE_ORDER.indexOf('lens_options')) {
+          applyStageTransition('lens_options');
+        }
         checkTrackEntryAnomaly(entry.track);
         convoState.current_track = entry.track;
         if (!convoState.tracks_visited.includes(entry.track)) {
