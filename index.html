@@ -690,7 +690,9 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 <script type="module">
 import { Conversation } from 'https://esm.sh/@elevenlabs/client';
 
-const AGENT_ID  = 'agent_1401kws7xzy8ev4ryzbwvza7mex5';
+// 4.4: the public agent ID no longer lives here — the Worker calls
+// ElevenLabs' get-signed-url endpoint server-side (with the real API key)
+// and hands back a short-lived signed URL instead. See startConversation().
 const PROXY_URL = 'https://clarityiq-proxy.dlpventures13.workers.dev';
 const CLIENT_KEY = '58e955745eaf504e679cf0d00f8d63311cb8e5e486006a50';
 
@@ -1531,11 +1533,40 @@ async function startConversation() {
     return;
   }
 
+  // 4.4: fetch a short-lived signed URL server-side instead of connecting
+  // with the bare public agent ID — the Worker holds the real ElevenLabs
+  // key and rate-limits this (5/IP/hour), so it fails fast here rather than
+  // after already prompting for mic access.
+  let signedUrl;
+  try {
+    const voiceRes = await fetch(PROXY_URL + '/api/get-voice-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+      body: JSON.stringify({ session_code: sessionCode }),
+    });
+    if (voiceRes.status === 429) {
+      const data = await voiceRes.json().catch(() => ({}));
+      setStatus('idle', '');
+      beginBtn.disabled = false;
+      showError(data.message || 'Too many attempts from this connection — please try again shortly.');
+      return;
+    }
+    if (!voiceRes.ok) throw new Error('voice session request failed');
+    const voiceData = await voiceRes.json();
+    signedUrl = voiceData.signed_url;
+    if (!signedUrl) throw new Error('no signed_url in response');
+  } catch (e) {
+    setStatus('idle', '');
+    beginBtn.disabled = false;
+    showError('Could not start the voice session. Please try again in a moment.');
+    return;
+  }
+
   try {
     await navigator.mediaDevices.getUserMedia({ audio: true });
 
     conversation = await Conversation.startSession({
-      agentId: AGENT_ID,
+      signedUrl,
 
       // The commercial prompt's TIER LOGIC branches entirely on this —
       // "Do not ask the person which tier they purchased; this is
@@ -1566,7 +1597,7 @@ async function startConversation() {
             const res = await fetch(PROXY_URL + '/create-upgrade-checkout-session', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
-              body: JSON.stringify({ access_code: purchaseInfo ? purchaseInfo.access_code : null }),
+              body: JSON.stringify({ access_code: purchaseInfo ? purchaseInfo.access_code : null, session_code: sessionCode }),
             });
             const data = await res.json();
             if (!res.ok || !data.url) {
@@ -1588,7 +1619,7 @@ async function startConversation() {
             const res = await fetch(PROXY_URL + '/check-upgrade-status', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
-              body: JSON.stringify({ checkout_session_id: upgradeCheckoutSessionId }),
+              body: JSON.stringify({ checkout_session_id: upgradeCheckoutSessionId, session_code: sessionCode }),
             });
             const data = await res.json();
 
