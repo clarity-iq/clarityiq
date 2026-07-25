@@ -632,7 +632,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
     <!-- Inline tappable upgrade payment link — present_upgrade_link client tool -->
     <div id="upgrade-link-banner" style="display:none">
-      <div id="upgrade-link-text">Complete your upgrade to the full IOL Clarity Session</div>
+      <div id="upgrade-link-text">Complete your upgrade to the full IOL ClarityIQ Session</div>
       <a id="upgrade-link-btn" href="#" target="_blank" rel="noopener">Complete upgrade — $200</a>
     </div>
 
@@ -892,8 +892,8 @@ document.getElementById('gate-input').addEventListener('keydown', (e) => {
 function showAccessCodeModal(result) {
   document.getElementById('access-code-value').textContent = result.access_code;
   const note = result.tier === 'session'
-    ? `Unlocks your IOL Clarity Session for 6 months, and you can return to it as many times as you'd like during that window.`
-    : `Unlocks your IOL Clarity Starter — a single session.`;
+    ? `Unlocks your IOL ClarityIQ Session for 6 months, and you can return to it as many times as you'd like during that window.`
+    : `Unlocks your IOL ClarityIQ Starter — a single session.`;
   document.getElementById('access-code-note').textContent = note;
   document.getElementById('access-code-modal').classList.add('show');
 }
@@ -1529,7 +1529,7 @@ async function startConversation() {
   if (!canProceed) {
     setStatus('idle', '');
     beginBtn.disabled = false;
-    showError('This IOL Clarity Starter session has already been used. Each Starter purchase covers a single session.');
+    showError('This IOL ClarityIQ Starter session has already been used. Each Starter purchase covers a single session.');
     return;
   }
 
