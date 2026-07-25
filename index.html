@@ -451,6 +451,10 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 .notice-block-title { font-size: 15px; font-weight: 600; color: #1a1a18; margin-bottom: 8px; }
 .notice-block p { font-size: 13.5px; color: #5f5e5a; line-height: 1.55; }
 
+.notice-ack { display: flex; align-items: flex-start; gap: 10px; margin: 4px 0 16px; cursor: pointer; }
+.notice-ack input { margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0; accent-color: #1D9E75; cursor: pointer; }
+.notice-ack span { font-size: 13.5px; color: #1a1a18; line-height: 1.5; }
+
 .consent-line { font-size: 11.5px; color: #a0a09a; line-height: 1.5; margin-top: 10px; text-align: center; }
 .consent-line a { color: #1D9E75; text-decoration: none; }
 .consent-line a:hover { text-decoration: underline; }
@@ -552,7 +556,16 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
       <p>ClarityIQ is an educational tool only. It does not provide medical advice, diagnosis, treatment recommendations, or clinical decision support. The information provided is general in nature and may not apply to your specific situation. Always consult a qualified eye care professional before making any decisions about your eye care or surgery. Use of ClarityIQ does not create a doctor-patient relationship between you and ClarityIQ, DLP Ventures, LLC, or any individual associated with it.</p>
     </div>
 
-    <button class="screen-submit" id="before-begin-continue">I understand, let's begin</button>
+    <div class="notice-block">
+      <p>Your conversation is processed in real time solely to generate a personalized educational summary. The summary is shown to you and emailed once. We do not store the conversation, the summary, or any related content after the session ends.</p>
+    </div>
+
+    <label class="notice-ack">
+      <input type="checkbox" id="before-begin-ack">
+      <span>I have read and understand the above.</span>
+    </label>
+
+    <button class="screen-submit" id="before-begin-continue" disabled>I understand, let's begin</button>
   </div>
 
   <!-- Post-survey (Batch 2.1) -->
@@ -1157,6 +1170,31 @@ async function sendTelemetry(extra = {}) {
     });
   } catch (e) {
     console.error('Telemetry write failed (non-blocking):', e);
+  }
+}
+
+// Records that the "Before You Begin" gate was affirmatively acknowledged —
+// captures the live DOM text of the gate at the moment of consent, not a
+// hardcoded copy, so the record always reflects exactly what this session's
+// user actually saw, even if the copy is edited later.
+async function logConsent() {
+  if (!sessionCode) return;
+  const noticeText = Array.from(document.querySelectorAll('#before-begin .notice-block'))
+    .map((el) => el.textContent.trim())
+    .join('\n\n');
+  const payload = {
+    session_code: sessionCode,
+    agreed_at: new Date().toISOString(),
+    disclosure_text: noticeText,
+  };
+  try {
+    await fetch(PROXY_URL + '/log-consent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.error('Consent log write failed (non-blocking):', e);
   }
 }
 
@@ -1900,7 +1938,12 @@ document.getElementById('pre-survey-submit').addEventListener('click', () => {
   showScreen('before-begin');
 });
 
-document.getElementById('before-begin-continue').addEventListener('click', () => {
+document.getElementById('before-begin-ack').addEventListener('change', (e) => {
+  document.getElementById('before-begin-continue').disabled = !e.target.checked;
+});
+
+document.getElementById('before-begin-continue').addEventListener('click', async () => {
+  await logConsent();
   showScreen(null);
   document.getElementById('voice-panel').style.display = 'flex';
   document.getElementById('action-bar').style.display  = 'flex';
