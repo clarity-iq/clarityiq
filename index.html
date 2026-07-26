@@ -428,9 +428,9 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 .screen-sub { font-size: 15px; color: #6b6b68; margin-bottom: 20px; line-height: 1.5; }
 .screen-question { margin-bottom: 22px; }
 .screen-question-label { font-size: 13.5px; font-weight: 600; color: #1a1a18; margin-bottom: 10px; line-height: 1.4; }
-.scale-row { display: flex; gap: 8px; }
+.scale-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .scale-btn {
-  flex: 1; padding: 14px 0; text-align: center;
+  flex: 1 1 calc(20% - 7px); min-width: 44px; padding: 14px 0; text-align: center;
   border: 1px solid #d8d6ce; border-radius: 10px;
   font-size: 14px; font-weight: 600; color: #5f5e5a;
   background: #fff; cursor: pointer; font-family: inherit;
@@ -538,6 +538,11 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
         <button class="scale-btn" data-value="3">3</button>
         <button class="scale-btn" data-value="4">4</button>
         <button class="scale-btn" data-value="5">5</button>
+        <button class="scale-btn" data-value="6">6</button>
+        <button class="scale-btn" data-value="7">7</button>
+        <button class="scale-btn" data-value="8">8</button>
+        <button class="scale-btn" data-value="9">9</button>
+        <button class="scale-btn" data-value="10">10</button>
       </div>
       <div class="scale-hint"><span>Not confident</span><span>Very confident</span></div>
     </div>
@@ -595,6 +600,11 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
         <button class="scale-btn" data-value="3">3</button>
         <button class="scale-btn" data-value="4">4</button>
         <button class="scale-btn" data-value="5">5</button>
+        <button class="scale-btn" data-value="6">6</button>
+        <button class="scale-btn" data-value="7">7</button>
+        <button class="scale-btn" data-value="8">8</button>
+        <button class="scale-btn" data-value="9">9</button>
+        <button class="scale-btn" data-value="10">10</button>
       </div>
       <div class="scale-hint"><span>Not confident</span><span>Very confident</span></div>
     </div>
@@ -1138,6 +1148,7 @@ let upgradeCheckAttempts     = 0;
 
 // ── Pre/post survey state (Batch 2.1) — joined onto the same telemetry record
 // via sessionCode, NOT a separate record. See sendTelemetry() below.
+const CONFIDENCE_SCALE_MAX = 10; // scale changed from 1-5 to 1-10 — update here, the .scale-btn markup, and the Worker's email template together
 let preConfidence  = null;
 let preLeaning     = null;
 let postConfidence = null;
@@ -1345,7 +1356,7 @@ ${knownValues}
 
 SOURCE OF TRUTH RULE: Stage 6 contains an explicit confirmation moment where the agent states back its understanding of the person's goal and track, and the person confirms or corrects it. If the person corrected anything at that point, the confirmed/corrected version is authoritative — use it, not earlier statements in the conversation that were later corrected.
 
-vision_goal: Extract the person's stated goal in their own words, as confirmed in Stage 6. Do not paraphrase into different language than what the person actually said.
+vision_goal: Extract the person's stated goal in their own words, as confirmed in Stage 6. Do not paraphrase into different language than what the person actually said. If the conversation ended before Stage 6 and this was never confirmed, omit the field entirely — do not return an empty string, null, or a placeholder like "not captured."
 
 monovision_history: If the transcript indicates the person has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A". This can apply regardless of tier.
 
@@ -1431,14 +1442,16 @@ function renderSummary(summary) {
   body.innerHTML = '';
   const tier = convoState ? convoState.tier : 'starter';
 
-  const goalCard = document.createElement('div');
-  goalCard.className = 'summary-card';
-  let goalHtml = `<div class="summary-card-label">My vision goal</div><div class="summary-card-value">"${escapeHtmlClient(summary.vision_goal)}"</div>`;
-  if (summary.monovision_history) {
-    goalHtml += `<div class="summary-card-subline">${escapeHtmlClient(summary.monovision_history)}</div>`;
+  if (summary.vision_goal) {
+    const goalCard = document.createElement('div');
+    goalCard.className = 'summary-card';
+    let goalHtml = `<div class="summary-card-label">My vision goal</div><div class="summary-card-value">"${escapeHtmlClient(summary.vision_goal)}"</div>`;
+    if (summary.monovision_history) {
+      goalHtml += `<div class="summary-card-subline">${escapeHtmlClient(summary.monovision_history)}</div>`;
+    }
+    goalCard.innerHTML = goalHtml;
+    body.appendChild(goalCard);
   }
-  goalCard.innerHTML = goalHtml;
-  body.appendChild(goalCard);
 
   if (summary.topics_covered && summary.topics_covered.length) {
     const topicsCard = document.createElement('div');
@@ -1514,6 +1527,15 @@ async function buildAndShowSummary() {
       ...(fallbackTier === 'session' ? { lens_category_interest: 'To be confirmed with your surgeon.' } : {}),
       ...(fallbackTier === 'starter' ? { starter_scope_note: 'This summary reflects your starter session — full lens category comparison was outside its scope.' } : {}),
     };
+  }
+  // Confidence shift rides on the same summary object sent to the email
+  // endpoint — omitted entirely (not zero-filled) if either half of the
+  // pre/post survey was skipped, same "absent, not a placeholder" rule as
+  // every other field.
+  if (preConfidence && postConfidence) {
+    pendingSummaryResult.confidence_before = preConfidence;
+    pendingSummaryResult.confidence_after = postConfidence;
+    pendingSummaryResult.confidence_scale_max = CONFIDENCE_SCALE_MAX;
   }
   document.getElementById('summary-loading').style.display = 'none';
   sendTelemetry({ completed: convoState ? convoState.current_stage === 'summary' : false });
