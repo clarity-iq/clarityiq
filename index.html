@@ -399,6 +399,32 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
   gap: 10px; padding: 32px; text-align: center;
 }
 #access-code-modal.show { display: flex; }
+
+/* ── Email re-verification (existing-access-code re-entry) ── */
+#email-verify-modal {
+  position: absolute; inset: 0; z-index: 26;
+  background: #fff; border-radius: 20px;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; padding: 32px; text-align: center;
+}
+#email-verify-modal.show { display: flex; }
+#email-verify-modal .logo-mark { width: 40px; height: 40px; margin-bottom: 4px; }
+#email-verify-title { font-size: 17px; font-weight: 600; color: #1a1a18; }
+#email-verify-sub { font-size: 13px; color: #6b6b68; max-width: 280px; margin-bottom: 6px; }
+#email-verify-input {
+  width: 100%; max-width: 260px;
+  padding: 12px 14px; font-size: 14px; font-family: inherit;
+  border: 1px solid #d8d6ce; border-radius: 10px;
+  text-align: center; outline: none;
+}
+#email-verify-input:focus { border-color: #1D9E75; }
+#email-verify-submit {
+  width: 100%; max-width: 260px;
+  padding: 15px; background: #0f6e56; color: #fff;
+  border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+#email-verify-error { font-size: 12.5px; color: #b91c1c; display: none; }
 #access-code-title { font-size: 17px; font-weight: 600; color: #1a1a18; }
 #access-code-sub { font-size: 13px; color: #6b6b68; max-width: 280px; margin-bottom: 6px; }
 #access-code-value {
@@ -505,6 +531,23 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
     <div id="access-code-value"></div>
     <div id="access-code-note"></div>
     <button id="access-code-continue">Got it, continue</button>
+  </div>
+
+  <!-- Email re-verification for existing-access-code re-entry (ToS §7 —
+       session-sharing prevention). Shown whenever an access code is used to
+       start a new session, whether typed manually or auto-applied from a
+       saved code — NOT shown on a fresh Stripe purchase (checkout_session_id
+       path), since that's the actual purchaser at the moment of payment. -->
+  <div id="email-verify-modal">
+    <div class="logo-mark">
+      <img src="logo-mark.png" alt="">
+    </div>
+    <h1 id="email-verify-title">Confirm your email</h1>
+    <div id="email-verify-sub">Enter the email address you used to purchase, so we can confirm this is your session.</div>
+    <label class="field-label" for="email-verify-input">Purchase email</label>
+    <input id="email-verify-input" type="email" autocomplete="email" placeholder="you@example.com" />
+    <button id="email-verify-submit">Continue</button>
+    <div id="email-verify-error">That email doesn't match our records for this access code.</div>
   </div>
 
   <!-- Pre-survey (Batch 2.1) -->
@@ -800,6 +843,65 @@ function applyVerifiedPurchase(result) {
   }
 }
 
+// Session-sharing prevention (ToS §7): shown whenever an access code is
+// used to start a new session — not on a fresh Stripe purchase, which is
+// the actual purchaser at the moment of payment. onVerified() only fires
+// once the email matches the purchase record; the caller is responsible
+// for actually unlocking (this function never unlocks by itself).
+function showEmailVerifyScreen(accessCode, onVerified) {
+  document.getElementById('gate').style.display = 'none';
+  const modal = document.getElementById('email-verify-modal');
+  const input = document.getElementById('email-verify-input');
+  const errorEl = document.getElementById('email-verify-error');
+  const submitBtn = document.getElementById('email-verify-submit');
+
+  errorEl.style.display = 'none';
+  input.value = '';
+  modal.classList.add('show');
+
+  async function submit() {
+    const email = input.value.trim();
+    if (!isValidEmail(email)) {
+      errorEl.textContent = 'Please enter a valid email address.';
+      errorEl.style.display = 'block';
+      return;
+    }
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch(PROXY_URL + '/verify-access-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+        body: JSON.stringify({ access_code: accessCode, email }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        cleanup();
+        onVerified();
+        return;
+      }
+      errorEl.textContent = "That email doesn't match our records for this access code.";
+      errorEl.style.display = 'block';
+      input.value = '';
+      input.focus();
+    } catch (e) {
+      errorEl.textContent = 'Something went wrong — please try again.';
+      errorEl.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+    }
+  }
+  function onKeydown(e) { if (e.key === 'Enter') submit(); }
+  function cleanup() {
+    modal.classList.remove('show');
+    submitBtn.removeEventListener('click', submit);
+    input.removeEventListener('keydown', onKeydown);
+  }
+
+  submitBtn.addEventListener('click', submit);
+  input.addEventListener('keydown', onKeydown);
+  input.focus();
+}
+
 // Auto path, run unconditionally at load: URL checkout_session_id (fresh
 // from Stripe) or a stored access code (returning, same browser). On
 // success this bypasses the gate entirely — zero manual entry.
@@ -825,17 +927,28 @@ async function verifyAndApplyPurchase() {
   }
 
   if (result && result.valid) {
-    applyVerifiedPurchase(result);
-    unlockApp();
     if (fromQuery) {
+      // Fresh from Stripe — this is the actual purchaser at the moment of
+      // payment, not an existing access code being reused to start a new
+      // session, so no email re-verification here.
+      applyVerifiedPurchase(result);
+      unlockApp();
       // Don't leave the checkout session id sitting in a shareable/bookmarkable URL.
       url.searchParams.delete('checkout_session_id');
       window.history.replaceState({}, '', url.toString());
-      // Fresh from Stripe: this is the one moment the customer has full
-      // attention and the code in hand regardless of whether the emailed
-      // copy lands (Resend's shared sending domain has delivery
-      // restrictions until a verified clarityiq.ai domain is live).
+      // This is the one moment the customer has full attention and the
+      // code in hand regardless of whether the emailed copy lands
+      // (Resend's shared sending domain has delivery restrictions until a
+      // verified clarityiq.ai domain is live).
       showAccessCodeModal(result);
+    } else {
+      // Returning via a saved access code — an existing code being used to
+      // start a new session, exactly what ToS §7 and this check target.
+      // Require the purchase email before unlocking.
+      showEmailVerifyScreen(storedCode, () => {
+        applyVerifiedPurchase(result);
+        unlockApp();
+      });
     }
   } else if (result && (result.reason === 'expired' || result.reason === 'already_used')) {
     // Dead code — stop re-checking it on future loads.
@@ -912,7 +1025,9 @@ async function checkGatePassword() {
   // Not the static password — try it as a purchase access code.
   const applied = await tryApplyAccessCode(value);
   if (applied) {
-    unlockApp();
+    // Existing access code, manually entered — same email re-verification
+    // as the auto-relogin path (ToS §7 / session-sharing prevention).
+    showEmailVerifyScreen(value, () => unlockApp());
     return;
   }
   document.getElementById('gate-error').style.display = 'block';
