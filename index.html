@@ -1286,6 +1286,14 @@ async function sendTelemetry(extra = {}) {
   const payload = {
     session_code: sessionCode,
     tier: convoState ? convoState.tier : null,
+    // Derived from raw CURRENT_TIER, not convoState.tier — the latter already
+    // normalizes the password-gate default ('free') up to 'session' for
+    // conversation-flow purposes (see initConvoState), which would erase the
+    // one signal that distinguishes a test entry from a real purchase.
+    // CURRENT_TIER only ever becomes non-'free' via applyVerifiedPurchase(),
+    // which exclusively fires on a verified Stripe-derived access code —
+    // never on the password-gate path (vision/future test word).
+    code_source: CURRENT_TIER === 'free' ? 'test' : 'paid',
     current_stage: convoState ? convoState.current_stage : null,
     current_track: convoState ? convoState.current_track : null,
     routed_track: convoState ? convoState.routed_track : null,
