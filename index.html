@@ -2,11 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ClarityIQ — Lens Education</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+button:focus-visible, input:focus-visible, a:focus-visible {
+  outline: 3px solid #0f6e56; outline-offset: 2px;
+}
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -222,7 +234,7 @@ body {
 #begin-btn:disabled { opacity: 0.42; cursor: not-allowed; transform: none; }
 
 #speaker-btn {
-  padding: 12px 14px; flex-shrink: 0;
+  padding: 15px 16px; flex-shrink: 0;
   background: transparent; color: #5f5e5a;
   border: 1px solid #d8d6ce; border-radius: 10px;
   font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit;
@@ -233,7 +245,7 @@ body {
 #speaker-btn.muted { background: #fff5f5; color: #e05050; border-color: #e05050; }
 
 #mic-btn {
-  padding: 12px 14px; flex-shrink: 0;
+  padding: 15px 16px; flex-shrink: 0;
   background: transparent; color: #1D9E75;
   border: 1px solid #1D9E75; border-radius: 10px;
   font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit;
@@ -278,9 +290,9 @@ body {
 #summary-body::-webkit-scrollbar-thumb { background: #e4e2da; border-radius: 2px; }
 .summary-card { background: #f8f8f4; border: 1px solid #e8e6de; border-radius: 14px; padding: 13px 15px; }
 .summary-card-label { font-size: 11px; font-weight: 600; color: #6b6b68; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
-.summary-card-value { font-size: 14px; color: #1a1a18; line-height: 1.55; }
+.summary-card-value { font-size: 16px; color: #1a1a18; line-height: 1.55; }
 .summary-card-subline { font-size: 13px; color: #5f5e5a; line-height: 1.5; margin-top: 6px; }
-.summary-topics-list { margin: 0; padding-left: 18px; font-size: 14px; color: #1a1a18; line-height: 1.7; }
+.summary-topics-list { margin: 0; padding-left: 18px; font-size: 16px; color: #1a1a18; line-height: 1.7; }
 .summary-card-note { font-size: 12.5px; color: #6b6b68; line-height: 1.5; }
 .checklist { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
 .check-row { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #4a4a48; line-height: 1.45; }
@@ -303,14 +315,14 @@ body {
   display: flex; gap: 8px; align-items: center; justify-content: center;
 }
 #restart-btn {
-  padding: 10px 18px; background: transparent; color: #5f5e5a;
+  padding: 15px 18px; background: transparent; color: #5f5e5a;
   border: 1px solid #d8d6ce; border-radius: 10px;
   font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
   transition: all 0.15s;
 }
 #restart-btn:hover { background: #f5f5f0; }
 #save-btn {
-  padding: 10px 18px; background: #0f6e56; color: #fff;
+  padding: 15px 18px; background: #0f6e56; color: #fff;
   border: none; border-radius: 10px;
   font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
   transition: all 0.15s;
@@ -318,7 +330,7 @@ body {
 #save-btn:hover { background: #0f6e56; }
 #save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 #expand-btn {
-  padding: 10px 14px; background: transparent; color: #5f5e5a;
+  padding: 15px 14px; background: transparent; color: #5f5e5a;
   border: 1px solid #d8d6ce; border-radius: 10px;
   font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit;
   transition: all 0.15s;
@@ -361,6 +373,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 #gate .logo-mark { width: 40px; height: 40px; margin-bottom: 4px; }
 #gate-title { font-size: 17px; font-weight: 600; color: #1a1a18; }
 #gate-sub { font-size: 13px; color: #6b6b68; text-align: center; margin-top: -8px; margin-bottom: 6px; }
+.field-label { font-size: 13px; font-weight: 600; color: #5f5e5a; margin-bottom: 6px; display: block; }
 #gate-input {
   width: 100%; max-width: 260px;
   padding: 12px 14px; font-size: 14px; font-family: inherit;
@@ -370,7 +383,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 #gate-input:focus { border-color: #1D9E75; }
 #gate-submit {
   width: 100%; max-width: 260px;
-  padding: 12px; background: #0f6e56; color: #fff;
+  padding: 15px; background: #0f6e56; color: #fff;
   border: none; border-radius: 10px;
   font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
 }
@@ -395,7 +408,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 #access-code-note { font-size: 12.5px; color: #6b6b68; max-width: 280px; margin-bottom: 10px; }
 #access-code-continue {
   width: 100%; max-width: 260px;
-  padding: 12px; background: #0f6e56; color: #fff;
+  padding: 15px; background: #0f6e56; color: #fff;
   border: none; border-radius: 10px;
   font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
 }
@@ -412,12 +425,12 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 }
 .screen.active { display: flex; }
 .screen-title { font-size: 17px; font-weight: 600; color: #1a1a18; margin-bottom: 4px; }
-.screen-sub { font-size: 13px; color: #6b6b68; margin-bottom: 20px; line-height: 1.5; }
+.screen-sub { font-size: 15px; color: #6b6b68; margin-bottom: 20px; line-height: 1.5; }
 .screen-question { margin-bottom: 22px; }
 .screen-question-label { font-size: 13.5px; font-weight: 600; color: #1a1a18; margin-bottom: 10px; line-height: 1.4; }
 .scale-row { display: flex; gap: 8px; }
 .scale-btn {
-  flex: 1; padding: 10px 0; text-align: center;
+  flex: 1; padding: 14px 0; text-align: center;
   border: 1px solid #d8d6ce; border-radius: 10px;
   font-size: 14px; font-weight: 600; color: #5f5e5a;
   background: #fff; cursor: pointer; font-family: inherit;
@@ -426,9 +439,9 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 .scale-hint { display: flex; justify-content: space-between; font-size: 11px; color: #6b6b68; margin-top: 6px; }
 .choice-row { display: flex; flex-direction: column; gap: 8px; }
 .choice-btn {
-  padding: 12px 14px; text-align: left;
+  padding: 14px; text-align: left;
   border: 1px solid #d8d6ce; border-radius: 10px;
-  font-size: 13.5px; color: #1a1a18; line-height: 1.4;
+  font-size: 15px; color: #1a1a18; line-height: 1.4;
   background: #fff; cursor: pointer; font-family: inherit;
 }
 .choice-btn.selected { background: #e1f5ee; border-color: #1D9E75; }
@@ -449,10 +462,10 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
 .notice-block { margin-bottom: 16px; }
 .notice-block-title { font-size: 15px; font-weight: 600; color: #1a1a18; margin-bottom: 8px; }
-.notice-block p { font-size: 13.5px; color: #5f5e5a; line-height: 1.55; }
+.notice-block p { font-size: 16px; color: #5f5e5a; line-height: 1.55; }
 
-.notice-ack { display: flex; align-items: flex-start; gap: 10px; margin: 4px 0 16px; cursor: pointer; }
-.notice-ack input { margin-top: 3px; width: 16px; height: 16px; flex-shrink: 0; accent-color: #1D9E75; cursor: pointer; }
+.notice-ack { display: flex; align-items: center; gap: 12px; margin: 4px 0 16px; padding: 8px 4px; cursor: pointer; }
+.notice-ack input { width: 22px; height: 22px; flex-shrink: 0; accent-color: #1D9E75; cursor: pointer; }
 .notice-ack span { font-size: 13.5px; color: #1a1a18; line-height: 1.5; }
 
 .consent-line { font-size: 11.5px; color: #6b6b68; line-height: 1.5; margin-top: 10px; text-align: center; }
@@ -468,15 +481,16 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" role="main">
 
   <!-- Password gate -->
   <div id="gate">
     <div class="logo-mark">
       <img src="logo-mark.png" alt="">
     </div>
-    <div id="gate-title">ClarityIQ</div>
+    <h1 id="gate-title">ClarityIQ</h1>
     <div id="gate-sub">Enter your password or access code to continue</div>
+    <label class="field-label" for="gate-input">Password or access code</label>
     <input id="gate-input" type="password" autocomplete="off" placeholder="Password or access code" />
     <button id="gate-submit">Continue</button>
     <div id="gate-error">Incorrect password or access code</div>
@@ -485,7 +499,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
   <!-- Access code confirmation — shown once, right after a fresh purchase.
        Covers customers regardless of whether the emailed copy lands. -->
   <div id="access-code-modal">
-    <div id="access-code-title">You're all set — save this code</div>
+    <h1 id="access-code-title">You're all set — save this code</h1>
     <div id="access-code-sub">You'll need it if you return on a different device or after clearing your browser.</div>
     <div id="access-code-value"></div>
     <div id="access-code-note"></div>
@@ -494,7 +508,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
   <!-- Pre-survey (Batch 2.1) -->
   <div id="pre-survey" class="screen">
-    <div class="screen-title">Before we begin</div>
+    <h1 class="screen-title">Before we begin</h1>
     <div class="screen-sub">A few quick questions — this helps us understand how helpful this conversation actually is.</div>
 
     <div class="screen-question">
@@ -545,7 +559,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
        A distinct required moment, shown once per session, right before the
        conversation itself starts — not a line item buried in the Terms. -->
   <div id="before-begin" class="screen">
-    <div class="screen-title">Before you begin</div>
+    <h1 class="screen-title">Before you begin</h1>
 
     <div class="notice-block">
       <div class="notice-block-title">You're talking with an AI.</div>
@@ -570,7 +584,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
   <!-- Post-survey (Batch 2.1) -->
   <div id="post-survey" class="screen">
-    <div class="screen-title">One more thing</div>
+    <h1 class="screen-title">One more thing</h1>
     <div class="screen-sub">Same two questions, now that you've finished — this is how we measure whether the conversation actually helped.</div>
 
     <div class="screen-question">
@@ -600,8 +614,9 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
   <!-- Email gate (Batch 2.3) — summary content does not render until this is submitted -->
   <div id="email-gate" class="screen">
-    <div class="screen-title">Your summary is ready</div>
+    <h1 class="screen-title">Your summary is ready</h1>
     <div class="screen-sub">Enter your email to view and save your personal lens preference summary.</div>
+    <label class="field-label" for="email-input">Email address</label>
     <input id="email-input" type="email" autocomplete="email" placeholder="you@example.com" />
     <div id="email-gate-error">Please enter a valid email address.</div>
     <button class="screen-submit" id="email-gate-submit">Show my summary</button>
@@ -615,7 +630,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
   </div>
 
   <!-- Header -->
-  <div id="header">
+  <div id="header" role="banner">
     <div class="logo-mark">
       <img src="logo-mark.png" alt="">
     </div>
@@ -625,12 +640,14 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
   <!-- Progress bar -->
   <div id="progress-wrap">
-    <span id="progress-stage-label">Getting started</span>
+    <span id="progress-stage-label" aria-live="polite">Getting started</span>
   </div>
 
   <!-- Topic roadmap — 5 or 6 dots depending on tier, no labels. Populated
-       entirely by renderRoadmap() — see the anchor state machine section. -->
-  <div id="roadmap"></div>
+       entirely by renderRoadmap() — see the anchor state machine section.
+       aria-hidden: purely decorative duplicate of #progress-stage-label,
+       which already announces the current stage as text. -->
+  <div id="roadmap" aria-hidden="true"></div>
 
   <!-- Voice panel — scrollable -->
   <div id="voice-panel" style="display:none">
@@ -696,7 +713,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
 </div>
 
-<div class="app-footer">
+<div class="app-footer" role="contentinfo">
   <a href="https://clarityiq.ai/terms.html" target="_blank" rel="noopener">Terms of Service</a>·<a href="https://clarityiq.ai/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
 </div>
 
@@ -1896,9 +1913,14 @@ function resetChoiceGroup(containerId) {
 
 function setupChoiceGroup(containerId, onSelect) {
   document.getElementById(containerId).querySelectorAll('button').forEach(btn => {
+    btn.setAttribute('aria-pressed', 'false');
     btn.addEventListener('click', () => {
-      document.getElementById(containerId).querySelectorAll('button').forEach(b => b.classList.remove('selected'));
+      document.getElementById(containerId).querySelectorAll('button').forEach(b => {
+        b.classList.remove('selected');
+        b.setAttribute('aria-pressed', 'false');
+      });
       btn.classList.add('selected');
+      btn.setAttribute('aria-pressed', 'true');
       onSelect(btn.dataset.value);
     });
   });
