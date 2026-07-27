@@ -993,7 +993,13 @@ async function consumeStarterIfNeeded() {
 verifyAndApplyPurchase();
 
 // ── Password gate ──────────────────────────────────────────────────────────────
-const GATE_HASH = '5944ae849448011ca08c3785f1de1a54c8a96d6c23f787f9d962b624edd4151d';
+// 'vision' is Martin's own standing internal/beta access, kept separate from
+// 'test' (informal/founder tester word) so 'test' can be retired later
+// (removed from this array) without touching Martin's own access.
+const GATE_HASHES = [
+  '5944ae849448011ca08c3785f1de1a54c8a96d6c23f787f9d962b624edd4151d', // vision
+  '9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08', // test
+];
 
 async function sha256Hex(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
@@ -1018,7 +1024,7 @@ async function checkGatePassword() {
   const input = document.getElementById('gate-input');
   const value = input.value.trim();
   const hash  = await sha256Hex(value.toLowerCase());
-  if (hash === GATE_HASH) {
+  if (GATE_HASHES.includes(hash)) {
     unlockApp();
     return;
   }
