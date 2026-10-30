@@ -777,8 +777,101 @@ import { Conversation } from 'https://esm.sh/@elevenlabs/client';
 // 4.4: the public agent ID no longer lives here — the Worker calls
 // ElevenLabs' get-signed-url endpoint server-side (with the real API key)
 // and hands back a short-lived signed URL instead. See startConversation().
-const PROXY_URL = 'https://clarityiq-proxy.dlpventures13.workers.dev';
+// Test-only API base override: a local test harness may set
+// window.CIQ_TEST_API_BASE to a localhost URL before the page loads. Nothing
+// on the live app sets it, and any non-localhost value is ignored.
+function ciqApiBase(liveBase) {
+  try {
+    const o = window.CIQ_TEST_API_BASE;
+    if (typeof o === 'string' && /^http:\/\/(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(o)) return o;
+  } catch (e) {}
+  return liveBase;
+}
+const PROXY_URL = ciqApiBase('https://clarityiq-proxy.dlpventures13.workers.dev');
 const CLIENT_KEY = '58e955745eaf504e679cf0d00f8d63311cb8e5e486006a50';
+
+// ── Funnel source tag (Tracking patch A, Phase 4) ───────────────────────────
+// First-touch source for the funnel view (Reset Plan v2 §2). Read from the
+// link: utm_source/utm_medium/utm_campaign/utm_content, or the short forms
+// ?src=linkedin / ?ref=dr-smith; else the referring site's host name (never
+// the full URL); else "direct". Kept in this browser's localStorage for 30
+// days (key ciq_src). Not a cookie, no personal data: only short lowercase
+// tags. First touch wins, except an explicit tag replaces an untagged
+// (direct/referrer) source, and "internal" (Martin/testers) always wins.
+// Every step is wrapped so a storage or parsing failure never breaks the page.
+const CIQ_SRC_KEY = 'ciq_src';
+const CIQ_SRC_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+function ciqTag(v) {
+  return String(v == null ? '' : v).toLowerCase().slice(0, 80).replace(/[^\w.\-\/]/g, '');
+}
+function ciqStorage(kind) {
+  try {
+    const s = window[kind];
+    s.setItem('__ciq_t', '1');
+    s.removeItem('__ciq_t');
+    return s;
+  } catch (e) { return null; }
+}
+const CIQ_SRC_STATE = (function () {
+  try {
+    const p = new URLSearchParams(location.search);
+    let refHost = '';
+    try { refHost = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : ''; } catch (e) {}
+    // Our own pages and the Stripe checkout return are not sources.
+    if (/(^|\.)clarityiq\.ai$|(^|\.)stripe\.com$/.test(refHost)) refHost = '';
+    const utmSource = ciqTag(p.get('utm_source'));
+    const short = ciqTag(p.get('src'));
+    const ref = ciqTag(p.get('ref'));
+    const tag = utmSource || short || ref;
+    const src = {
+      utm_source: tag || ciqTag(refHost) || 'direct',
+      utm_medium: ciqTag(p.get('utm_medium')) || (utmSource || short ? '' : ref ? 'ref' : refHost ? 'referral' : 'none'),
+      utm_campaign: ciqTag(p.get('utm_campaign')),
+      utm_content: ciqTag(p.get('utm_content')),
+      landing_path: ciqTag(location.pathname) || '/',
+    };
+    if (ref) src.ref = ref;
+    const fresh = { v: 1, at: Date.now(), tagged: !!tag, src: src };
+    const store = ciqStorage('localStorage');
+    if (!store) return fresh;
+    let saved = null;
+    try { saved = JSON.parse(store.getItem(CIQ_SRC_KEY) || 'null'); } catch (e) { saved = null; }
+    const savedOk = saved && saved.v === 1 && saved.src && typeof saved.src.utm_source === 'string' &&
+      typeof saved.at === 'number' && Date.now() - saved.at < CIQ_SRC_TTL_MS;
+    const keep = savedOk && !(fresh.tagged && (!saved.tagged || src.utm_source === 'internal'));
+    if (keep) return saved;
+    store.setItem(CIQ_SRC_KEY, JSON.stringify(fresh));
+    return fresh;
+  } catch (e) {
+    return { v: 1, at: Date.now(), tagged: false, src: { utm_source: 'unknown' } };
+  }
+})();
+const CIQ_SRC = CIQ_SRC_STATE.src;
+// App side: the source arrives on links from clarityiq.ai, nurture emails or
+// tagged links straight to the app. It is added to the session telemetry
+// record ONLY when it was explicitly tagged, so a buyer coming back from
+// Stripe (no tag in that URL) stays "untagged" in the funnel instead of being
+// miscounted as "direct". If /verify-purchase ever returns utm_source, it is
+// adopted the same way (forward-compatible; today's Worker doesn't send it).
+function ciqSessionSource() {
+  if (!CIQ_SRC_STATE.tagged) return {};
+  const out = {};
+  ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'].forEach(function (k) {
+    if (CIQ_SRC[k]) out[k] = CIQ_SRC[k];
+  });
+  return out;
+}
+function ciqAdoptPurchaseSource(result) {
+  try {
+    const tag = result && ciqTag(result.utm_source);
+    if (!tag || CIQ_SRC_STATE.tagged) return;
+    CIQ_SRC_STATE.tagged = true;
+    CIQ_SRC.utm_source = tag;
+    ['utm_medium', 'utm_campaign', 'utm_content'].forEach(function (k) { CIQ_SRC[k] = ciqTag(result[k]); });
+    const store = ciqStorage('localStorage');
+    if (store) store.setItem(CIQ_SRC_KEY, JSON.stringify(CIQ_SRC_STATE));
+  } catch (e) {}
+}
 
 // ── Tier model (Batch 2.4 / 2.5) ─────────────────────────────────────────────
 // This is the structural seed: every feature that ships with a tier
@@ -832,6 +925,7 @@ async function callVerifyPurchase(params) {
 }
 
 function applyVerifiedPurchase(result) {
+  ciqAdoptPurchaseSource(result); // Tracking patch A (no-op unless the Worker returns utm_source)
   CURRENT_TIER = result.tier;
   purchaseInfo = {
     access_code: result.access_code || null,
@@ -1318,6 +1412,8 @@ async function sendTelemetry(extra = {}) {
     pre_leaning: preLeaning,
     post_confidence: postConfidence,
     post_leaning: postLeaning,
+    // Tracking patch A: source tag (only when explicitly tagged; no personal data).
+    ...ciqSessionSource(),
     ...extra,
   };
   try {
