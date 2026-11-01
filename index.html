@@ -441,6 +441,16 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 }
 #access-code-continue:hover { background: #0f6e56; }
 
+/* free-phase-bundle: after-survey */
+.as-text, #as-email { width: 100%; padding: 11px 12px; border: 1px solid #d8d6ce; border-radius: 10px; font-family: inherit; font-size: 14px; }
+.as-consent { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: #3a3a38; margin-top: 8px; line-height: 1.4; }
+.as-consent input { margin-top: 2px; }
+.as-error { color: #b42318; font-size: 12.5px; margin-top: 6px; min-height: 1em; }
+.as-hint { font-size: 11.5px; color: #6b6b68; margin-bottom: 12px; line-height: 1.4; }
+.as-hint a { color: #0f6e56; }
+.as-skip { background: none; border: 0; color: #5f5e5a; font-size: 14px; margin-top: 10px; cursor: pointer; text-decoration: underline; font-family: inherit; }
+.as-disclaimer { font-size: 11.5px; color: #6b6b68; margin-top: 14px; text-align: center; }
+
 /* ── Survey / email screens (pre-survey, post-survey, email gate) ── */
 .screen {
   display: none;
@@ -664,6 +674,49 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
     </div>
 
     <button class="screen-submit" id="post-survey-submit" disabled>See my summary</button>
+  </div>
+
+  <!-- free-phase-bundle: after-session survey (free launch codes only, optional) -->
+  <div id="after-survey" class="screen">
+    <h1 class="screen-title">Help us improve ClarityIQ (optional)</h1>
+    <div class="screen-sub">A few quick questions about your free session. Skip any you like.</div>
+    <div class="screen-question">
+      <div class="screen-question-label">How likely are you to recommend ClarityIQ to a friend? (0–10)</div>
+      <div class="scale-row" id="as-recommend-scale"></div>
+      <div class="scale-hint"><span>Not likely</span><span>Very likely</span></div>
+    </div>
+    <div class="screen-question">
+      <div class="screen-question-label">After launch, what would feel like a fair price for a session like this?</div>
+      <div class="choice-row" id="as-wtp-choices">
+        <button class="choice-btn" data-value="0">$0</button>
+        <button class="choice-btn" data-value="49">$49</button>
+        <button class="choice-btn" data-value="99">$99</button>
+        <button class="choice-btn" data-value="249">$249</button>
+        <button class="choice-btn" data-value="more">More than $249</button>
+      </div>
+    </div>
+    <div class="screen-question">
+      <label class="screen-question-label" for="as-unclear">Was anything unclear?</label>
+      <textarea id="as-unclear" class="as-text" maxlength="1000" rows="2"></textarea>
+    </div>
+    <div class="screen-question">
+      <div class="screen-question-label">Did anything not work?</div>
+      <div class="choice-row" id="as-issue-choices">
+        <button class="choice-btn" data-value="no">No</button>
+        <button class="choice-btn" data-value="yes">Yes</button>
+      </div>
+      <textarea id="as-issue-detail" class="as-text" maxlength="1000" rows="2" placeholder="What happened?" style="display:none; margin-top:8px;"></textarea>
+    </div>
+    <div class="screen-question">
+      <label class="screen-question-label" for="as-email">Email for one follow-up message (optional)</label>
+      <input id="as-email" type="email" autocomplete="email" placeholder="you@example.com" />
+      <label class="as-consent"><input type="checkbox" id="as-email-consent"> I agree to receive one follow-up message about my experience. I can withdraw anytime.</label>
+      <div id="as-error" class="as-error"></div>
+    </div>
+    <div class="as-hint">Please don't include names, phone numbers, or health details. Answers are kept up to 12 months (<a href="https://clarityiq.ai/privacy.html#survey" target="_blank" rel="noopener">Privacy Policy</a>).</div>
+    <button class="screen-submit" id="as-submit">Send and see my summary</button>
+    <button class="as-skip" id="as-skip" type="button">Skip</button>
+    <div class="as-disclaimer">ClarityIQ is education only, not a substitute for your eye surgeon's advice.</div>
   </div>
 
   <!-- Email gate (Batch 2.3) — summary content does not render until this is submitted -->
@@ -931,6 +984,8 @@ function applyVerifiedPurchase(result) {
     access_code: result.access_code || null,
     tier: result.tier,
     expires_at: result.expires_at || null,
+    free: result.free === true, // free-phase-bundle: free launch code (1 completed session or 7 days)
+    used: false,
   };
   if (result.access_code) {
     localStorage.setItem(ACCESS_CODE_STORAGE_KEY, result.access_code);
@@ -999,6 +1054,23 @@ function showEmailVerifyScreen(accessCode, onVerified) {
 // Auto path, run unconditionally at load: URL checkout_session_id (fresh
 // from Stripe) or a stored access code (returning, same browser). On
 // success this bypasses the gate entirely — zero manual entry.
+// free-phase-bundle: the free checkout returns with &sv=<survey id> so the
+// optional after-survey can be paired with the before-survey. Kept in this
+// browser only (localStorage ciq_sv), removed from the URL right away.
+const CIQ_SV_KEY = 'ciq_sv';
+(function () {
+  try {
+    const u = new URL(window.location.href);
+    const sv = u.searchParams.get('sv');
+    if (sv && /^[0-9a-z]{6,10}\.[0-9a-f]{16}\.[A-Za-z0-9_-]{32}$/.test(sv)) localStorage.setItem(CIQ_SV_KEY, sv);
+    if (u.searchParams.has('sv')) { u.searchParams.delete('sv'); window.history.replaceState({}, '', u.toString()); }
+  } catch (e) {}
+})();
+const FREE_CODE_MESSAGES = {
+  free_used: 'This free code has already been used for one completed session.',
+  expired: 'This code has expired.',
+};
+
 async function verifyAndApplyPurchase() {
   const url = new URL(window.location.href);
   const fromQuery = url.searchParams.get('checkout_session_id');
@@ -1044,9 +1116,10 @@ async function verifyAndApplyPurchase() {
         unlockApp();
       });
     }
-  } else if (result && (result.reason === 'expired' || result.reason === 'already_used')) {
+  } else if (result && (result.reason === 'expired' || result.reason === 'already_used' || result.reason === 'free_used')) {
     // Dead code — stop re-checking it on future loads.
     localStorage.removeItem(ACCESS_CODE_STORAGE_KEY);
+    if (result.reason === 'free_used' || result.message) showGateNotice(result.message || FREE_CODE_MESSAGES[result.reason]);
   }
 }
 
@@ -1060,7 +1133,18 @@ async function tryApplyAccessCode(code) {
     applyVerifiedPurchase(result);
     return true;
   }
+  if (result && (result.reason === 'free_used' || (result.reason === 'expired' && result.message))) {
+    return { notice: result.message || FREE_CODE_MESSAGES[result.reason] };
+  }
   return false;
+}
+
+// free-phase-bundle: a plain-language note on the gate (used / expired free code).
+function showGateNotice(text) {
+  const el = document.getElementById('gate-error');
+  if (!el || !text) return;
+  el.textContent = text;
+  el.style.display = 'block';
 }
 
 // Consumes the Starter tier's single use. Only called at the moment a
@@ -1124,12 +1208,18 @@ async function checkGatePassword() {
   }
   // Not the static password — try it as a purchase access code.
   const applied = await tryApplyAccessCode(value);
+  if (applied && applied.notice) {
+    showGateNotice(applied.notice);
+    input.value = '';
+    return;
+  }
   if (applied) {
     // Existing access code, manually entered — same email re-verification
     // as the auto-relogin path (ToS §7 / session-sharing prevention).
     showEmailVerifyScreen(value, () => unlockApp());
     return;
   }
+  document.getElementById('gate-error').textContent = 'Incorrect password or access code';
   document.getElementById('gate-error').style.display = 'block';
   input.value = '';
   input.focus();
@@ -1147,9 +1237,14 @@ document.getElementById('gate-input').addEventListener('keydown', (e) => {
 // Shown once, right after a fresh purchase — see verifyAndApplyPurchase().
 function showAccessCodeModal(result) {
   document.getElementById('access-code-value').textContent = result.access_code;
-  const note = result.tier === 'session'
+  const note = result.free === true
+    ? `Your free launch code unlocks one completed IOL ClarityIQ Session within 7 days. If a session drops before the end, you can start again until then.`
+    : result.tier === 'session'
     ? `Unlocks your IOL ClarityIQ Session for 6 months, and you can return to it as many times as you'd like during that window.`
     : `Unlocks your IOL ClarityIQ Starter — a single session.`;
+  document.getElementById('access-code-title').textContent = result.free === true
+    ? "You're all set — save your free code"
+    : "You're all set — save this code";
   document.getElementById('access-code-note').textContent = note;
   document.getElementById('access-code-modal').classList.add('show');
 }
@@ -1393,7 +1488,7 @@ async function sendTelemetry(extra = {}) {
     // CURRENT_TIER only ever becomes non-'free' via applyVerifiedPurchase(),
     // which exclusively fires on a verified Stripe-derived access code —
     // never on the password-gate path (vision/future test word).
-    code_source: CURRENT_TIER === 'free' ? 'test' : 'paid',
+    code_source: CURRENT_TIER === 'free' ? 'test' : (purchaseInfo && purchaseInfo.free ? 'free_code' : 'paid'),
     current_stage: convoState ? convoState.current_stage : null,
     current_track: convoState ? convoState.current_track : null,
     routed_track: convoState ? convoState.routed_track : null,
@@ -1766,9 +1861,28 @@ async function buildAndShowSummary() {
     pendingSummaryResult.confidence_scale_max = CONFIDENCE_SCALE_MAX;
   }
   document.getElementById('summary-loading').style.display = 'none';
-  sendTelemetry({ completed: convoState ? convoState.current_stage === 'summary' : false });
+  const completed = convoState ? convoState.current_stage === 'summary' : false;
+  sendTelemetry({ completed });
+  if (completed) completeFreeSessionIfNeeded();
   showScreen('email-gate');
   document.getElementById('email-input').focus();
+}
+
+// free-phase-bundle: a free code covers ONE completed session. Called only
+// when the conversation reached the summary stage; an early end keeps the
+// code usable (7 days). Fire-and-forget; never blocks the summary.
+async function completeFreeSessionIfNeeded() {
+  if (!purchaseInfo || !purchaseInfo.free || purchaseInfo.used || !purchaseInfo.access_code) return;
+  purchaseInfo.used = true;
+  try {
+    await fetch(PROXY_URL + '/complete-free-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+      body: JSON.stringify({ access_code: purchaseInfo.access_code, session_code: sessionCode }),
+    });
+  } catch (e) {
+    console.error('complete-free-session failed (non-blocking):', e);
+  }
 }
 
 function isValidEmail(v) {
@@ -1830,6 +1944,12 @@ async function startConversation() {
   beginBtn.disabled = true;
   setStatus('connecting', 'Connecting…');
 
+  if (purchaseInfo && purchaseInfo.free && purchaseInfo.used) {
+    setStatus('idle', '');
+    beginBtn.disabled = false;
+    showError(FREE_CODE_MESSAGES.free_used + ' Thank you for trying ClarityIQ during our free launch.');
+    return;
+  }
   const canProceed = await consumeStarterIfNeeded();
   if (!canProceed) {
     setStatus('idle', '');
@@ -2222,8 +2342,78 @@ document.getElementById('before-begin-continue').addEventListener('click', async
 });
 
 document.getElementById('post-survey-submit').addEventListener('click', () => {
+  if (purchaseInfo && purchaseInfo.free) { openAfterSurvey(); return; }
   showScreen(null);
   buildAndShowSummary();
+});
+
+// ── free-phase-bundle: optional after-session survey (free codes) ──────────
+// Confidence is taken from the post-survey answer just given (not asked
+// twice). Everything here is optional; Skip goes straight to the summary.
+let asRecommend = null, asWtp = null, asIssue = null;
+(function () {
+  const row = document.getElementById('as-recommend-scale');
+  for (let i = 0; i <= 10; i++) {
+    const b = document.createElement('button');
+    b.className = 'scale-btn'; b.dataset.value = String(i); b.textContent = String(i);
+    b.style.flexBasis = 'calc(16% - 7px)';
+    row.appendChild(b);
+  }
+})();
+setupChoiceGroup('as-recommend-scale', (v) => { asRecommend = Number(v); });
+setupChoiceGroup('as-wtp-choices', (v) => { asWtp = v; });
+setupChoiceGroup('as-issue-choices', (v) => {
+  asIssue = v;
+  document.getElementById('as-issue-detail').style.display = v === 'yes' ? 'block' : 'none';
+});
+function openAfterSurvey() {
+  asRecommend = null; asWtp = null; asIssue = null;
+  ['as-recommend-scale', 'as-wtp-choices', 'as-issue-choices'].forEach(resetChoiceGroup);
+  ['as-unclear', 'as-issue-detail', 'as-email'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('as-issue-detail').style.display = 'none';
+  document.getElementById('as-email-consent').checked = false;
+  document.getElementById('as-error').textContent = '';
+  showScreen('after-survey');
+}
+function finishAfterSurvey() {
+  showScreen(null);
+  buildAndShowSummary();
+}
+document.getElementById('as-skip').addEventListener('click', finishAfterSurvey);
+document.getElementById('as-submit').addEventListener('click', async () => {
+  const err = document.getElementById('as-error');
+  const email = document.getElementById('as-email').value.trim();
+  const consent = document.getElementById('as-email-consent').checked;
+  if (email && !isValidEmail(email)) { err.textContent = 'Please check the email address, or leave it blank.'; return; }
+  if (email && !consent) { err.textContent = 'Please tick the box to agree to one follow-up message, or leave the email blank.'; return; }
+  err.textContent = '';
+  const body = {};
+  let sv = null;
+  try { sv = localStorage.getItem(CIQ_SV_KEY); } catch (e) {}
+  if (sv) body.survey_id = sv;
+  if (postConfidence != null) body.confidence = postConfidence;
+  if (asRecommend != null) body.recommend = asRecommend;
+  if (asWtp) body.wtp = asWtp;
+  const unclear = document.getElementById('as-unclear').value.trim();
+  if (unclear) body.unclear = unclear.slice(0, 1000);
+  if (asIssue) body.issue = asIssue;
+  const detail = document.getElementById('as-issue-detail').value.trim();
+  if (asIssue === 'yes' && detail) body.issue_detail = detail.slice(0, 1000);
+  if (email) { body.email = email; body.email_consent = true; }
+  const btn = document.getElementById('as-submit');
+  btn.disabled = true;
+  try {
+    const res = await fetch(PROXY_URL + '/survey/after', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) { try { localStorage.removeItem(CIQ_SV_KEY); } catch (e) {} }
+  } catch (e) {
+    console.error('after-survey failed (non-blocking):', e);
+  }
+  btn.disabled = false;
+  finishAfterSurvey();
 });
 
 document.getElementById('email-gate-submit').addEventListener('click', submitEmailGate);
