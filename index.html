@@ -1067,7 +1067,7 @@ const CIQ_SV_KEY = 'ciq_sv';
   } catch (e) {}
 })();
 const FREE_CODE_MESSAGES = {
-  free_used: 'This free code has already been used for one completed session.',
+  free_used: 'This launch pass code has already been used for one completed session.',
   expired: 'This code has expired.',
 };
 
@@ -1238,12 +1238,12 @@ document.getElementById('gate-input').addEventListener('keydown', (e) => {
 function showAccessCodeModal(result) {
   document.getElementById('access-code-value').textContent = result.access_code;
   const note = result.free === true
-    ? `Your free launch code unlocks one completed IOL ClarityIQ Session within 7 days. If a session drops before the end, you can start again until then.`
+    ? `Your launch pass code unlocks one completed IOL ClarityIQ Session within 7 days. If a session drops before the end, you can start again until then.`
     : result.tier === 'session'
     ? `Unlocks your IOL ClarityIQ Session for 6 months, and you can return to it as many times as you'd like during that window.`
     : `Unlocks your IOL ClarityIQ Starter — a single session.`;
   document.getElementById('access-code-title').textContent = result.free === true
-    ? "You're all set — save your free code"
+    ? "You're all set — save your launch pass code"
     : "You're all set — save this code";
   document.getElementById('access-code-note').textContent = note;
   document.getElementById('access-code-modal').classList.add('show');
