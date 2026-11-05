@@ -575,7 +575,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
       </div>
     </div>
 
-    <div class="screen-question">
+    <div class="screen-question" id="pre-population-q">
       <div class="screen-question-label">Do you currently have a cataract consultation scheduled, or has an eye doctor mentioned you may need one?</div>
       <div class="choice-row" id="pre-population-choices">
         <button class="choice-btn" data-value="scheduled_consult">Yes, I have one scheduled</button>
@@ -585,7 +585,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
     </div>
 
     <div class="screen-question">
-      <div class="screen-question-label">How confident do you feel right now about which lens is right for you?</div>
+      <div class="screen-question-label">How confident do you feel right now about understanding your lens options and their trade-offs?</div>
       <div class="scale-row" id="pre-confidence-scale">
         <button class="scale-btn" data-value="1">1</button>
         <button class="scale-btn" data-value="2">2</button>
@@ -602,11 +602,11 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
     </div>
 
     <div class="screen-question">
-      <div class="screen-question-label">Right now, which best describes your leaning?</div>
+      <div class="screen-question-label">Right now, which kind of lens are you leaning toward?</div>
       <div class="choice-row" id="pre-leaning-choices">
-        <button class="choice-btn" data-value="standard">Probably the basic/standard lens</button>
-        <button class="choice-btn" data-value="upgraded">Probably an upgraded lens, somewhat less dependence on glasses</button>
-        <button class="choice-btn" data-value="glasses_free">Probably the most advanced lens available, as little dependence on glasses as possible</button>
+        <button class="choice-btn" data-value="standard">A standard lens</button>
+        <button class="choice-btn" data-value="upgraded">A lens that may reduce glasses for some distances</button>
+        <button class="choice-btn" data-value="glasses_free">A lens aimed at the least glasses use</button>
         <button class="choice-btn" data-value="not_sure">Not sure yet</button>
       </div>
     </div>
@@ -644,10 +644,10 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
   <!-- Post-survey (Batch 2.1) -->
   <div id="post-survey" class="screen">
     <h1 class="screen-title">One more thing</h1>
-    <div class="screen-sub">Same two questions, now that you've finished — this is how we measure whether the conversation actually helped.</div>
+    <div class="screen-sub">Same two questions as before the conversation, now that you've reached the summary. This is how we measure whether it helped.</div>
 
     <div class="screen-question">
-      <div class="screen-question-label">How confident do you feel now about which lens is right for you?</div>
+      <div class="screen-question-label">How confident do you feel now about understanding your lens options and their trade-offs?</div>
       <div class="scale-row" id="post-confidence-scale">
         <button class="scale-btn" data-value="1">1</button>
         <button class="scale-btn" data-value="2">2</button>
@@ -664,11 +664,11 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
     </div>
 
     <div class="screen-question">
-      <div class="screen-question-label">Now, which best describes your leaning?</div>
+      <div class="screen-question-label">Now, which kind of lens are you leaning toward?</div>
       <div class="choice-row" id="post-leaning-choices">
-        <button class="choice-btn" data-value="standard">Probably the basic/standard lens</button>
-        <button class="choice-btn" data-value="upgraded">Probably an upgraded lens, somewhat less dependence on glasses</button>
-        <button class="choice-btn" data-value="glasses_free">Probably the most advanced lens available, as little dependence on glasses as possible</button>
+        <button class="choice-btn" data-value="standard">A standard lens</button>
+        <button class="choice-btn" data-value="upgraded">A lens that may reduce glasses for some distances</button>
+        <button class="choice-btn" data-value="glasses_free">A lens aimed at the least glasses use</button>
         <button class="choice-btn" data-value="not_sure">Not sure yet</button>
       </div>
     </div>
@@ -676,17 +676,62 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
     <button class="screen-submit" id="post-survey-submit" disabled>See my summary</button>
   </div>
 
+  <!-- Survey merge v1: the call ended before the summary step, so the
+       "now that you've finished" questions would not fit. One short,
+       optional question instead. -->
+  <div id="stopped-survey" class="screen">
+    <h1 class="screen-title">Before your summary</h1>
+    <div class="screen-sub">The conversation ended before the summary step. One quick, optional question.</div>
+    <div class="screen-question">
+      <div class="screen-question-label">What made you stop?</div>
+      <div class="choice-row" id="stop-reason-choices">
+        <button class="choice-btn" data-value="got_enough">I got what I needed</button>
+        <button class="choice-btn" data-value="no_time">I ran out of time</button>
+        <button class="choice-btn" data-value="audio_problem">Audio or connection problem</button>
+        <button class="choice-btn" data-value="voice">The voice was hard to listen to</button>
+        <button class="choice-btn" data-value="not_expected">It wasn't what I expected</button>
+        <button class="choice-btn" data-value="other">Something else</button>
+      </div>
+    </div>
+    <div class="screen-question">
+      <label class="screen-question-label" for="stop-detail">Anything else? (optional)</label>
+      <textarea id="stop-detail" class="as-text" maxlength="500" rows="2"></textarea>
+    </div>
+    <div class="as-hint" id="stop-free-note" style="display:none;">Your launch pass code still works for one complete session within 7 days of getting it.</div>
+    <div class="as-hint">Please don't include names, phone numbers, or health details.</div>
+    <button class="screen-submit" id="stop-submit">Continue</button>
+    <button class="as-skip" id="stop-skip" type="button">Skip</button>
+  </div>
+
   <!-- free-phase-bundle: after-session survey (free launch codes only, optional) -->
   <div id="after-survey" class="screen">
     <h1 class="screen-title">Help us improve ClarityIQ (optional)</h1>
     <div class="screen-sub">A few quick questions about your launch pass session. Skip any you like.</div>
     <div class="screen-question">
-      <div class="screen-question-label">How likely are you to recommend ClarityIQ to a friend? (0–10)</div>
-      <div class="scale-row" id="as-recommend-scale"></div>
-      <div class="scale-hint"><span>Not likely</span><span>Very likely</span></div>
+      <div class="screen-question-label">How prepared do you feel to talk with your surgeon about your lens options? (1–10)</div>
+      <div class="scale-row" id="as-prepared-scale"></div>
+      <div class="scale-hint"><span>Not prepared</span><span>Very prepared</span></div>
     </div>
     <div class="screen-question">
-      <div class="screen-question-label">After launch, what would feel like a fair price for a session like this?</div>
+      <div class="screen-question-label">How did the voice sound?</div>
+      <div class="choice-row" id="as-voice-choices">
+        <button class="choice-btn" data-value="natural">Natural</button>
+        <button class="choice-btn" data-value="fine">Fine</button>
+        <button class="choice-btn" data-value="robotic">A bit robotic</button>
+        <button class="choice-btn" data-value="odd_start">Odd or high-pitched at the start</button>
+        <button class="choice-btn" data-value="hard_to_hear">Hard to hear or cut out</button>
+      </div>
+    </div>
+    <div class="screen-question">
+      <div class="screen-question-label">If this session hadn't been free, would you have paid for it?</div>
+      <div class="choice-row" id="as-wouldpay-choices">
+        <button class="choice-btn" data-value="yes">Yes</button>
+        <button class="choice-btn" data-value="maybe">Maybe</button>
+        <button class="choice-btn" data-value="no">No</button>
+      </div>
+    </div>
+    <div class="screen-question" id="as-wtp-q">
+      <div class="screen-question-label">Roughly how much would feel fair for a session like this?</div>
       <div class="choice-row" id="as-wtp-choices">
         <button class="choice-btn" data-value="0">$0</button>
         <button class="choice-btn" data-value="49">$49</button>
@@ -694,6 +739,15 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
         <button class="choice-btn" data-value="249">$249</button>
         <button class="choice-btn" data-value="more">More than $249</button>
       </div>
+    </div>
+    <div class="screen-question">
+      <label class="screen-question-label" for="as-helped">What helped most?</label>
+      <textarea id="as-helped" class="as-text" maxlength="1000" rows="2"></textarea>
+    </div>
+    <div class="screen-question">
+      <div class="screen-question-label">How likely are you to recommend ClarityIQ to a friend? (0–10)</div>
+      <div class="scale-row" id="as-recommend-scale"></div>
+      <div class="scale-hint"><span>Not likely</span><span>Very likely</span></div>
     </div>
     <div class="screen-question">
       <label class="screen-question-label" for="as-unclear">Was anything unclear?</label>
@@ -1465,6 +1519,8 @@ let preConfidence  = null;
 let preLeaning     = null;
 let postConfidence = null;
 let postLeaning    = null;
+let skipPopulationQ = false; // survey merge v1: consultation question skipped (free flow, site survey answered)
+let stopReason = null;        // survey merge v1: why the call ended before the summary
 let pendingSummaryResult = null; // AI summary held here until email gate (2.3) clears it
 
 function generateSessionCode() {
@@ -1503,6 +1559,7 @@ async function sendTelemetry(extra = {}) {
     duration_ms: sessionStartedAt ? Date.now() - sessionStartedAt : 0,
     age_band: ageBand,
     population_filter: populationFilter,
+    population_skipped: skipPopulationQ && !populationFilter ? true : undefined,
     clarity_tap_count: clarityTapCount,
     pre_confidence: preConfidence,
     pre_leaning: preLeaning,
@@ -2164,10 +2221,17 @@ async function startConversation() {
 // Guards against onDisconnect AND a manual "End conversation" click both
 // firing the post-session flow for the same session.
 let summaryFlowStarted = false;
+// Survey merge v1: the "now that you've finished" questions only fit when
+// the conversation reached the summary step. An earlier end gets one short
+// "what made you stop?" question instead.
+function reachedSummaryStage() {
+  return !!(summaryReady || (convoState && convoState.current_stage === 'summary'));
+}
 function triggerPostSession() {
   if (summaryFlowStarted) return;
   summaryFlowStarted = true;
-  showScreen('post-survey');
+  if (reachedSummaryStage()) showScreen('post-survey');
+  else openStoppedSurvey();
 }
 
 async function endConversation() {
@@ -2211,6 +2275,8 @@ function resetUI() {
   resetChoiceGroup('pre-leaning-choices');
   resetChoiceGroup('post-confidence-scale');
   resetChoiceGroup('post-leaning-choices');
+  resetChoiceGroup('stop-reason-choices');
+  stopReason = null;
   document.getElementById('pre-survey-submit').disabled  = true;
   document.getElementById('post-survey-submit').disabled = true;
   document.getElementById('email-input').value = '';
@@ -2239,6 +2305,7 @@ function resetUI() {
   setStatus('', 'Ready to begin');
   document.getElementById('progress-stage-label').textContent = 'Getting started';
   document.getElementById('roadmap').innerHTML = ''; // rebuilt by renderRoadmap() once the next conversation starts
+  applyPreSurveyMode();
   showScreen('pre-survey');
 }
 
@@ -2304,9 +2371,21 @@ function setupChoiceGroup(containerId, onSelect) {
 // same telemetry fields, different source. record_track is unaffected: it
 // still fires live from Stage 3 since track depends on how the conversation
 // actually unfolds, not something choosable up front.
+// Survey merge v1: in the free flow the site survey already asked where the
+// person is in the process, so the consultation question is skipped when that
+// survey was answered in this browser (ciq_sv). population_filter stays null
+// and population_skipped marks why.
+function applyPreSurveyMode() {
+  let sv = null;
+  try { sv = localStorage.getItem(CIQ_SV_KEY); } catch (e) {}
+  skipPopulationQ = !!(purchaseInfo && purchaseInfo.free && sv);
+  const q = document.getElementById('pre-population-q');
+  if (q) q.style.display = skipPopulationQ ? 'none' : '';
+  checkPreSurveyComplete();
+}
 function checkPreSurveyComplete() {
   document.getElementById('pre-survey-submit').disabled =
-    !(preConfidence && preLeaning && ageBand && populationFilter);
+    !(preConfidence && preLeaning && ageBand && (populationFilter || skipPopulationQ));
 }
 setupChoiceGroup('pre-age-band-choices', (v) => { ageBand = v; checkPreSurveyComplete(); });
 setupChoiceGroup('pre-population-choices', (v) => { populationFilter = v; checkPreSurveyComplete(); });
@@ -2352,6 +2431,7 @@ document.getElementById('post-survey-submit').addEventListener('click', () => {
 // Confidence is taken from the post-survey answer just given (not asked
 // twice). Everything here is optional; Skip goes straight to the summary.
 let asRecommend = null, asWtp = null, asIssue = null;
+let asPrepared = null, asVoice = null, asWouldPay = null;
 (function () {
   const row = document.getElementById('as-recommend-scale');
   for (let i = 0; i <= 10; i++) {
@@ -2360,8 +2440,17 @@ let asRecommend = null, asWtp = null, asIssue = null;
     b.style.flexBasis = 'calc(16% - 7px)';
     row.appendChild(b);
   }
+  const prep = document.getElementById('as-prepared-scale');
+  for (let i = 1; i <= 10; i++) {
+    const b = document.createElement('button');
+    b.className = 'scale-btn'; b.dataset.value = String(i); b.textContent = String(i);
+    prep.appendChild(b);
+  }
 })();
 setupChoiceGroup('as-recommend-scale', (v) => { asRecommend = Number(v); });
+setupChoiceGroup('as-prepared-scale', (v) => { asPrepared = Number(v); });
+setupChoiceGroup('as-voice-choices', (v) => { asVoice = v; });
+setupChoiceGroup('as-wouldpay-choices', (v) => { asWouldPay = v; });
 setupChoiceGroup('as-wtp-choices', (v) => { asWtp = v; });
 setupChoiceGroup('as-issue-choices', (v) => {
   asIssue = v;
@@ -2369,8 +2458,9 @@ setupChoiceGroup('as-issue-choices', (v) => {
 });
 function openAfterSurvey() {
   asRecommend = null; asWtp = null; asIssue = null;
-  ['as-recommend-scale', 'as-wtp-choices', 'as-issue-choices'].forEach(resetChoiceGroup);
-  ['as-unclear', 'as-issue-detail', 'as-email'].forEach(id => { document.getElementById(id).value = ''; });
+  asPrepared = null; asVoice = null; asWouldPay = null;
+  ['as-recommend-scale', 'as-wtp-choices', 'as-issue-choices', 'as-prepared-scale', 'as-voice-choices', 'as-wouldpay-choices'].forEach(resetChoiceGroup);
+  ['as-unclear', 'as-issue-detail', 'as-email', 'as-helped'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('as-issue-detail').style.display = 'none';
   document.getElementById('as-email-consent').checked = false;
   document.getElementById('as-error').textContent = '';
@@ -2392,7 +2482,15 @@ document.getElementById('as-submit').addEventListener('click', async () => {
   let sv = null;
   try { sv = localStorage.getItem(CIQ_SV_KEY); } catch (e) {}
   if (sv) body.survey_id = sv;
+  // Survey merge v1: the stored before/after pair is the app's own two
+  // questions (same wording, both 1-10), not the site pop-up.
   if (postConfidence != null) body.confidence = postConfidence;
+  if (preConfidence != null) body.confidence_before = preConfidence;
+  if (asPrepared != null) body.prepared = asPrepared;
+  if (asVoice) body.voice = asVoice;
+  if (asWouldPay) body.would_pay = asWouldPay;
+  const helped = document.getElementById('as-helped').value.trim();
+  if (helped) body.helped_most = helped.slice(0, 1000);
   if (asRecommend != null) body.recommend = asRecommend;
   if (asWtp) body.wtp = asWtp;
   const unclear = document.getElementById('as-unclear').value.trim();
@@ -2415,6 +2513,48 @@ document.getElementById('as-submit').addEventListener('click', async () => {
   }
   btn.disabled = false;
   finishAfterSurvey();
+});
+
+// ── Survey merge v1: "what made you stop?" (call ended before the summary) ──
+setupChoiceGroup('stop-reason-choices', (v) => { stopReason = v; });
+function openStoppedSurvey() {
+  stopReason = null;
+  resetChoiceGroup('stop-reason-choices');
+  document.getElementById('stop-detail').value = '';
+  document.getElementById('stop-free-note').style.display = (purchaseInfo && purchaseInfo.free && !purchaseInfo.used) ? 'block' : 'none';
+  showScreen('stopped-survey');
+}
+function finishStoppedSurvey() {
+  showScreen(null);
+  buildAndShowSummary();
+}
+document.getElementById('stop-skip').addEventListener('click', finishStoppedSurvey);
+document.getElementById('stop-submit').addEventListener('click', async () => {
+  const detail = document.getElementById('stop-detail').value.trim().slice(0, 500);
+  if (stopReason || detail) {
+    sendTelemetry({ stop_reason: stopReason || 'other' });
+    if (purchaseInfo && purchaseInfo.free) {
+      const body = { kind: 'stopped' };
+      let sv = null;
+      try { sv = localStorage.getItem(CIQ_SV_KEY); } catch (e) {}
+      if (sv) body.survey_id = sv; // kept (not removed) so a later full session can still pair
+      if (stopReason) body.stop_reason = stopReason;
+      if (detail) body.stop_detail = detail;
+      const btn = document.getElementById('stop-submit');
+      btn.disabled = true;
+      try {
+        await fetch(PROXY_URL + '/survey/after', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+          body: JSON.stringify(body),
+        });
+      } catch (e) {
+        console.error('stopped-survey failed (non-blocking):', e);
+      }
+      btn.disabled = false;
+    }
+  }
+  finishStoppedSurvey();
 });
 
 document.getElementById('email-gate-submit').addEventListener('click', submitEmailGate);
