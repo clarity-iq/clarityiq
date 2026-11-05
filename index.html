@@ -825,8 +825,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 </div>
 
 <script type="module">
-import { Conversation } from 'https://esm.sh/@elevenlabs/client@1.35.0';
-// Pinned so a new SDK release can't change voice behaviour without a test pass. To upgrade: bump the version here, run the E2E, then merge.
+import { Conversation } from 'https://esm.sh/@elevenlabs/client';
 
 // 4.4: the public agent ID no longer lives here — the Worker calls
 // ElevenLabs' get-signed-url endpoint server-side (with the real API key)
