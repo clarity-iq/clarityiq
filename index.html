@@ -60,33 +60,6 @@ body {
   border-bottom: 1px solid #f0ede8; flex-shrink: 0;
 }
 #progress-stage-label { font-size: 12px; color: #5f5e5a; font-weight: 500; }
-/* Tap-next v1: soft session timer (elapsed vs ~30 min goal). Never ends the call. */
-#progress-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-#session-timer { font-size: 12px; color: #6b6b68; font-variant-numeric: tabular-nums; display: none; white-space: nowrap; }
-#session-timer.over-goal { color: #8a5a00; }
-#time-bar { height: 4px; background: #f0ede8; border-radius: 2px; margin-top: 6px; overflow: hidden; display: none; }
-#time-bar-fill { height: 100%; width: 0%; background: #1D9E75; border-radius: 2px; transition: width 1s linear; }
-#time-bar.over-goal #time-bar-fill { background: #d9a441; }
-/* Tap-next v1: the person moves the conversation forward. */
-#next-bar { flex-shrink: 0; padding: 10px 16px 0; background: #fff; display: none; }
-#next-btn {
-  width: 100%; min-height: 52px; padding: 12px 16px;
-  background: #fff; color: #0f6e56;
-  border: 2px solid #0f6e56; border-radius: 12px;
-  font-size: 16px; font-weight: 600; font-family: inherit; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  transition: background 0.15s, color 0.15s, transform 0.1s;
-  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
-}
-#next-btn .next-hint { font-size: 12px; font-weight: 500; opacity: 0.85; }
-#next-btn:active { transform: scale(0.98); }
-#next-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-#next-btn.invited { background: #0f6e56; color: #fff; animation: next-pulse 2s ease-in-out infinite; }
-@keyframes next-pulse {
-  0%,100% { box-shadow: 0 0 0 0 rgba(15,110,86,0.45); }
-  50%      { box-shadow: 0 0 0 6px rgba(15,110,86,0); }
-}
-@media (prefers-reduced-motion: reduce) { #next-btn.invited { animation: none; } }
 
 /* ── Topic roadmap — 6 dots, no labels ── */
 #roadmap {
@@ -828,11 +801,7 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
   <!-- Progress bar -->
   <div id="progress-wrap">
-    <div id="progress-row">
-      <span id="progress-stage-label" aria-live="polite">Getting started</span>
-      <span id="session-timer" role="timer" aria-live="off" aria-label="Time so far">0:00 · goal about 30 min</span>
-    </div>
-    <div id="time-bar" aria-hidden="true"><div id="time-bar-fill"></div></div>
+    <span id="progress-stage-label" aria-live="polite">Getting started</span>
   </div>
 
   <!-- Topic roadmap — 5 or 6 dots depending on tier, no labels. Populated
@@ -847,7 +816,6 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
       <div id="expect-card-title">What to expect</div>
       <div class="expect-row"><div class="expect-icon">⏱</div><span>About 20-30 minutes, more if you have questions</span></div>
       <div class="expect-row"><div class="expect-icon">🎤</div><span>Speak naturally — ClarityIQ will guide you through each step</span></div>
-      <div class="expect-row"><div class="expect-icon">➡️</div><span>Move on when you're ready: tap Next, or just say "next"</span></div>
       <div class="expect-row"><div class="expect-icon">📋</div><span>You'll receive a personal summary</span></div>
     </div>
 
@@ -873,13 +841,6 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
 
     <div id="transcript-wrap"></div>
     <div id="error-box"></div>
-  </div>
-
-  <!-- Tap-next v1: person-controlled stage advance (spoken "next" also works) -->
-  <div id="next-bar">
-    <button id="next-btn" type="button" aria-describedby="progress-stage-label">
-      <span id="next-btn-label">Next</span><span class="next-hint" id="next-btn-hint"></span>
-    </button>
   </div>
 
   <!-- Fixed bottom action bar -->
@@ -1487,12 +1448,6 @@ function checkReadinessPrecondition() {
 }
 
 function applyStageTransition(toStage) {
-  // Tap-next v1: the dot only ever moves forward. A re-fired or earlier
-  // anchor (e.g. the agent repeating an opening line) is logged, not applied.
-  if (STAGE_ORDER.indexOf(toStage) < STAGE_ORDER.indexOf(convoState.current_stage)) {
-    logAnomaly('anomaly', 'backward_transition_ignored', { from: convoState.current_stage, to: toStage });
-    return;
-  }
   checkStageTransition(toStage);
   // Implicit decline: reaching readiness as starter with no outcome ever
   // set means the person declined at the tier gate without attempting an
@@ -1507,138 +1462,7 @@ function applyStageTransition(toStage) {
   touchState();
   renderRoadmap();
   updateProgressBar();
-  updateNextButton();
   sendTelemetry();
-}
-
-// ── Tap-next v1: the person controls when the conversation moves on ─────────
-// The Next button (or the person saying "next" after the agent invites it)
-// advances the stage dot forward and tells the agent which stage is now
-// open. The agent's EXACT opening sentences still move the dot too (anchor
-// matching above is unchanged), so either path keeps the bar in step.
-const NEXT_LABELS = {
-  foundations: 'The basics', vision_goals: 'Your goals', tier_gate: 'What comes next',
-  lens_options: 'Lens options', readiness: 'Getting ready', summary: 'Your summary',
-};
-const AGENT_STAGE_NAMES = {
-  foundations: 'Stage 2 Foundations', vision_goals: 'Stage 3 Vision goals',
-  tier_gate: 'Stage 3.5 Tier gate', lens_options: 'Stage 4 Lens options',
-  readiness: 'Stage 5 Readiness', summary: 'Stage 6 Summary',
-};
-let nextInvited = false;     // agent just said "tap Next / say next"
-let lastAdvanceAt = 0;       // debounce: one advance per 2 s
-function nextStageFor(state) {
-  if (!state) return null;
-  switch (state.current_stage) {
-    case 'welcome':      return 'foundations';
-    case 'foundations':  return 'vision_goals';
-    case 'vision_goals': return state.tier === 'session' ? 'lens_options' : 'tier_gate';
-    case 'tier_gate':    return state.tier === 'session' ? 'lens_options' : 'readiness';
-    case 'lens_options': return 'readiness';
-    case 'readiness':    return 'summary';
-    default:             return null;
-  }
-}
-function updateNextButton() {
-  const bar = document.getElementById('next-bar');
-  const btn = document.getElementById('next-btn');
-  const to = nextStageFor(convoState);
-  if (!conversation || !convoState || !to) { bar.style.display = 'none'; return; }
-  bar.style.display = 'block';
-  document.getElementById('next-btn-label').textContent = 'Next: ' + NEXT_LABELS[to] + ' ›';
-  document.getElementById('next-btn-hint').textContent = nextInvited ? '(or say "next")' : '';
-  btn.setAttribute('aria-label', 'Next: go on to ' + NEXT_LABELS[to]);
-  btn.classList.toggle('invited', nextInvited);
-  // While an upgrade payment is open, moving on would skip the payment check.
-  btn.disabled = document.getElementById('upgrade-link-banner').style.display === 'flex';
-}
-function advanceByUser(source) {
-  if (!conversation || !convoState) return false;
-  const now = Date.now();
-  if (now - lastAdvanceAt < 2000) return false;
-  const to = nextStageFor(convoState);
-  if (!to) return false;
-  lastAdvanceAt = now;
-  nextInvited = false;
-  applyStageTransition(to);
-  try {
-    conversation.sendContextualUpdate('USER_ADVANCED: now ' + AGENT_STAGE_NAMES[to] + '. The person ' +
-      (source === 'tap' ? 'tapped Next' : 'said next') + '. Open this stage now with its EXACT opening sentence.');
-    // A contextual update alone doesn't make the agent speak; a tap also
-    // sends "Next" as the person's turn (they said it out loud otherwise).
-    if (source === 'tap') conversation.sendUserMessage('Next');
-  } catch (e) { console.error('Next advance send failed (non-blocking):', e); }
-  updateNextButton();
-  return true;
-}
-// Spoken backup: a short reply that is basically "next" / "move on", only
-// right after the agent invited it (keeps "what's next for me?" from firing).
-function isSpokenNext(text) {
-  const t = text.toLowerCase().replace(/[‘’]/g, "'").replace(/[^a-z' ]/g, ' ').replace(/\s+/g, ' ').trim();
-  if (!t || t.split(' ').length > 6) return false;
-  return /\bnext\b/.test(t) || /\bmove on\b/.test(t);
-}
-document.getElementById('next-btn').addEventListener('click', () => advanceByUser('tap'));
-
-// ── Tap-next v1: soft timer + wrap-up nudges ───────────────────────────────
-// Goal ~30 min; the timer never ends the call. At 30/35/40 min the agent is
-// told it's wrap-up attempt 1/2/3, and at 44 min to give its final line
-// (the agent's own max duration, 45 min, is the hard stop).
-const TIME_GOAL_MIN = 30;
-const WRAP_UPS = [
-  { min: 30, text: 'WRAP_UP_ATTEMPT 1: about 30 minutes have passed. At the next natural pause, gently offer to head to the summary.' },
-  { min: 35, text: 'WRAP_UP_ATTEMPT 2: about 35 minutes have passed. At the next natural pause, suggest wrapping up soon.' },
-  { min: 40, text: 'WRAP_UP_ATTEMPT 3: about 40 minutes have passed. At the next natural pause, suggest going to the summary now.' },
-  { min: 44, text: 'FINAL_CLOSE: about 44 minutes have passed; the call ends at 45. Give your final closing line now.' },
-];
-// Test-only: a local test page may shorten a "minute" (localhost only).
-function ciqMinuteMs() {
-  try {
-    const h = location.hostname;
-    const v = window.CIQ_TEST_MINUTE_MS;
-    if ((h === 'localhost' || h === '127.0.0.1') && typeof v === 'number' && v >= 50) return v;
-  } catch (e) {}
-  return 60000;
-}
-let callStartedAt = 0;
-let callTimer = null;
-let wrapUpsSent = 0;
-function fmtElapsed(ms) {
-  const s = Math.floor(ms / 1000), m = Math.floor(s / 60);
-  return m + ':' + String(s % 60).padStart(2, '0');
-}
-function tickCallTimer() {
-  if (!callStartedAt) return;
-  updateNextButton(); // also re-enables Next once an upgrade banner closes
-  const minuteMs = ciqMinuteMs();
-  const elapsed = Date.now() - callStartedAt;
-  const realMs = elapsed * (60000 / minuteMs);
-  const mins = elapsed / minuteMs;
-  const over = mins >= TIME_GOAL_MIN;
-  const el = document.getElementById('session-timer');
-  el.textContent = fmtElapsed(realMs) + (over ? ' · wrapping up' : ' · goal about 30 min');
-  el.classList.toggle('over-goal', over);
-  el.setAttribute('aria-label', Math.floor(mins) + ' minutes so far, goal about 30 minutes');
-  const bar = document.getElementById('time-bar');
-  bar.classList.toggle('over-goal', over);
-  document.getElementById('time-bar-fill').style.width = Math.min(100, (mins / TIME_GOAL_MIN) * 100) + '%';
-  while (wrapUpsSent < WRAP_UPS.length && mins >= WRAP_UPS[wrapUpsSent].min) {
-    const w = WRAP_UPS[wrapUpsSent++];
-    try { if (conversation) conversation.sendContextualUpdate(w.text); } catch (e) { console.error('Wrap-up update failed (non-blocking):', e); }
-  }
-}
-function startCallTimer() {
-  stopCallTimer();
-  callStartedAt = Date.now();
-  wrapUpsSent = 0;
-  document.getElementById('session-timer').style.display = 'inline';
-  document.getElementById('time-bar').style.display = 'block';
-  tickCallTimer();
-  callTimer = setInterval(tickCallTimer, Math.min(1000, Math.max(50, Math.floor(ciqMinuteMs() / 60))));
-}
-function stopCallTimer() {
-  if (callTimer) clearInterval(callTimer);
-  callTimer = null;
 }
 
 // ── Progress tracker (§7) ────────────────────────────────────────────────
@@ -1833,14 +1657,7 @@ function addTranscriptLine(role, text) {
   wrap.appendChild(line);
   wrap.scrollTop = wrap.scrollHeight;
 
-  // Tap-next v1: curly apostrophes are folded to straight ones so the exact
-  // anchor sentences still match if the transcript uses typographic quotes.
-  const lower = clean.toLowerCase().replace(/[‘’]/g, "'");
-
-  // Tap-next v1: spoken backup for the Next button.
-  if (role === 'user' && convoState && nextInvited && isSpokenNext(clean)) {
-    advanceByUser('spoken');
-  }
+  const lower = clean.toLowerCase();
 
   // Anchor-phrase detection — agent messages only. See
   // clarityiq_anchor_state_machine_spec_v0_1.md §3 for the phrase table.
@@ -1871,11 +1688,6 @@ function addTranscriptLine(role, text) {
         sendTelemetry();
         break;
       }
-    }
-    // Tap-next v1: highlight the Next button when the agent invites it.
-    if (/\btap next\b|\bsay next\b|\bsay "next"/.test(lower)) {
-      nextInvited = true;
-      updateNextButton();
     }
     // Dynamic summary button — fires on the Stage 6 anchor or tap instruction
     if (!summaryReady && (
@@ -1937,7 +1749,7 @@ surgeon_questions: Extract the polished version of each surgeon question raised 
 
 starter_scope_note: Starter tier only. Generate one honest, brief sentence noting that this summary reflects the starter session, and that full lens category comparison was outside its scope. Omit entirely for session-tier people.
 
-reassurance_note: this is NOT extracted from the transcript — it is fixed boilerplate text applied at render time, not generated by this prompt. Do not include it in the JSON you return.
+session_access_note and reassurance_note: these are NOT extracted from the transcript — they are fixed boilerplate text applied at render time based on tier, not generated by this prompt. Do not include them in the JSON you return.
 
 Conversation transcript:
 ${transcriptText}
@@ -1994,15 +1806,13 @@ function escapeHtmlClient(s) {
 
 // Fixed boilerplate, not model-generated — applied at render time based on
 // final effective tier (see clarityiq_artifact_generation_prompt_update_v0_2.md §1, §2).
-// Tap-next v1 (Nov 10): the "Your access" card (six-month wording) was removed.
-// Access length lives in the purchase terms, not in the session or its summary,
-// so every pass type sees the same summary.
+const SESSION_ACCESS_NOTE = "Your access to this conversation is good for six months from today — you're welcome to start a new conversation anytime during that window if new questions come up.";
 const REASSURANCE_NOTE = "It's completely normal to still have questions at this point — that's what your surgical consultation is for. Bring this summary with you.";
 
 // Summary Artifact — v0.2 field order: vision_goal (with
 // monovision_history nested as a sub-line) -> topics_covered ->
 // lens_category_interest (now includes focal point / tradeoff preference
-// inline) -> surgeon_questions -> (session_access_note removed, tap-next v1) ->
+// inline) -> surgeon_questions -> session_access_note (session only) ->
 // starter_scope_note (starter only) -> reassurance_note (always last).
 // Every field but reassurance_note may legitimately be absent per the
 // extraction prompt's omission rules — the rendered summary should look
@@ -2048,6 +1858,13 @@ function renderSummary(summary) {
       : `<ol class="surgeon-q-list">${qs.map(q => `<li>${escapeHtmlClient(q)}</li>`).join('')}</ol>`;
     qCard.innerHTML = `<div class="surgeon-q-block" style="margin-top:0"><div class="surgeon-q-label">Questions for your surgeon</div>${inner}</div>`;
     body.appendChild(qCard);
+  }
+
+  if (tier === 'session') {
+    const accessCard = document.createElement('div');
+    accessCard.className = 'summary-card';
+    accessCard.innerHTML = `<div class="summary-card-label">Your access</div><div class="summary-card-value">${escapeHtmlClient(SESSION_ACCESS_NOTE)}</div>`;
+    body.appendChild(accessCard);
   }
 
   if (summary.starter_scope_note) {
@@ -2272,7 +2089,6 @@ async function startConversation() {
             upgradeCheckoutSessionId = data.checkout_session_id;
             document.getElementById('upgrade-link-btn').href = data.url;
             document.getElementById('upgrade-link-banner').style.display = 'flex';
-            updateNextButton();
             return { ok: true };
           } catch (e) {
             return { ok: false, error: 'network_error' };
@@ -2299,7 +2115,6 @@ async function startConversation() {
               touchState();
               renderRoadmap();
               updateProgressBar();
-              updateNextButton();
               sendTelemetry();
               return { status: 'confirmed' };
             }
@@ -2355,8 +2170,6 @@ async function startConversation() {
         initConvoState();
         renderRoadmap();
         updateProgressBar();
-        startCallTimer();
-        updateNextButton();
         sendTelemetry();
         beginBtn.style.display                                = 'none';
         document.getElementById('expect-card').style.display = 'none';
@@ -2366,8 +2179,6 @@ async function startConversation() {
       },
 
       onDisconnect: () => {
-        stopCallTimer();
-        document.getElementById('next-bar').style.display = 'none';
         setStatus('', 'Conversation ended');
         triggerPostSession();
       },
@@ -2424,8 +2235,6 @@ function triggerPostSession() {
 }
 
 async function endConversation() {
-  stopCallTimer();
-  document.getElementById('next-bar').style.display = 'none';
   triggerPostSession();
   if (conversation) {
     try { await conversation.endSession(); } catch(e) {}
@@ -2440,15 +2249,6 @@ async function endConversation() {
 }
 
 function resetUI() {
-  stopCallTimer();
-  callStartedAt = 0;
-  wrapUpsSent   = 0;
-  nextInvited   = false;
-  lastAdvanceAt = 0;
-  document.getElementById('next-bar').style.display = 'none';
-  document.getElementById('session-timer').style.display = 'none';
-  document.getElementById('time-bar').style.display = 'none';
-  document.getElementById('time-bar-fill').style.width = '0%';
   transcriptLog  = [];
   convoState     = null;
   staleLogged    = false;
