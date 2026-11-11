@@ -1079,6 +1079,7 @@ function applyVerifiedPurchase(result) {
     tier: result.tier,
     expires_at: result.expires_at || null,
     free: result.free === true, // free-phase-bundle: free launch code (1 completed session or 7 days)
+    practice: result.practice === true, // practice-profile-v1: code made in a surgeon's dashboard
     used: false,
   };
   if (result.access_code) {
@@ -1205,15 +1206,23 @@ async function verifyAndApplyPurchase() {
       // Returning via a saved access code — an existing code being used to
       // start a new session, exactly what ToS §7 and this check target.
       // Require the purchase email before unlocking.
-      showEmailVerifyScreen(storedCode, () => {
+      // practice-profile-v1: a code from a surgeon's dashboard has no
+      // purchase email on file (no personal data), so there is nothing to
+      // check; unlock directly.
+      if (result.practice === true) {
         applyVerifiedPurchase(result);
         unlockApp();
-      });
+      } else {
+        showEmailVerifyScreen(storedCode, () => {
+          applyVerifiedPurchase(result);
+          unlockApp();
+        });
+      }
     }
-  } else if (result && (result.reason === 'expired' || result.reason === 'already_used' || result.reason === 'free_used')) {
+  } else if (result && (result.reason === 'expired' || result.reason === 'already_used' || result.reason === 'free_used' || result.reason === 'practice_used')) {
     // Dead code — stop re-checking it on future loads.
     localStorage.removeItem(ACCESS_CODE_STORAGE_KEY);
-    if (result.reason === 'free_used' || result.message) showGateNotice(result.message || FREE_CODE_MESSAGES[result.reason]);
+    if (result.reason === 'free_used' || result.reason === 'practice_used' || result.message) showGateNotice(result.message || FREE_CODE_MESSAGES[result.reason]);
   }
 }
 
@@ -1227,7 +1236,7 @@ async function tryApplyAccessCode(code) {
     applyVerifiedPurchase(result);
     return true;
   }
-  if (result && (result.reason === 'free_used' || (result.reason === 'expired' && result.message))) {
+  if (result && (result.reason === 'free_used' || result.reason === 'practice_used' || (result.reason === 'expired' && result.message))) {
     return { notice: result.message || FREE_CODE_MESSAGES[result.reason] };
   }
   return false;
@@ -1305,6 +1314,12 @@ async function checkGatePassword() {
   if (applied && applied.notice) {
     showGateNotice(applied.notice);
     input.value = '';
+    return;
+  }
+  if (applied && purchaseInfo && purchaseInfo.practice) {
+    // practice-profile-v1: code from a surgeon's dashboard; no purchase
+    // email exists for it, so there is nothing to re-check.
+    unlockApp();
     return;
   }
   if (applied) {
@@ -1721,7 +1736,7 @@ async function sendTelemetry(extra = {}) {
     // CURRENT_TIER only ever becomes non-'free' via applyVerifiedPurchase(),
     // which exclusively fires on a verified Stripe-derived access code —
     // never on the password-gate path (vision/future test word).
-    code_source: CURRENT_TIER === 'free' ? 'test' : (purchaseInfo && purchaseInfo.free ? 'free_code' : 'paid'),
+    code_source: CURRENT_TIER === 'free' ? 'test' : (purchaseInfo && purchaseInfo.free ? 'free_code' : (purchaseInfo && purchaseInfo.practice ? 'practice_code' : 'paid')),
     current_stage: convoState ? convoState.current_stage : null,
     current_track: convoState ? convoState.current_track : null,
     routed_track: convoState ? convoState.routed_track : null,
@@ -2113,7 +2128,8 @@ async function buildAndShowSummary() {
 // when the conversation reached the summary stage; an early end keeps the
 // code usable (7 days). Fire-and-forget; never blocks the summary.
 async function completeFreeSessionIfNeeded() {
-  if (!purchaseInfo || !purchaseInfo.free || purchaseInfo.used || !purchaseInfo.access_code) return;
+  // practice-profile v1.1: a finished session also uses up a surgeon-made code.
+  if (!purchaseInfo || !(purchaseInfo.free || purchaseInfo.practice) || purchaseInfo.used || !purchaseInfo.access_code) return;
   purchaseInfo.used = true;
   try {
     await fetch(PROXY_URL + '/complete-free-session', {
@@ -2204,11 +2220,14 @@ async function startConversation() {
   // key and rate-limits this (5/IP/hour), so it fails fast here rather than
   // after already prompting for mic access.
   let signedUrl;
+  let practiceProfile = 'NONE'; // practice-profile-v1: 'NONE' = the standard session
   try {
     const voiceRes = await fetch(PROXY_URL + '/api/get-voice-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
-      body: JSON.stringify({ session_code: sessionCode }),
+      // practice-profile-v1: the code lets the Worker fill the surgeon's
+      // practice profile (only for codes made in a surgeon dashboard).
+      body: JSON.stringify({ session_code: sessionCode, access_code: purchaseInfo ? purchaseInfo.access_code : null }),
     });
     if (voiceRes.status === 429) {
       const data = await voiceRes.json().catch(() => ({}));
@@ -2217,10 +2236,21 @@ async function startConversation() {
       showError(data.message || 'Too many attempts from this connection — please try again shortly.');
       return;
     }
+    if (voiceRes.status === 403) {
+      // practice-profile v1.1: surgeon code already used (1 session + 1 restart).
+      const data = await voiceRes.json().catch(() => ({}));
+      if (data.error === 'code_used') {
+        setStatus('idle', '');
+        beginBtn.disabled = false;
+        showError(data.message || 'This access code has already been used.');
+        return;
+      }
+    }
     if (!voiceRes.ok) throw new Error('voice session request failed');
     const voiceData = await voiceRes.json();
     signedUrl = voiceData.signed_url;
     if (!signedUrl) throw new Error('no signed_url in response');
+    practiceProfile = (typeof voiceData.practice_profile === 'string' && voiceData.practice_profile) ? voiceData.practice_profile : 'NONE';
   } catch (e) {
     setStatus('idle', '');
     beginBtn.disabled = false;
@@ -2240,6 +2270,9 @@ async function startConversation() {
       // way in initConvoState()).
       dynamicVariables: {
         tier: (CURRENT_TIER === 'starter') ? 'starter' : 'session',
+        // practice-profile-v1: fills the prompt's {{practice_profile}} slot.
+        // 'NONE' (any code not made in a surgeon dashboard) = standard session.
+        practice_profile: practiceProfile,
       },
 
       // record_age_band/record_population_filter moved to the pre-survey UI
@@ -2352,6 +2385,15 @@ async function startConversation() {
 
       onConnect: () => {
         setStatus('idle', 'Connected — listening');
+        // practice-profile v1.2: a surgeon code's start counts only once the
+        // call has connected (a failed connect never uses one). Fire-and-forget.
+        if (purchaseInfo && purchaseInfo.practice && purchaseInfo.access_code) {
+          fetch(PROXY_URL + '/practice-code-start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+            body: JSON.stringify({ access_code: purchaseInfo.access_code, session_code: sessionCode }),
+          }).catch(() => {});
+        }
         initConvoState();
         renderRoadmap();
         updateProgressBar();
