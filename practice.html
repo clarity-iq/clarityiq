@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>ClarityIQ · Surgeon dashboard</title>
+<!-- practice-profile-v1 (2026-11-10): surgeon dashboard, first pass.
+     PIN sign-in only. Lens toggles, focal-point options, per-eye plans,
+     and access codes. No personal data, no prices, no locations. -->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0ede8;color:#1a1a18;padding:20px;display:flex;justify-content:center}
+main{width:100%;max-width:720px}
+.card{background:#fff;border:1px solid #e4e2da;border-radius:16px;padding:18px 20px;margin-bottom:14px;box-shadow:0 2px 12px rgba(0,0,0,.05)}
+header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+header img{width:32px;height:32px}
+header h1{font-size:18px;font-weight:600}
+header .who{margin-left:auto;font-size:13px;color:#5f5e5a;text-align:right}
+h2{font-size:15px;font-weight:600;margin-bottom:4px}
+.hint{font-size:13px;color:#6b6b68;margin-bottom:10px;line-height:1.4}
+label.row{display:flex;align-items:flex-start;gap:10px;padding:7px 0;font-size:14px;line-height:1.35;cursor:pointer;border-bottom:1px solid #f4f2ee}
+label.row:last-child{border-bottom:none}
+label.row input{margin-top:2px;width:18px;height:18px;accent-color:#0f6e56;flex-shrink:0}
+.tag{font-size:11px;color:#0f6e56;border:1px solid #bfe0d3;border-radius:6px;padding:0 5px;margin-left:6px;white-space:nowrap}
+.tag.warn{color:#8a5a00;border-color:#ecd7a8}
+details.group{border:1px solid #ece9e2;border-radius:10px;padding:6px 12px;margin-bottom:8px}
+details.group summary{cursor:pointer;font-size:14px;font-weight:600;padding:4px 0;list-style-position:inside}
+details.group summary .count{font-weight:400;color:#6b6b68;margin-left:6px}
+button{font:inherit;font-size:15px;font-weight:600;border-radius:10px;padding:10px 16px;cursor:pointer;border:2px solid #0f6e56;background:#0f6e56;color:#fff;min-height:44px}
+button.ghost{background:#fff;color:#0f6e56}
+button:disabled{opacity:.5;cursor:default}
+input[type=password],input[type=text],select{font:inherit;font-size:16px;padding:10px 12px;border:1px solid #d6d3cb;border-radius:10px;width:100%}
+.status{font-size:13px;margin-top:8px;min-height:18px}
+.ok{color:#0f6e56}.err{color:#a3341f}
+.code-big{font-size:28px;font-weight:700;letter-spacing:.12em;font-variant-numeric:tabular-nums;margin:10px 0 4px}
+pre{white-space:pre-wrap;font-size:12.5px;background:#f8f7f4;border:1px solid #ece9e2;border-radius:10px;padding:10px;line-height:1.45}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{text-align:left;padding:5px 4px;border-bottom:1px solid #f0ede8}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sticky{position:sticky;bottom:10px;z-index:2}
+:focus-visible{outline:3px solid #0f6e56;outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="logo-mark.png" alt="">
+    <h1>ClarityIQ surgeon dashboard</h1>
+    <div class="who" id="who"></div>
+  </header>
+
+  <!-- Sign in -->
+  <section class="card" id="signin">
+    <h2>Sign in</h2>
+    <p class="hint">Enter your dashboard PIN. After 5 wrong tries, sign-in pauses for 15 minutes.</p>
+    <div id="sid-wrap" style="display:none;margin-bottom:8px">
+      <input type="text" id="sid" placeholder="Surgeon ID (from your dashboard link)" autocomplete="username" autocapitalize="none">
+    </div>
+    <form id="signin-form" class="actions">
+      <input type="password" id="pin" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" placeholder="PIN" style="flex:1;min-width:160px" aria-label="PIN">
+      <button type="submit" id="signin-btn">Sign in</button>
+    </form>
+    <div class="status" id="signin-status" role="status"></div>
+  </section>
+
+  <div id="dash" style="display:none">
+    <section class="card">
+      <h2>Lenses you offer</h2>
+      <p class="hint">ClarityIQ names and explains only the lenses switched on here. If someone asks about another lens, it says in one sentence that it's a lens some surgeons use and points them to you. It never recommends a lens. List from the ClarityIQ lens source of truth (<span id="lens-total"></span> lenses; discontinued lenses left out).</p>
+      <div class="actions" style="margin-bottom:10px"><span id="lens-count" class="hint" style="margin:0"></span></div>
+      <div id="lens-groups"></div>
+    </section>
+
+    <section class="card">
+      <h2>Single-focal-point targets you offer</h2>
+      <p class="hint">For standard and toric lenses: which ranges you set the focal point for.</p>
+      <div id="focal"></div>
+    </section>
+
+    <section class="card">
+      <h2>Per-eye plans you offer</h2>
+      <p class="hint">A lens-specific plan is only used in sessions when a matching lens is switched on above.</p>
+      <div id="plans"></div>
+      <div style="margin-top:10px">
+        <label for="usual" class="hint" style="display:block;margin-bottom:4px">Your usual plan</label>
+        <select id="usual"></select>
+      </div>
+    </section>
+
+    <div class="card sticky">
+      <div class="actions">
+        <button id="save-btn">Save settings</button>
+        <span class="status" id="save-status" role="status" style="margin:0"></span>
+      </div>
+    </div>
+
+    <section class="card">
+      <h2>Make an access code</h2>
+      <p class="hint">People enter the code at app.clarityiq.ai. Their session then follows your settings above. Codes hold no personal data.</p>
+      <div id="kinds"></div>
+      <div class="actions" style="margin-top:8px"><button id="code-btn" class="ghost">Make code</button></div>
+      <div id="new-code" style="display:none">
+        <div class="code-big" id="code-value"></div>
+        <div class="actions"><button class="ghost" id="copy-btn" type="button">Copy</button><span class="hint" id="code-exp" style="margin:0"></span></div>
+      </div>
+      <div class="status" id="code-status" role="status"></div>
+      <details style="margin-top:10px"><summary class="hint" style="cursor:pointer">Recent codes</summary><table id="codes"></table></details>
+    </section>
+
+    <section class="card">
+      <details><summary><h2 style="display:inline">What ClarityIQ is told</h2></summary>
+        <p class="hint" style="margin-top:6px">This is the practice profile a session gets from your saved settings.</p>
+        <pre id="preview"></pre>
+      </details>
+    </section>
+
+    <div class="actions" style="justify-content:flex-end;margin-bottom:20px"><button class="ghost" id="signout-btn">Sign out</button></div>
+  </div>
+</main>
+<script>
+function ciqApiBase(liveBase) {
+  try {
+    const o = window.CIQ_TEST_API_BASE;
+    if (typeof o === 'string' && /^http:\/\/(127\.0\.0\.1|localhost)(:\d{1,5})?$/.test(o)) return o;
+  } catch (e) {}
+  return liveBase;
+}
+const API = ciqApiBase('https://clarityiq-proxy.dlpventures13.workers.dev');
+const SID_KEY = 'ciq_surgeon_id', TOK_KEY = 'ciq_practice_session';
+const $ = id => document.getElementById(id);
+let state = null;
+
+(function initSid() {
+  const u = new URL(location.href);
+  const s = (u.searchParams.get('s') || '').trim().toLowerCase();
+  if (s) { localStorage.setItem(SID_KEY, s); u.searchParams.delete('s'); history.replaceState({}, '', u.toString()); }
+  if (!localStorage.getItem(SID_KEY)) $('sid-wrap').style.display = 'block';
+})();
+
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  const tok = sessionStorage.getItem(TOK_KEY);
+  if (tok) headers['X-Practice-Session'] = tok;
+  const res = await fetch(API + path, { ...opts, headers });
+  let body = {};
+  try { body = await res.json(); } catch (e) {}
+  if (res.status === 401 && path !== '/practice/login') { sessionStorage.removeItem(TOK_KEY); showSignin('Please sign in again.'); }
+  return { status: res.status, body };
+}
+
+function showSignin(msg) {
+  $('dash').style.display = 'none'; $('signin').style.display = 'block'; $('who').textContent = '';
+  if (msg) setStatus('signin-status', msg, 'err');
+}
+function setStatus(id, text, cls) { const el = $(id); el.textContent = text || ''; el.className = 'status ' + (cls || ''); }
+function el(tag, attrs = {}, kids = []) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) { if (k === 'text') e.textContent = v; else if (k in e && typeof v !== 'string') e[k] = v; else e.setAttribute(k, v); }
+  for (const k of kids) e.append(k);
+  return e;
+}
+function checkRow(name, value, labelText, checked, tags = []) {
+  const input = el('input', { type: 'checkbox', name, value });
+  input.checked = !!checked;
+  const span = el('span', { text: labelText });
+  for (const t of tags) span.append(el('span', { class: 'tag' + (t.warn ? ' warn' : ''), text: t.text }));
+  return el('label', { class: 'row' }, [input, span]);
+}
+const checkedValues = name => [...document.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
+
+function render() {
+  const { surgeon, practice, catalog, codes, profile_preview } = state;
+  $('who').textContent = `${surgeon.display_name} · ${practice.name}`;
+  // Lenses, grouped by ClarityIQ category
+  const groups = $('lens-groups'); groups.innerHTML = '';
+  $('lens-total').textContent = catalog.lenses.length;
+  for (const [cid, cname] of Object.entries(catalog.categories)) {
+    const ls = catalog.lenses.filter(l => l.category === cid);
+    if (!ls.length) continue;
+    const on = ls.filter(l => surgeon.lenses_on.includes(l.id)).length;
+    const d = el('details', { class: 'group' });
+    if (on) d.open = true;
+    const sum = el('summary', { text: cname }); sum.append(el('span', { class: 'count', 'data-cat': cid, text: `${on} of ${ls.length} on` }));
+    d.append(sum);
+    for (const l of ls) {
+      const tags = []; if (l.toric) tags.push({ text: 'toric version' }); if (l.note) tags.push({ text: l.note, warn: true });
+      d.append(checkRow('lens', l.id, l.label, surgeon.lenses_on.includes(l.id), tags));
+    }
+    groups.append(d);
+  }
+  const fp = $('focal'); fp.innerHTML = '';
+  for (const f of catalog.focal_points) fp.append(checkRow('focal', f.id, f.label, surgeon.focal_points.includes(f.id)));
+  const pl = $('plans'); pl.innerHTML = '';
+  for (const p of catalog.per_eye_plans) pl.append(checkRow('plan', p.id, p.label, surgeon.per_eye_plans.includes(p.id)));
+  const us = $('usual'); us.innerHTML = '';
+  for (const p of catalog.per_eye_plans) { const o = el('option', { value: p.id, text: p.label }); if (p.id === surgeon.usual_plan) o.selected = true; us.append(o); }
+  const kinds = $('kinds'); kinds.innerHTML = '';
+  let first = true;
+  for (const [k, v] of Object.entries(catalog.code_kinds)) {
+    const r = el('input', { type: 'radio', name: 'kind', value: k }); r.checked = first; first = false;
+    kinds.append(el('label', { class: 'row' }, [r, el('span', { text: v.label })]));
+  }
+  renderCodes(codes); $('preview').textContent = profile_preview || '';
+  updateCounts();
+}
+function renderCodes(codes) {
+  const t = $('codes'); t.innerHTML = '';
+  t.append(el('tr', {}, [el('th', { text: 'Code' }), el('th', { text: 'Type' }), el('th', { text: 'Made' }), el('th', { text: 'Works until' })]));
+  for (const c of codes || []) t.append(el('tr', {}, [el('td', { text: c.code }), el('td', { text: c.kind === 'clinic' ? 'Shared clinic' : 'One person' }), el('td', { text: new Date(c.created_at).toLocaleDateString() }), el('td', { text: new Date(c.expires_at).toLocaleDateString() })]));
+}
+function updateCounts() {
+  const on = checkedValues('lens');
+  $('lens-count').textContent = `${on.length} of ${state.catalog.lenses.length} lenses on`;
+  for (const span of document.querySelectorAll('.count[data-cat]')) {
+    const ls = state.catalog.lenses.filter(l => l.category === span.dataset.cat);
+    span.textContent = `${ls.filter(l => on.includes(l.id)).length} of ${ls.length} on`;
+  }
+}
+document.addEventListener('change', e => { if (e.target.name === 'lens') updateCounts(); if (['lens', 'focal', 'plan'].includes(e.target.name) || e.target.id === 'usual') setStatus('save-status', 'Unsaved changes', ''); });
+
+async function load() {
+  const r = await api('/practice/me');
+  if (r.status !== 200) return;
+  state = r.body;
+  $('signin').style.display = 'none'; $('dash').style.display = 'block';
+  render();
+}
+
+$('signin-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const sid = (localStorage.getItem(SID_KEY) || $('sid').value || '').trim().toLowerCase();
+  if ($('sid').value.trim()) localStorage.setItem(SID_KEY, $('sid').value.trim().toLowerCase());
+  $('signin-btn').disabled = true; setStatus('signin-status', 'Signing in…');
+  try {
+    const r = await api('/practice/login', { method: 'POST', body: JSON.stringify({ surgeon_id: sid, pin: $('pin').value }) });
+    if (r.status === 200 && r.body.token) { sessionStorage.setItem(TOK_KEY, r.body.token); $('pin').value = ''; setStatus('signin-status', ''); await load(); }
+    else setStatus('signin-status', r.body.message || 'Sign-in did not work. Try again.', 'err');
+  } catch (err) { setStatus('signin-status', 'Could not reach ClarityIQ. Try again in a moment.', 'err'); }
+  $('signin-btn').disabled = false;
+});
+
+$('save-btn').addEventListener('click', async () => {
+  $('save-btn').disabled = true; setStatus('save-status', 'Saving…');
+  const r = await api('/practice/settings', { method: 'POST', body: JSON.stringify({ lenses_on: checkedValues('lens'), focal_points: checkedValues('focal'), per_eye_plans: checkedValues('plan'), usual_plan: $('usual').value }) });
+  if (r.status === 200) { Object.assign(state.surgeon, r.body.settings); $('preview').textContent = r.body.profile_preview || ''; setStatus('save-status', 'Saved. New sessions use these settings.', 'ok'); }
+  else setStatus('save-status', 'Not saved. Try again.', 'err');
+  $('save-btn').disabled = false;
+});
+
+$('code-btn').addEventListener('click', async () => {
+  $('code-btn').disabled = true; setStatus('code-status', 'Making code…');
+  const kind = (document.querySelector('input[name="kind"]:checked') || {}).value || 'person';
+  const r = await api('/practice/codes', { method: 'POST', body: JSON.stringify({ kind }) });
+  if (r.status === 201) {
+    $('new-code').style.display = 'block'; $('code-value').textContent = r.body.code;
+    $('code-exp').textContent = 'Works until ' + new Date(r.body.expires_at).toLocaleDateString();
+    setStatus('code-status', '');
+    state.codes = [{ code: r.body.code, kind: r.body.kind, created_at: new Date().toISOString(), expires_at: r.body.expires_at }, ...(state.codes || [])];
+    renderCodes(state.codes);
+  } else setStatus('code-status', 'Could not make a code. Try again.', 'err');
+  $('code-btn').disabled = false;
+});
+$('copy-btn').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('code-value').textContent); setStatus('code-status', 'Copied.', 'ok'); } catch (e) { setStatus('code-status', 'Copy did not work; select the code instead.', 'err'); }
+});
+$('signout-btn').addEventListener('click', async () => {
+  await api('/practice/logout', { method: 'POST' }).catch(() => {});
+  sessionStorage.removeItem(TOK_KEY); showSignin('Signed out.');
+});
+
+if (sessionStorage.getItem(TOK_KEY)) load();
+</script>
+</body>
+</html>
