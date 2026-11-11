@@ -2385,6 +2385,15 @@ async function startConversation() {
 
       onConnect: () => {
         setStatus('idle', 'Connected — listening');
+        // practice-profile v1.2: a surgeon code's start counts only once the
+        // call has connected (a failed connect never uses one). Fire-and-forget.
+        if (purchaseInfo && purchaseInfo.practice && purchaseInfo.access_code) {
+          fetch(PROXY_URL + '/practice-code-start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+            body: JSON.stringify({ access_code: purchaseInfo.access_code, session_code: sessionCode }),
+          }).catch(() => {});
+        }
         initConvoState();
         renderRoadmap();
         updateProgressBar();
