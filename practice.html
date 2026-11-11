@@ -40,6 +40,19 @@ td,th{text-align:left;padding:5px 4px;border-bottom:1px solid #f0ede8}
 .actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .sticky{position:sticky;bottom:10px;z-index:2}
 :focus-visible{outline:3px solid #0f6e56;outline-offset:2px}
+.st{font-size:12px;border-radius:6px;padding:1px 6px;white-space:nowrap}
+.st-unused{color:#0f6e56;background:#e8f5ef}.st-started{color:#8a5a00;background:#fbf1dc}
+.st-used,.st-restart_used,.st-expired{color:#5f5e5a;background:#efede8}
+.plan-state{font-size:12px;color:#6b6b68;margin-left:6px}
+.plan-state.on{color:#0f6e56}
+#print-sheet{display:none}
+.pcode{border:1px dashed #999;border-radius:8px;padding:10px 12px;break-inside:avoid;font-size:12px;line-height:1.4}
+.pcode b{display:block;font-size:22px;letter-spacing:.12em;margin:4px 0}
+@media print{
+  body{background:#fff;padding:0;display:block}
+  main>*{display:none!important}
+  #print-sheet{display:grid!important;grid-template-columns:repeat(3,1fr);gap:10px}
+}
 </style>
 </head>
 <body>
@@ -96,16 +109,26 @@ td,th{text-align:left;padding:5px 4px;border-bottom:1px solid #f0ede8}
     </div>
 
     <section class="card">
-      <h2>Make an access code</h2>
-      <p class="hint">People enter the code at app.clarityiq.ai. Their session then follows your settings above. Codes hold no personal data.</p>
-      <div id="kinds"></div>
-      <div class="actions" style="margin-top:8px"><button id="code-btn" class="ghost">Make code</button></div>
+      <h2>Access codes</h2>
+      <p class="hint">One code per person. A code covers one finished session, plus one restart if the call drops. People enter it at app.clarityiq.ai, and their session follows your settings above. Codes hold no personal data. Each code works for <span id="code-days"></span> days.</p>
+      <div class="actions">
+        <button id="code-btn" class="ghost">Make one code</button>
+        <span class="hint" style="margin:0">or</span>
+        <label for="batch-n" class="hint" style="margin:0">Make a batch of</label>
+        <input type="number" id="batch-n" value="25" min="1" step="1" style="width:90px" aria-label="Number of codes">
+        <button id="batch-btn" class="ghost">Make batch</button>
+      </div>
       <div id="new-code" style="display:none">
         <div class="code-big" id="code-value"></div>
         <div class="actions"><button class="ghost" id="copy-btn" type="button">Copy</button><span class="hint" id="code-exp" style="margin:0"></span></div>
       </div>
+      <div id="new-batch" style="display:none;margin-top:10px">
+        <p class="hint" id="batch-info"></p>
+        <pre id="batch-list"></pre>
+        <div class="actions"><button id="print-btn" type="button">Print these codes</button></div>
+      </div>
       <div class="status" id="code-status" role="status"></div>
-      <details style="margin-top:10px"><summary class="hint" style="cursor:pointer">Recent codes</summary><table id="codes"></table></details>
+      <details style="margin-top:10px" id="codes-wrap"><summary class="hint" style="cursor:pointer">Your codes and their status <span id="code-summary"></span></summary><table id="codes"></table></details>
     </section>
 
     <section class="card">
@@ -115,8 +138,21 @@ td,th{text-align:left;padding:5px 4px;border-bottom:1px solid #f0ede8}
       </details>
     </section>
 
+    <section class="card" id="pin-card">
+      <h2>Change PIN</h2>
+      <p class="hint">Enter your current PIN, then a new PIN of 6 to 12 digits. Wrong tries count toward the same 15-minute lock as sign-in. Other signed-in browsers are signed out.</p>
+      <form id="pin-form">
+        <input type="password" id="pin-cur" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password" placeholder="Current PIN" aria-label="Current PIN" style="margin-bottom:8px">
+        <input type="password" id="pin-new" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" placeholder="New PIN (6-12 digits)" aria-label="New PIN" style="margin-bottom:8px">
+        <input type="password" id="pin-new2" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password" placeholder="New PIN again" aria-label="New PIN again" style="margin-bottom:8px">
+        <button type="submit" id="pin-btn">Change PIN</button>
+      </form>
+      <div class="status" id="pin-status" role="status"></div>
+    </section>
+
     <div class="actions" style="justify-content:flex-end;margin-bottom:20px"><button class="ghost" id="signout-btn">Sign out</button></div>
   </div>
+  <div id="print-sheet" aria-hidden="true"></div>
 </main>
 <script>
 function ciqApiBase(liveBase) {
@@ -192,25 +228,44 @@ function render() {
   const fp = $('focal'); fp.innerHTML = '';
   for (const f of catalog.focal_points) fp.append(checkRow('focal', f.id, f.label, surgeon.focal_points.includes(f.id)));
   const pl = $('plans'); pl.innerHTML = '';
-  for (const p of catalog.per_eye_plans) pl.append(checkRow('plan', p.id, p.label, surgeon.per_eye_plans.includes(p.id)));
+  for (const p of catalog.per_eye_plans) {
+    const row = checkRow('plan', p.id, p.label, surgeon.per_eye_plans.includes(p.id));
+    if (p.needs.length) row.querySelector('span').append(el('span', { class: 'plan-state', 'data-needs': p.needs.join(','), text: '' }));
+    pl.append(row);
+  }
   const us = $('usual'); us.innerHTML = '';
   for (const p of catalog.per_eye_plans) { const o = el('option', { value: p.id, text: p.label }); if (p.id === surgeon.usual_plan) o.selected = true; us.append(o); }
-  const kinds = $('kinds'); kinds.innerHTML = '';
-  let first = true;
-  for (const [k, v] of Object.entries(catalog.code_kinds)) {
-    const r = el('input', { type: 'radio', name: 'kind', value: k }); r.checked = first; first = false;
-    kinds.append(el('label', { class: 'row' }, [r, el('span', { text: v.label })]));
-  }
+  $('code-days').textContent = catalog.code_days;
+  $('batch-n').max = catalog.batch_max;
   renderCodes(codes); $('preview').textContent = profile_preview || '';
   updateCounts();
 }
+const STATUS_LABEL = { unused: 'Unused', started: 'Started (restart left)', used: 'Used', restart_used: 'Restart used', expired: 'Expired', unknown: 'Unknown' };
 function renderCodes(codes) {
   const t = $('codes'); t.innerHTML = '';
-  t.append(el('tr', {}, [el('th', { text: 'Code' }), el('th', { text: 'Type' }), el('th', { text: 'Made' }), el('th', { text: 'Works until' })]));
-  for (const c of codes || []) t.append(el('tr', {}, [el('td', { text: c.code }), el('td', { text: c.kind === 'clinic' ? 'Shared clinic' : 'One person' }), el('td', { text: new Date(c.created_at).toLocaleDateString() }), el('td', { text: new Date(c.expires_at).toLocaleDateString() })]));
+  t.append(el('tr', {}, [el('th', { text: 'Code' }), el('th', { text: 'Status' }), el('th', { text: 'Made' }), el('th', { text: 'Works until' })]));
+  const n = {};
+  for (const c of codes || []) {
+    n[c.status] = (n[c.status] || 0) + 1;
+    t.append(el('tr', {}, [el('td', { text: c.code }), el('td', {}, [el('span', { class: 'st st-' + c.status, text: STATUS_LABEL[c.status] || c.status })]), el('td', { text: new Date(c.created_at).toLocaleDateString() }), el('td', { text: new Date(c.expires_at).toLocaleDateString() })]));
+  }
+  $('code-summary').textContent = (codes && codes.length) ? '(' + Object.entries(n).map(([k, v]) => v + ' ' + (STATUS_LABEL[k] || k).toLowerCase()).join(', ') + ')' : '(none yet)';
+}
+function fillPrintSheet(codes, expires) {
+  const sheet = $('print-sheet'); sheet.innerHTML = '';
+  const until = new Date(expires).toLocaleDateString();
+  for (const c of codes) sheet.append(el('div', { class: 'pcode' }, [el('span', { text: 'ClarityIQ access code' }), el('b', { text: c }), el('span', { text: 'Enter it at app.clarityiq.ai. One session, plus one restart if the call drops. Works until ' + until + '.' })]));
 }
 function updateCounts() {
   const on = checkedValues('lens');
+  // One rule for every plan: used in sessions only when a lens it needs is on.
+  const cats = new Set(state.catalog.lenses.filter(l => on.includes(l.id)).map(l => l.category));
+  for (const span of document.querySelectorAll('.plan-state')) {
+    const needs = span.dataset.needs.split(',');
+    const active = needs.some(c => cats.has(c));
+    span.className = 'plan-state' + (active ? ' on' : '');
+    span.textContent = active ? '· used in sessions' : '· not used: needs a ' + needs.map(c => state.catalog.categories[c]).join(' or ') + ' lens on';
+  }
   $('lens-count').textContent = `${on.length} of ${state.catalog.lenses.length} lenses on`;
   for (const span of document.querySelectorAll('.count[data-cat]')) {
     const ls = state.catalog.lenses.filter(l => l.category === span.dataset.cat);
@@ -248,18 +303,49 @@ $('save-btn').addEventListener('click', async () => {
   $('save-btn').disabled = false;
 });
 
-$('code-btn').addEventListener('click', async () => {
-  $('code-btn').disabled = true; setStatus('code-status', 'Making code…');
-  const kind = (document.querySelector('input[name="kind"]:checked') || {}).value || 'person';
-  const r = await api('/practice/codes', { method: 'POST', body: JSON.stringify({ kind }) });
+async function makeCodes(count) {
+  const btns = [$('code-btn'), $('batch-btn')]; btns.forEach(b => b.disabled = true);
+  setStatus('code-status', count > 1 ? `Making ${count} codes…` : 'Making code…');
+  const r = await api('/practice/codes', { method: 'POST', body: JSON.stringify({ count }) });
   if (r.status === 201) {
-    $('new-code').style.display = 'block'; $('code-value').textContent = r.body.code;
-    $('code-exp').textContent = 'Works until ' + new Date(r.body.expires_at).toLocaleDateString();
     setStatus('code-status', '');
-    state.codes = [{ code: r.body.code, kind: r.body.kind, created_at: new Date().toISOString(), expires_at: r.body.expires_at }, ...(state.codes || [])];
-    renderCodes(state.codes);
-  } else setStatus('code-status', 'Could not make a code. Try again.', 'err');
-  $('code-btn').disabled = false;
+    const until = 'Works until ' + new Date(r.body.expires_at).toLocaleDateString();
+    if (count === 1) {
+      $('new-batch').style.display = 'none'; $('new-code').style.display = 'block';
+      $('code-value').textContent = r.body.code; $('code-exp').textContent = until;
+    } else {
+      $('new-code').style.display = 'none'; $('new-batch').style.display = 'block';
+      $('batch-info').textContent = `${r.body.codes.length} new codes. ${until}. One code per person.`;
+      $('batch-list').textContent = r.body.codes.join('\n');
+      fillPrintSheet(r.body.codes, r.body.expires_at);
+    }
+    const me = await api('/practice/me');
+    if (me.status === 200) { state.codes = me.body.codes; renderCodes(state.codes); }
+  } else setStatus('code-status', (r.body && r.body.detail) ? 'Not made: ' + r.body.detail + '.' : 'Could not make codes. Try again.', 'err');
+  btns.forEach(b => b.disabled = false);
+}
+$('code-btn').addEventListener('click', () => makeCodes(1));
+$('batch-btn').addEventListener('click', () => {
+  const n = parseInt($('batch-n').value, 10);
+  const max = state.catalog.batch_max;
+  if (!Number.isInteger(n) || n < 2 || n > max) { setStatus('code-status', `Choose a number from 2 to ${max}.`, 'err'); return; }
+  makeCodes(n);
+});
+$('print-btn').addEventListener('click', () => window.print());
+$('pin-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const cur = $('pin-cur').value.trim(), n1 = $('pin-new').value.trim(), n2 = $('pin-new2').value.trim();
+  if (n1 !== n2) { setStatus('pin-status', 'The two new PINs do not match.', 'err'); return; }
+  if (!/^[0-9]{6,12}$/.test(n1)) { setStatus('pin-status', 'The new PIN must be 6 to 12 digits.', 'err'); return; }
+  $('pin-btn').disabled = true; setStatus('pin-status', 'Changing PIN…');
+  const tok = sessionStorage.getItem(TOK_KEY);
+  try {
+    const res = await fetch(API + '/practice/pin', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Practice-Session': tok || '' }, body: JSON.stringify({ current_pin: cur, new_pin: n1 }) });
+    const b = await res.json().catch(() => ({}));
+    if (res.status === 200 && b.token) { sessionStorage.setItem(TOK_KEY, b.token); ['pin-cur', 'pin-new', 'pin-new2'].forEach(id => $(id).value = ''); setStatus('pin-status', 'PIN changed. Use the new PIN next time you sign in.', 'ok'); }
+    else setStatus('pin-status', b.message || 'PIN not changed. Try again.', 'err');
+  } catch (err) { setStatus('pin-status', 'Could not reach ClarityIQ. Try again in a moment.', 'err'); }
+  $('pin-btn').disabled = false;
 });
 $('copy-btn').addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($('code-value').textContent); setStatus('code-status', 'Copied.', 'ok'); } catch (e) { setStatus('code-status', 'Copy did not work; select the code instead.', 'err'); }

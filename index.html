@@ -1219,10 +1219,10 @@ async function verifyAndApplyPurchase() {
         });
       }
     }
-  } else if (result && (result.reason === 'expired' || result.reason === 'already_used' || result.reason === 'free_used')) {
+  } else if (result && (result.reason === 'expired' || result.reason === 'already_used' || result.reason === 'free_used' || result.reason === 'practice_used')) {
     // Dead code — stop re-checking it on future loads.
     localStorage.removeItem(ACCESS_CODE_STORAGE_KEY);
-    if (result.reason === 'free_used' || result.message) showGateNotice(result.message || FREE_CODE_MESSAGES[result.reason]);
+    if (result.reason === 'free_used' || result.reason === 'practice_used' || result.message) showGateNotice(result.message || FREE_CODE_MESSAGES[result.reason]);
   }
 }
 
@@ -1236,7 +1236,7 @@ async function tryApplyAccessCode(code) {
     applyVerifiedPurchase(result);
     return true;
   }
-  if (result && (result.reason === 'free_used' || (result.reason === 'expired' && result.message))) {
+  if (result && (result.reason === 'free_used' || result.reason === 'practice_used' || (result.reason === 'expired' && result.message))) {
     return { notice: result.message || FREE_CODE_MESSAGES[result.reason] };
   }
   return false;
@@ -2128,7 +2128,8 @@ async function buildAndShowSummary() {
 // when the conversation reached the summary stage; an early end keeps the
 // code usable (7 days). Fire-and-forget; never blocks the summary.
 async function completeFreeSessionIfNeeded() {
-  if (!purchaseInfo || !purchaseInfo.free || purchaseInfo.used || !purchaseInfo.access_code) return;
+  // practice-profile v1.1: a finished session also uses up a surgeon-made code.
+  if (!purchaseInfo || !(purchaseInfo.free || purchaseInfo.practice) || purchaseInfo.used || !purchaseInfo.access_code) return;
   purchaseInfo.used = true;
   try {
     await fetch(PROXY_URL + '/complete-free-session', {
@@ -2234,6 +2235,16 @@ async function startConversation() {
       beginBtn.disabled = false;
       showError(data.message || 'Too many attempts from this connection — please try again shortly.');
       return;
+    }
+    if (voiceRes.status === 403) {
+      // practice-profile v1.1: surgeon code already used (1 session + 1 restart).
+      const data = await voiceRes.json().catch(() => ({}));
+      if (data.error === 'code_used') {
+        setStatus('idle', '');
+        beginBtn.disabled = false;
+        showError(data.message || 'This access code has already been used.');
+        return;
+      }
     }
     if (!voiceRes.ok) throw new Error('voice session request failed');
     const voiceData = await voiceRes.json();
