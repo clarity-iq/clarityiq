@@ -488,16 +488,6 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
   overflow-y: auto;
 }
 .screen.active { display: flex; }
-#stay-on-page-banner {
-  display: none;
-  position: absolute; left: 12px; right: 12px; top: 12px; z-index: 20;
-  background: #1a1a18; color: #fff;
-  border-radius: 12px; padding: 10px 14px;
-  font-size: 13.5px; line-height: 1.45;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-}
-#stay-on-page-banner.show { display: block; }
-#reconnect-error { font-size: 13.5px; color: #b91c1c; line-height: 1.5; margin: 0 0 16px; display: none; }
 .screen-title { font-size: 17px; font-weight: 600; color: #1a1a18; margin-bottom: 4px; }
 .screen-sub { font-size: 15px; color: #6b6b68; margin-bottom: 20px; line-height: 1.5; }
 .screen-question { margin-bottom: 22px; }
@@ -828,8 +818,6 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
   </div>
 
   <!-- Header -->
-  <div id="stay-on-page-banner" role="status" aria-live="polite">Please stay on this page during your session so the conversation isn't interrupted.</div>
-
   <div id="header" role="banner">
     <div class="logo-mark">
       <img src="logo-mark.png" alt="">
@@ -852,15 +840,6 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
        aria-hidden: purely decorative duplicate of #progress-stage-label,
        which already announces the current stage as text. -->
   <div id="roadmap" aria-hidden="true"></div>
-
-  <!-- Unexpected disconnect: offer Resume instead of jumping to the conclusion. -->
-  <div id="reconnect" class="screen">
-    <h1 class="screen-title">Connection lost</h1>
-    <div class="screen-sub">Your session dropped. Tap to resume and pick up where you left off.</div>
-    <p id="reconnect-error"></p>
-    <button class="screen-submit" id="reconnect-resume">Tap to resume</button>
-    <button class="screen-submit" id="reconnect-end" style="margin-top:10px; background:#fff; color:#5f5e5a; border:1px solid #d8d6ce;">End session</button>
-  </div>
 
   <!-- Voice panel — scrollable -->
   <div id="voice-panel" style="display:none">
@@ -1636,15 +1615,6 @@ function ciqMinuteMs() {
   } catch (e) {}
   return 60000;
 }
-// Mute-jump v1: a muted pause ends politely after 10 minutes (localhost tests may shorten this).
-function ciqMuteCapMs() {
-  try {
-    const h = location.hostname;
-    const v = window.CIQ_TEST_MUTE_CAP_MS;
-    if ((h === 'localhost' || h === '127.0.0.1') && typeof v === 'number' && v >= 50) return v;
-  } catch (e) {}
-  return 10 * 60 * 1000;
-}
 let callStartedAt = 0;
 let callTimer = null;
 let wrapUpsSent = 0;
@@ -1723,12 +1693,6 @@ let transcriptLog  = [];
 let isMicMuted     = false;
 let isSpeakerMuted = false;
 let summaryReady   = false;
-let endingIntentionally = false;
-let mutedSince = 0;
-let muteCapTimer = null;
-let stayOnPageTimer = null;
-let wasBackgrounded = false;
-let callConnected = false;
 
 // ── Telemetry state (Batch 1.1 / 1.2 / 1.3 / 1.4) ──────────────────────────────
 let sessionCode      = '';
@@ -2228,131 +2192,27 @@ async function submitEmailGate() {
 }
 
 // ── Session ───────────────────────────────────────────────────────────────────
-function stageLabelForRecap() {
-  if (!convoState) return 'the start of the conversation';
-  return AGENT_STAGE_NAMES[convoState.current_stage] || convoState.current_stage || 'the start of the conversation';
-}
-function resumeFirstMessage() {
-  return "Welcome back — let's pick up where we left off, at " + stageLabelForRecap() + ". Don't restart from the beginning.";
-}
-function resumeRecapText() {
-  const stage = stageLabelForRecap();
-  const track = (convoState && convoState.current_track) ? (' Current track: ' + convoState.current_track + '.') : '';
-  return 'RESUME: The conversation dropped and the person is back on a new connection. Continue from the current stage; do not restart from the welcome, do not re-introduce yourself at length, and do not wrap up or go to the summary unless they ask. Current stage: ' + stage + '.' + track;
-}
-function showReconnectScreen(message) {
-  const err = document.getElementById('reconnect-error');
-  if (message) {
-    err.textContent = message;
-    err.style.display = 'block';
-  } else {
-    err.textContent = '';
-    err.style.display = 'none';
-  }
-  document.getElementById('next-bar').style.display = 'none';
-  document.getElementById('speaker-btn').style.display = 'none';
-  document.getElementById('mic-btn').style.display     = 'none';
-  document.getElementById('end-btn').style.display     = 'none';
-  showScreen('reconnect');
-  setStatus('', 'Connection lost');
-}
-function showReconnectNoRestart(message) {
-  showReconnectScreen(message || 'This access code has already been used. Please ask your surgeon\'s office for a new one.');
-  document.getElementById('reconnect-resume').disabled = true;
-}
-function hideReconnectScreen() {
-  const rec = document.getElementById('reconnect');
-  if (rec) rec.classList.remove('active');
-  document.getElementById('reconnect-error').style.display = 'none';
-  document.getElementById('reconnect-resume').disabled = false;
-}
-function clearMuteCapTimer() {
-  if (muteCapTimer) { clearTimeout(muteCapTimer); muteCapTimer = null; }
-  mutedSince = 0;
-}
-function startMuteCapTimer() {
-  clearMuteCapTimer();
-  mutedSince = Date.now();
-  muteCapTimer = setTimeout(() => {
-    muteCapTimer = null;
-    if (!conversation || !isMicMuted || summaryFlowStarted || endingIntentionally) return;
-    try {
-      if (conversation) conversation.sendContextualUpdate('MUTE_CAP: the person has been muted for a long time. End this connection now. Do not wrap up or go to the summary.');
-    } catch (e) {}
-    // Polite end of this connection; show Resume, not the conclusion flow.
-    const conv = conversation;
-    conversation = null;
-    callConnected = false;
-    stopCallTimer();
-    if (conv) { try { conv.endSession(); } catch (e) {} }
-    showReconnectScreen('The session paused after a long mute. Tap to resume.');
-  }, ciqMuteCapMs());
-}
-function sendMuteContextualUpdate(muted) {
-  if (!conversation) return;
-  try {
-    if (muted) {
-      conversation.sendContextualUpdate('The person muted their microphone. Wait quietly; do not wrap up, do not advance, and do not end the conversation.');
-    } else {
-      conversation.sendContextualUpdate('The person unmuted and is back; continue where you left off.');
-    }
-  } catch (e) { console.error('Mute update failed (non-blocking):', e); }
-}
-function showStayOnPageBanner() {
-  const el = document.getElementById('stay-on-page-banner');
-  if (!el) return;
-  el.classList.add('show');
-  if (stayOnPageTimer) clearTimeout(stayOnPageTimer);
-  stayOnPageTimer = setTimeout(() => {
-    el.classList.remove('show');
-    stayOnPageTimer = null;
-  }, 6000);
-}
-function hideStayOnPageBanner() {
-  const el = document.getElementById('stay-on-page-banner');
-  if (el) el.classList.remove('show');
-  if (stayOnPageTimer) { clearTimeout(stayOnPageTimer); stayOnPageTimer = null; }
-}
-document.addEventListener('visibilitychange', () => {
-  if (!callConnected || !conversation || summaryFlowStarted || endingIntentionally) return;
-  if (document.hidden) {
-    wasBackgrounded = true;
-    return;
-  }
-  if (wasBackgrounded) {
-    wasBackgrounded = false;
-    showStayOnPageBanner();
-  }
-});
-
-async function startConversation(opts) {
-  const resume = !!(opts && opts.resume);
+async function startConversation() {
   hideError();
-  if (!resume) summaryReady = false;
+  summaryReady   = false;
   // sessionCode/sessionStartedAt are generated at pre-survey submit (2.1),
-  // before this ever runs — not regenerated here, except on Resume, which
-  // starts a new voice session (and uses the remaining restart if this is a
-  // surgeon-made code).
+  // before this ever runs — not regenerated here.
   const beginBtn = document.getElementById('begin-btn');
   beginBtn.disabled = true;
-  setStatus('connecting', resume ? 'Reconnecting…' : 'Connecting…');
+  setStatus('connecting', 'Connecting…');
 
-  if (!resume) {
-    if (purchaseInfo && purchaseInfo.free && purchaseInfo.used) {
-      setStatus('idle', '');
-      beginBtn.disabled = false;
-      showError(FREE_CODE_MESSAGES.free_used + ' Thank you for trying ClarityIQ during our free launch.');
-      return;
-    }
-    const canProceed = await consumeStarterIfNeeded();
-    if (!canProceed) {
-      setStatus('idle', '');
-      beginBtn.disabled = false;
-      showError('This IOL ClarityIQ Starter session has already been used. Each Starter purchase covers a single session.');
-      return;
-    }
-  } else {
-    sessionCode = generateSessionCode();
+  if (purchaseInfo && purchaseInfo.free && purchaseInfo.used) {
+    setStatus('idle', '');
+    beginBtn.disabled = false;
+    showError(FREE_CODE_MESSAGES.free_used + ' Thank you for trying ClarityIQ during our free launch.');
+    return;
+  }
+  const canProceed = await consumeStarterIfNeeded();
+  if (!canProceed) {
+    setStatus('idle', '');
+    beginBtn.disabled = false;
+    showError('This IOL ClarityIQ Starter session has already been used. Each Starter purchase covers a single session.');
+    return;
   }
 
   // 4.4: fetch a short-lived signed URL server-side instead of connecting
@@ -2382,11 +2242,7 @@ async function startConversation(opts) {
       if (data.error === 'code_used') {
         setStatus('idle', '');
         beginBtn.disabled = false;
-        if (resume) {
-          showReconnectNoRestart(data.message || 'This access code has already been used. Please ask your surgeon\'s office for a new one.');
-        } else {
-          showError(data.message || 'This access code has already been used.');
-        }
+        showError(data.message || 'This access code has already been used.');
         return;
       }
     }
@@ -2398,11 +2254,7 @@ async function startConversation(opts) {
   } catch (e) {
     setStatus('idle', '');
     beginBtn.disabled = false;
-    if (resume) {
-      showReconnectScreen('Could not resume just now. Please try again in a moment.');
-    } else {
-      showError('Could not start the voice session. Please try again in a moment.');
-    }
+    showError('Could not start the voice session. Please try again in a moment.');
     return;
   }
 
@@ -2422,9 +2274,6 @@ async function startConversation(opts) {
         // 'NONE' (any code not made in a surgeon dashboard) = standard session.
         practice_profile: practiceProfile,
       },
-      // SDK 1.35.0: override the fixed welcome so a resumed call picks up
-      // at the stage already reached, instead of starting over.
-      ...(resume ? { overrides: { agent: { firstMessage: resumeFirstMessage() } } } : {}),
 
       // record_age_band/record_population_filter moved to the pre-survey UI
       // (tap/select, not voice) — the Stage 1 spoken Q&A felt clunky.
@@ -2536,11 +2385,8 @@ async function startConversation(opts) {
 
       onConnect: () => {
         setStatus('idle', 'Connected — listening');
-        callConnected = true;
-        endingIntentionally = false;
         // practice-profile v1.2: a surgeon code's start counts only once the
         // call has connected (a failed connect never uses one). Fire-and-forget.
-        // A Resume starts a new session_code, so this uses the remaining restart.
         if (purchaseInfo && purchaseInfo.practice && purchaseInfo.access_code) {
           fetch(PROXY_URL + '/practice-code-start', {
             method: 'POST',
@@ -2548,54 +2394,24 @@ async function startConversation(opts) {
             body: JSON.stringify({ access_code: purchaseInfo.access_code, session_code: sessionCode }),
           }).catch(() => {});
         }
-        if (resume) {
-          hideReconnectScreen();
-          // Keep the stage, timer, and transcript; only restart the ticking display.
-          if (callStartedAt) {
-            if (callTimer) clearInterval(callTimer);
-            callTimer = setInterval(tickCallTimer, Math.min(1000, Math.max(50, Math.floor(ciqMinuteMs() / 60))));
-            tickCallTimer();
-          } else {
-            startCallTimer();
-          }
-          // Recap is sent once startSession returns (conversation is assigned).
-        } else {
-          initConvoState();
-          startCallTimer();
-        }
+        initConvoState();
         renderRoadmap();
         updateProgressBar();
+        startCallTimer();
         updateNextButton();
         sendTelemetry();
         beginBtn.style.display                                = 'none';
         document.getElementById('expect-card').style.display = 'none';
-        isMicMuted = false;
-        isSpeakerMuted = false;
-        clearMuteCapTimer();
-        const spk = document.getElementById('speaker-btn');
-        const mic = document.getElementById('mic-btn');
-        spk.textContent = '🔊 Speaker'; spk.classList.remove('muted');
-        mic.textContent = '🎤 Mic';     mic.classList.remove('muted');
         document.getElementById('speaker-btn').style.display = 'inline-block';
         document.getElementById('mic-btn').style.display     = 'inline-block';
         document.getElementById('end-btn').style.display     = 'inline-block';
       },
 
-      onDisconnect: (details) => {
-        callConnected = false;
+      onDisconnect: () => {
         stopCallTimer();
-        clearMuteCapTimer();
         document.getElementById('next-bar').style.display = 'none';
-        // End already started the post-session flow (and will also land here).
-        if (summaryFlowStarted) return;
-        const userEnded = endingIntentionally || (details && details.reason === 'user');
-        if (userEnded || reachedSummaryStage()) {
-          setStatus('', 'Conversation ended');
-          triggerPostSession();
-        } else {
-          // Unexpected drop (for example a backgrounded tab closing the socket).
-          showReconnectScreen();
-        }
+        setStatus('', 'Conversation ended');
+        triggerPostSession();
       },
 
       onError: (err) => {
@@ -2620,19 +2436,8 @@ async function startConversation(opts) {
       },
     });
 
-    if (resume && conversation) {
-      try { conversation.sendContextualUpdate(resumeRecapText()); } catch (e) { console.error('Resume recap failed (non-blocking):', e); }
-    }
-
   } catch(err) {
     const msg = err.message || String(err);
-    if (resume) {
-      const denied = msg.toLowerCase().includes('permission')||msg.toLowerCase().includes('denied');
-      showReconnectScreen(denied
-        ? 'Microphone access denied. Please allow microphone access and try again.'
-        : 'Could not resume just now. Please try again in a moment.');
-      return;
-    }
     if (msg.toLowerCase().includes('permission')||msg.toLowerCase().includes('denied')) {
       showError('Microphone access denied. Please allow microphone access and try again.');
     } else {
@@ -2661,12 +2466,7 @@ function triggerPostSession() {
 }
 
 async function endConversation() {
-  endingIntentionally = true;
-  callConnected = false;
   stopCallTimer();
-  clearMuteCapTimer();
-  hideStayOnPageBanner();
-  hideReconnectScreen();
   document.getElementById('next-bar').style.display = 'none';
   triggerPostSession();
   if (conversation) {
@@ -2682,12 +2482,6 @@ async function endConversation() {
 }
 
 function resetUI() {
-  endingIntentionally = false;
-  callConnected = false;
-  wasBackgrounded = false;
-  clearMuteCapTimer();
-  hideStayOnPageBanner();
-  hideReconnectScreen();
   stopCallTimer();
   callStartedAt = 0;
   wrapUpsSent   = 0;
@@ -3011,17 +2805,8 @@ document.getElementById('email-input').addEventListener('keydown', (e) => {
 });
 
 // ── Events ────────────────────────────────────────────────────────────────────
-document.getElementById('begin-btn').addEventListener('click', () => startConversation());
+document.getElementById('begin-btn').addEventListener('click', startConversation);
 document.getElementById('end-btn').addEventListener('click', endConversation);
-document.getElementById('reconnect-resume').addEventListener('click', () => {
-  document.getElementById('reconnect-resume').disabled = true;
-  startConversation({ resume: true }).finally(() => {
-    // Re-enable if we are still on the reconnect screen (failed resume).
-    const rec = document.getElementById('reconnect');
-    if (rec && rec.classList.contains('active')) document.getElementById('reconnect-resume').disabled = false;
-  });
-});
-document.getElementById('reconnect-end').addEventListener('click', endConversation);
 document.getElementById('restart-btn').addEventListener('click', resetUI);
 document.getElementById('save-btn').addEventListener('click', saveSummaryImage);
 document.getElementById('expand-btn').addEventListener('click', () => {
@@ -3046,9 +2831,6 @@ document.getElementById('mic-btn').addEventListener('click', () => {
   const btn = document.getElementById('mic-btn');
   btn.textContent = isMicMuted ? '🎤 Muted' : '🎤 Mic';
   btn.classList.toggle('muted', isMicMuted);
-  sendMuteContextualUpdate(isMicMuted);
-  if (isMicMuted) startMuteCapTimer();
-  else clearMuteCapTimer();
 });
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
