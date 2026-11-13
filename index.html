@@ -88,16 +88,15 @@ body {
 }
 @media (prefers-reduced-motion: reduce) { #next-btn.invited { animation: none; } }
 
-/* ── Topic roadmap — 5 or 6 dots with a short label under each step ── */
+/* ── Topic roadmap — 6 dots, no labels ── */
 #roadmap {
-  padding: 8px 8px 10px;
+  padding: 8px 20px;
   border-bottom: 1px solid #f0ede8;
-  display: flex; align-items: flex-start; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   gap: 0; flex-shrink: 0; background: #fafaf7;
 }
 .roadmap-step {
-  display: flex; flex-direction: column; align-items: center;
-  flex: 1 1 0; min-width: 0; max-width: 58px;
+  display: flex; align-items: center; justify-content: center;
 }
 .roadmap-dot {
   width: 20px; height: 20px; border-radius: 50%;
@@ -119,23 +118,9 @@ body {
   0%,100% { box-shadow: 0 0 0 0 rgba(29,158,117,0.4); }
   50%      { box-shadow: 0 0 0 4px rgba(29,158,117,0); }
 }
-.roadmap-label {
-  margin-top: 4px;
-  font-size: 8px;
-  line-height: 1.2;
-  font-weight: 600;
-  color: #6b6b68;
-  text-align: center;
-  letter-spacing: -0.02em;
-  max-width: 100%;
-  overflow-wrap: break-word;
-}
-.roadmap-label.active { color: #0f6e56; }
-.roadmap-label.complete { color: #0d7a56; }
 .roadmap-connector {
   height: 1.5px; background: #e4e2da;
-  flex: 0.55 1 8px; max-width: 20px; min-width: 4px;
-  margin-top: 10px; /* visually centers on the 20px dot */
+  flex: 1; max-width: 40px; min-width: 12px;
   transition: background 0.4s;
 }
 .roadmap-connector.complete { background: #1D9E75; }
@@ -336,12 +321,6 @@ body {
 .summary-card-value { font-size: 16px; color: #1a1a18; line-height: 1.55; }
 .summary-card-subline { font-size: 13px; color: #5f5e5a; line-height: 1.5; margin-top: 6px; }
 .summary-topics-list { margin: 0; padding-left: 18px; font-size: 16px; color: #1a1a18; line-height: 1.7; }
-.summary-topic-group { margin-top: 10px; }
-.summary-card-label + .summary-topic-group { margin-top: 0; }
-.summary-topic-group-label {
-  font-size: 13px; font-weight: 600; color: #3a3a38;
-  margin-bottom: 2px;
-}
 .summary-card-note { font-size: 12.5px; color: #6b6b68; line-height: 1.5; }
 .checklist { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
 .check-row { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #4a4a48; line-height: 1.45; }
@@ -868,10 +847,10 @@ body.summary-expanded #summary-body { overflow: visible; max-height: none; flex:
     <div id="time-bar" aria-hidden="true"><div id="time-bar-fill"></div></div>
   </div>
 
-  <!-- Topic roadmap — 5 or 6 dots depending on tier, each with a short
-       label. Populated entirely by renderRoadmap() — see the anchor state
-       machine section. aria-hidden: purely decorative duplicate of
-       #progress-stage-label, which already announces the current stage. -->
+  <!-- Topic roadmap — 5 or 6 dots depending on tier, no labels. Populated
+       entirely by renderRoadmap() — see the anchor state machine section.
+       aria-hidden: purely decorative duplicate of #progress-stage-label,
+       which already announces the current stage as text. -->
   <div id="roadmap" aria-hidden="true"></div>
 
   <!-- Unexpected disconnect: offer Resume instead of jumping to the conclusion. -->
@@ -1414,8 +1393,8 @@ document.getElementById('access-code-continue').addEventListener('click', () => 
 // sub-moment within the Vision Goals -> Tracks transition (§7).
 const STAGE_ORDER  = ['welcome', 'foundations', 'vision_goals', 'tier_gate', 'lens_options', 'readiness', 'summary'];
 const STAGE_LABELS = {
-  welcome: 'Intro', foundations: 'Basics', vision_goals: 'Your goals',
-  lens_options: 'Lens options', readiness: 'Getting ready', summary: 'Summary',
+  welcome: 'Welcome', foundations: 'Foundations', vision_goals: 'Vision Goals',
+  lens_options: 'Lens Options', readiness: 'Readiness', summary: 'Summary',
 };
 // Dot sequence per tier — lens_options (Lens Options) only appears for session tier
 // or after a mid-conversation upgrade (§7: dot count 5 vs 6, recomputed live).
@@ -1729,11 +1708,7 @@ function renderRoadmap() {
     else if (i === effectiveIdx){ dot.className = 'roadmap-dot active';   dot.textContent = i + 1; }
     else                        { dot.className = 'roadmap-dot';          dot.textContent = i + 1; }
     dot.title = STAGE_LABELS[stageKey];
-    const label = document.createElement('div');
-    label.className = 'roadmap-label' + (i < effectiveIdx ? ' complete' : i === effectiveIdx ? ' active' : '');
-    label.textContent = STAGE_LABELS[stageKey];
     step.appendChild(dot);
-    step.appendChild(label);
     container.appendChild(step);
     if (i < dots.length - 1) {
       const con = document.createElement('div');
@@ -1999,18 +1974,13 @@ ${knownValues}
 
 SOURCE OF TRUTH RULE: Stage 6 contains an explicit confirmation moment where the agent states back its understanding of the person's goal and track, and the person confirms or corrects it. If the person corrected anything at that point, the confirmed/corrected version is authoritative — use it, not earlier statements in the conversation that were later corrected.
 
-NO INTERNAL TERMINOLOGY RULE: Never use ClarityIQ's own internal system labels anywhere in your output. This includes track letters or names (Track A, Track B, Track C, "the A track," etc.), stage names or numbers (Stage 1 through 6, "the foundations stage," "vision_goals stage," etc.), tier codes, or any other internal categorization term from ClarityIQ's architecture — none of this is meaningful or appropriate for the person to read. Always describe what was actually discussed the way the person would understand it (e.g., "toric lens options," "advanced-technology lens options," "your vision goals and daily routine"), never by its internal label. This applies to every field below, not just the topics fields.
+NO INTERNAL TERMINOLOGY RULE: Never use ClarityIQ's own internal system labels anywhere in your output. This includes track letters or names (Track A, Track B, Track C, "the A track," etc.), stage names or numbers (Stage 1 through 6, "the foundations stage," "vision_goals stage," etc.), tier codes, or any other internal categorization term from ClarityIQ's architecture — none of this is meaningful or appropriate for the person to read. Always describe what was actually discussed the way the person would understand it (e.g., "toric lens options," "advanced-technology lens options," "your vision goals and daily routine"), never by its internal label. This applies to every field below, not just topics_covered.
 
 vision_goal: Extract the person's stated goal in their own words, as confirmed in Stage 6. Do not paraphrase into different language than what the person actually said. If the conversation ended before Stage 6 and this was never confirmed, omit the field entirely — do not return an empty string, null, or a placeholder like "not captured."
 
 monovision_history: If the transcript indicates the person has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A". This can apply regardless of tier.
 
-topics_by_group: Group the specific topics actually discussed in this conversation into the four sections below — not a generic list, and only topics that came up in this person's session. Omit any group that has nothing in it (or use an empty array). At least one group must contain at least one topic, even for a short or fast-moving conversation — at minimum, list the foundational topics from earlier stages (everyone reaches these regardless of pacing) in the matching group. For session-tier people, also include which lens category was explored, described in plain language exactly as in lens_category_interest below (e.g., "toric lens options," "advanced-technology lens options," "basic monofocal lens option") — never the internal track letter or the word "track" itself (do not write "Track A," "Track B," "Track C," "the B track," or similar). For starter-tier people, list the foundational topics covered (do not list track content, since starter-tier people did not receive it). Do not also return a flat topics_covered list.
-
-  basics: cataract and lens basics, how surgery works, focus ranges and vision zones, astigmatism basics, glasses and insurance myths, that the lens is meant to stay, that surgery is done one eye at a time, and similar foundational topics.
-  your_life: glasses habits, screens, night driving, hobbies, work, daily routine, and other lifestyle or personal-goal details the person shared.
-  lenses: lens categories and any specific lenses discussed.
-  tradeoffs: costs, night-vision effects (glare, halos, contrast), surgical risks, side effects, and other trade-offs.
+topics_covered: List the specific topics actually discussed in this conversation, in this person's session — not a generic list. This field must never be empty or omitted, even for a short or fast-moving conversation — at minimum, list the foundational topics from earlier stages (everyone reaches these regardless of pacing). For session-tier people, also include which lens category was explored, described in plain language exactly as in lens_category_interest below (e.g., "toric lens options," "advanced-technology lens options," "basic monofocal lens option") — never the internal track letter or the word "track" itself (do not write "Track A," "Track B," "Track C," "the B track," or similar). For starter-tier people, list the foundational topics covered (do not list track content, since starter-tier people did not receive it).
 
 lens_category_interest: Session tier only — omit entirely for starter tier. Start from the given preferred track, translated to plain language ("advanced technology," "toric," or "basic monofocal"). Then add the person's specific preference within that track: for Track A, their stated range-vs-side-effects tradeoff preference, phrased naturally. For Track B or C, their stated focal point preference (near, far, or both/unsure). If the transcript shows the person specifically asked about or dove deep into a named lens (e.g. Vivity, PanOptix, IC-8, LAL) during that track's deep-dive content, append that lens name as well.
 
@@ -2028,12 +1998,7 @@ Return only the JSON object below, no other text — omit any field per the rule
 {
   "vision_goal": "...",
   "monovision_history": "...",
-  "topics_by_group": {
-    "basics": ["..."],
-    "your_life": ["..."],
-    "lenses": ["..."],
-    "tradeoffs": ["..."]
-  },
+  "topics_covered": ["..."],
   "lens_category_interest": "...",
   "surgeon_questions": ["..."],
   "starter_scope_note": "..."
@@ -2051,23 +2016,13 @@ Return only the JSON object below, no other text — omit any field per the rule
   const clean = raw.replace(/```json|```/g,'').trim();
   const parsed = JSON.parse(clean);
 
-  // Prefer grouped topics. A flat topics_covered list is kept for
-  // backward compatibility (older model output, or when grouping fails).
-  // If grouping fails and topics_covered is also empty, fall back to
-  // known state rather than let the section vanish — still accurate
-  // (everyone reaches the foundational stages regardless of pacing),
-  // just generic instead of transcript-specific.
-  const groups = normalizeTopicGroups(parsed);
-  if (groups) {
-    parsed.topics_by_group = groups;
-    if (!parsed.topics_covered || !parsed.topics_covered.length) {
-      parsed.topics_covered = flattenTopicGroups(groups);
-    }
-  } else {
-    if (parsed && parsed.topics_by_group) delete parsed.topics_by_group;
-    if (!parsed.topics_covered || !parsed.topics_covered.length) {
-      parsed.topics_covered = fallbackTopicsFromState();
-    }
+  // Safety net: despite the prompt instruction that this field must never
+  // be empty, a fast/rushed conversation has occasionally come back with it
+  // omitted. Fall back to known state rather than let the section vanish —
+  // still accurate (everyone reaches the foundational stages regardless of
+  // pacing), just generic instead of transcript-specific.
+  if (!parsed.topics_covered || !parsed.topics_covered.length) {
+    parsed.topics_covered = fallbackTopicsFromState();
   }
   return parsed;
 }
@@ -2081,55 +2036,6 @@ function fallbackTopicsFromState() {
     });
   }
   return topics;
-}
-
-// Display groups for "Topics covered". Keys are the extraction schema;
-// labels are what the person sees on the card (and, prefixed, in email).
-const TOPIC_GROUPS = [
-  { key: 'basics', label: 'Basics' },
-  { key: 'your_life', label: 'Your life' },
-  { key: 'lenses', label: 'Lenses' },
-  { key: 'tradeoffs', label: 'Trade-offs and risks' },
-];
-
-function normalizeTopicGroups(summary) {
-  const raw = summary && summary.topics_by_group;
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
-  const out = {};
-  let any = false;
-  TOPIC_GROUPS.forEach(({ key }) => {
-    const arr = raw[key];
-    if (!Array.isArray(arr)) return;
-    const cleaned = arr.map(t => String(t == null ? '' : t).trim()).filter(Boolean);
-    if (cleaned.length) {
-      out[key] = cleaned;
-      any = true;
-    }
-  });
-  return any ? out : null;
-}
-
-function flattenTopicGroups(groups) {
-  const topics = [];
-  TOPIC_GROUPS.forEach(({ key }) => {
-    if (groups[key] && groups[key].length) topics.push.apply(topics, groups[key]);
-  });
-  return topics;
-}
-
-// Worker email still renders a flat topics_covered <li> list (Worker is
-// unchanged). When groups are present, prefix each item so the emailed
-// copy stays organized. Other fields pass through unchanged.
-function summaryForEmail(summary) {
-  const groups = normalizeTopicGroups(summary);
-  if (!groups) return summary;
-  const topics = [];
-  TOPIC_GROUPS.forEach(({ key, label }) => {
-    const items = groups[key];
-    if (!items || !items.length) return;
-    items.forEach(t => topics.push(label + ': ' + t));
-  });
-  return Object.assign({}, summary, { topics_covered: topics });
 }
 
 function escapeHtmlClient(s) {
@@ -2169,19 +2075,7 @@ function renderSummary(summary) {
     body.appendChild(goalCard);
   }
 
-  const topicGroups = normalizeTopicGroups(summary);
-  if (topicGroups) {
-    const topicsCard = document.createElement('div');
-    topicsCard.className = 'summary-card';
-    let topicsHtml = `<div class="summary-card-label">Topics covered</div>`;
-    TOPIC_GROUPS.forEach(({ key, label }) => {
-      const items = topicGroups[key];
-      if (!items || !items.length) return;
-      topicsHtml += `<div class="summary-topic-group"><div class="summary-topic-group-label">${escapeHtmlClient(label)}</div><ul class="summary-topics-list">${items.map(t => `<li>${escapeHtmlClient(t)}</li>`).join('')}</ul></div>`;
-    });
-    topicsCard.innerHTML = topicsHtml;
-    body.appendChild(topicsCard);
-  } else if (summary.topics_covered && summary.topics_covered.length) {
+  if (summary.topics_covered && summary.topics_covered.length) {
     const topicsCard = document.createElement('div');
     topicsCard.className = 'summary-card';
     const items = summary.topics_covered.map(t => `<li>${escapeHtmlClient(t)}</li>`).join('');
@@ -2318,10 +2212,9 @@ async function submitEmailGate() {
         // from summary field presence.
         tier: convoState ? convoState.tier : 'starter',
         // pendingSummaryResult already matches the artifact schema exactly
-        // (from generateSummaryWithAI() or its fallback). summaryForEmail
-        // prefixes grouped topics so the Worker's unchanged flat list
-        // still reads as sections; other fields pass through.
-        summary: summaryForEmail(pendingSummaryResult),
+        // (from generateSummaryWithAI() or its fallback) — passed through
+        // directly rather than reconstructed field-by-field.
+        summary: pendingSummaryResult,
       }),
     });
   } catch (e) {
