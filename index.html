@@ -2009,12 +2009,12 @@ topics_by_group: Group the specific topics actually discussed in this conversati
 
   basics: cataract and lens basics, how surgery works, focus ranges and vision zones, astigmatism basics, glasses and insurance myths, that the lens is meant to stay, that surgery is done one eye at a time, and similar foundational topics.
   your_life: glasses habits, screens, night driving, hobbies, work, daily routine, and other lifestyle or personal-goal details the person shared.
-  lenses: lens categories and any specific lenses discussed.
+  lenses: lens categories and every specific lens discussed, asked about or compared, by name (e.g. "PureSee vs PanOptix compared"), plus per-eye plans such as monovision or mini-monovision, the adjustable lens, and similar lens-choice topics that came up. Never leave out a named lens or monovision if it was discussed.
   tradeoffs: costs, night-vision effects (glare, halos, contrast), surgical risks, side effects, and other trade-offs.
 
-lens_category_interest: Session tier only — omit entirely for starter tier. Start from the given preferred track, translated to plain language ("advanced technology," "toric," or "basic monofocal"). Then add the person's specific preference within that track: for Track A, their stated range-vs-side-effects tradeoff preference, phrased naturally. For Track B or C, their stated focal point preference (near, far, or both/unsure). If the transcript shows the person specifically asked about or dove deep into a named lens (e.g. Vivity, PanOptix, IC-8, LAL) during that track's deep-dive content, append that lens name as well.
+lens_category_interest: Session tier only — omit entirely for starter tier. Start from the given preferred track, translated to plain language ("advanced technology," "toric," or "basic monofocal"). Then add the person's specific preference within that track: for Track A, their stated range-vs-side-effects tradeoff preference, phrased naturally. For Track B or C, their stated focal point preference (near, far, or both/unsure). Then always add, in plain words, any lens categories or named lenses the person said they were interested in, weighing or comparing anywhere in the conversation (e.g. "Interested in comparing PureSee and PanOptix"), and any per-eye plan they were interested in (e.g. monovision). Never drop a named lens the person said they were interested in or comparing.
 
-surgeon_questions: Extract the polished version of each surgeon question raised in Stage 5 — the version the agent phrased and the person confirmed, not their raw first attempts and not new re-summarizations of them now. There will be between 1 and 3. Preserve the order they were raised in. Carry each forward as close to verbatim as possible.
+surgeon_questions: Extract the polished version of each surgeon question raised in Stage 5 — the version the agent phrased and the person confirmed, not their raw first attempts and not new re-summarizations of them now. There will be between 1 and 3. Preserve the order they were raised in. Carry each forward as close to verbatim as possible. If the person said they were comparing or interested in specific named lenses and none of the confirmed questions already covers that, add one final question in plain words (e.g. "How do PureSee and PanOptix compare for my eyes and my goals?"), keeping the total to 3 or fewer. Never phrase a question as asking which lens is best or right for them.
 
 starter_scope_note: Starter tier only. Generate one honest, brief sentence noting that this summary reflects the starter session, and that full lens category comparison was outside its scope. Omit entirely for session-tier people.
 
@@ -2039,17 +2039,22 @@ Return only the JSON object below, no other text — omit any field per the rule
   "starter_scope_note": "..."
 }`;
 
-  const res = await fetch(PROXY_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 700, messages: [{ role: 'user', content: prompt }] })
-  });
-
-  if (!res.ok) throw new Error('API error ' + res.status);
-  const data  = await res.json();
-  const raw   = data.content?.map(b => b.text||'').join('').trim();
-  const clean = raw.replace(/```json|```/g,'').trim();
-  const parsed = JSON.parse(clean);
+  // Summary fix v3.8: max_tokens 700 -> 1000 (Worker ceiling is 1000), and
+  // one concise retry if the reply was cut off (stop_reason "max_tokens"),
+  // had no text, or wasn't valid JSON. Only after the retry also fails does
+  // the caller show its "extraction unavailable" fallback.
+  const CONCISE_RETRY_NOTE = '\n\nBE CONCISE: the previous attempt was too long. Return the same JSON, but use at most ' + SUMMARY_RETRY_MAX_BULLETS + ' short bullets per topic group (under 10 words each), keep lens_category_interest to one sentence, and at most 3 surgeon questions. Still include every named lens the person was interested in or comparing, and monovision if it came up.';
+  let parsed = null;
+  let lastErr = null;
+  for (let attempt = 0; attempt < 2 && !parsed; attempt++) {
+    try {
+      parsed = await requestSummaryJSON(attempt === 0 ? prompt : prompt + CONCISE_RETRY_NOTE);
+    } catch (e) {
+      lastErr = e;
+      console.warn('Summary attempt ' + (attempt + 1) + ' failed:', e && e.message);
+    }
+  }
+  if (!parsed) throw lastErr || new Error('summary extraction failed');
 
   // Prefer grouped topics. A flat topics_covered list is kept for
   // backward compatibility (older model output, or when grouping fails).
@@ -2069,6 +2074,42 @@ Return only the JSON object below, no other text — omit any field per the rule
       parsed.topics_covered = fallbackTopicsFromState();
     }
   }
+  return parsed;
+}
+
+const SUMMARY_MAX_TOKENS = 1000;      // Worker ceiling is also 1000
+const SUMMARY_RETRY_MAX_BULLETS = 4;
+
+// One summary call. Throws (so the caller can retry once, then fall back)
+// when the HTTP call fails, the proxy returns an error body with no text
+// (it returns 200 even on upstream errors), the reply was cut off at
+// max_tokens, or the text isn't a JSON object. Never calls a method on
+// undefined content.
+async function requestSummaryJSON(promptText) {
+  const res = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: SUMMARY_MAX_TOKENS, messages: [{ role: 'user', content: promptText }] })
+  });
+  if (!res || !res.ok) throw new Error('API error ' + (res ? res.status : 'no response'));
+  let data = null;
+  try { data = await res.json(); } catch (e) { throw new Error('summary response was not JSON'); }
+  if (!data || typeof data !== 'object') throw new Error('empty summary response');
+  if (data.stop_reason === 'max_tokens') throw new Error('summary cut off at max_tokens');
+  const blocks = Array.isArray(data.content) ? data.content : [];
+  const raw = blocks.map(b => (b && typeof b.text === 'string') ? b.text : '').join('').trim();
+  if (!raw) throw new Error('summary response had no text' + (data.error ? ' (upstream error)' : ''));
+  return parseSummaryJSON(raw);
+}
+
+function parseSummaryJSON(raw) {
+  let clean = String(raw || '').replace(/```json|```/g, '').trim();
+  const first = clean.indexOf('{');
+  const last = clean.lastIndexOf('}');
+  if (first === -1 || last <= first) throw new Error('summary JSON not found');
+  clean = clean.slice(first, last + 1);
+  const parsed = JSON.parse(clean);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('summary JSON is not an object');
   return parsed;
 }
 
