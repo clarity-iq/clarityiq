@@ -1062,6 +1062,30 @@ function ciqAdoptPurchaseSource(result) {
   } catch (e) {}
 }
 
+// Funnel tracking v2 (2026-11-17): one "app_open" per browser tab session,
+// sent to the Worker's POST /event (name already on its allow-list). Body is
+// the event name, the page path (no query string) and the coarse source tag
+// only: never a code, email, survey answer or transcript text. A visit that
+// was not explicitly tagged and has no referring site is sent as "untagged"
+// (same rule as session telemetry), so Stripe returns aren't miscounted as
+// "direct". Fire-and-forget; can never block the page.
+(function ciqAppOpen() {
+  try {
+    const s = ciqStorage('sessionStorage');
+    if (s) {
+      if (s.getItem('ciq_app_open')) return;
+      s.setItem('ciq_app_open', '1');
+    }
+    const src = (CIQ_SRC_STATE.tagged || CIQ_SRC.utm_medium === 'referral')
+      ? CIQ_SRC : { utm_source: 'untagged', landing_path: CIQ_SRC.landing_path };
+    const body = JSON.stringify({ name: 'app_open', path: ciqTag(location.pathname) || '/', src: src });
+    const url = PROXY_URL + '/event';
+    let sent = false;
+    try { sent = !!(navigator.sendBeacon && navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }))); } catch (e) {}
+    if (!sent) fetch(url, { method: 'POST', body: body, keepalive: true, mode: 'no-cors', headers: { 'Content-Type': 'text/plain' } }).catch(function () {});
+  } catch (e) {}
+})();
+
 // ── Tier model (Batch 2.4 / 2.5) ─────────────────────────────────────────────
 // This is the structural seed: every feature that ships with a tier
 // requirement should be tagged in FEATURE_TIERS rather than hardcoded, so
@@ -2276,10 +2300,14 @@ async function buildAndShowSummary() {
   document.getElementById('voice-panel').style.display = 'none';
   document.getElementById('action-bar').style.display  = 'none';
   document.getElementById('summary-loading').style.display = 'flex';
+  // Funnel tracking v2: 'ok' or 'fallback' rides on the final telemetry write
+  // (one word, no summary content), so summary failures show in the funnel.
+  let summaryStatus = 'ok';
   try {
     const result = await generateSummaryWithAI();
     pendingSummaryResult = result;
   } catch(err) {
+    summaryStatus = 'fallback';
     console.error('AI summary failed:', err);
     const fallbackTier = convoState ? convoState.tier : 'starter';
     pendingSummaryResult = {
@@ -2301,7 +2329,7 @@ async function buildAndShowSummary() {
   }
   document.getElementById('summary-loading').style.display = 'none';
   const completed = convoState ? convoState.current_stage === 'summary' : false;
-  sendTelemetry({ completed });
+  sendTelemetry({ completed, summary_status: summaryStatus });
   if (completed) completeFreeSessionIfNeeded();
   showScreen('email-gate');
   document.getElementById('email-input').focus();
