@@ -29,7 +29,7 @@ Effective date: July 14, 2026
 Operated by: DLP Ventures, LLC, a Wyoming limited liability company ("we," "us")
 
 **1. What ClarityIQ Is**
-ClarityIQ is an AI-powered educational tool designed to help people understand cataract surgery and intraocular lens (IOL) options before a surgical consultation. It is provided for general informational and educational purposes only.
+ClarityIQ is an AI-powered educational tool designed to help people understand cataract surgery and intraocular lens (IOL) options at any point before the lens is implanted. It is provided for general informational and educational purposes only.
 
 **2. Not Medical Advice**
 [Insert Educational Disclaimer from Section 2 above in full.]
