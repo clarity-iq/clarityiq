@@ -425,6 +425,68 @@ body.summary-expanded #summary-body{ overflow:visible; max-height:none; flex:non
 @media (min-width:960px){
   .summary-kept-note{ grid-column:1; grid-row:4; text-align:left; margin:16px 4px 0; }
 }
+
+/* ══ Compact call screen (fix after live test, Nov 18) ══
+   Smaller orb, tighter spacing, and a transcript that always gets the free
+   space and scrolls, so both ClarityIQ's and the person's words stay visible.
+   "In a call" = the roadmap has been rendered (#roadmap not empty). */
+body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])){ --foot:0px; }
+body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ display:none; }
+
+#app:has(#roadmap:not(:empty)) #voice-panel{ overflow:hidden; gap:6px; padding-top:4px; padding-bottom:4px; }
+#app:has(#roadmap:not(:empty)) #orb{ width:112px; height:112px; margin:22px auto 16px; }
+#app:has(#roadmap:not(:empty)) #orb svg{ width:24px; height:24px; }
+#app:has(#roadmap:not(:empty)) #status-pill{ font-size:18px; line-height:1.25; }
+#app:has(#roadmap:not(:empty)) #error-box{ order:3; flex:none; }
+#app:has(#roadmap:not(:empty)) #upgrade-link-banner{ flex:none; }
+#app:has(#roadmap:not(:empty)) #transcript-wrap{
+  flex:1 1 0; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  gap:8px; padding:10px 2px 6px; max-width:720px;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 14px); mask-image:linear-gradient(to bottom,transparent 0,#000 14px); }
+/* every line readable; newest lines are not oversized */
+#app:has(#roadmap:not(:empty)) .tr-line{ opacity:1; font-size:16px; line-height:1.45; flex:none; }
+#app:has(#roadmap:not(:empty)) .tr-line.agent,
+#app:has(#roadmap:not(:empty)) .tr-line.agent:nth-last-child(-n+2){ font-family:var(--serif); font-size:18px; line-height:1.4; color:var(--ink); max-width:100%; }
+#app:has(#roadmap:not(:empty)) .tr-line.agent:not(:nth-last-child(-n+2)){ color:var(--ink-2); }
+#app:has(#roadmap:not(:empty)) .tr-line.user{ padding:8px 14px; font-size:16px; color:var(--ink); }
+#app:has(#roadmap:not(:empty)) #next-bar{ padding-top:6px; }
+#app:has(#roadmap:not(:empty)) #next-btn{ min-height:48px; padding:8px 18px; }
+#app:has(#roadmap:not(:empty)) #action-bar{ padding-top:8px; padding-bottom:10px; gap:8px; flex-wrap:nowrap; }
+#app:has(#roadmap:not(:empty)) #mic-btn,
+#app:has(#roadmap:not(:empty)) #speaker-btn{ height:46px; }
+#app:has(#roadmap:not(:empty)) #end-btn{ height:46px; flex:0 0 auto; padding:0 12px; }
+#app:has(#roadmap:not(:empty)) #end-btn.summary-ready{ flex:1 1 auto; }
+
+@media (max-width:759px){
+  body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])){ --hdr:50px; }
+  #app:has(#roadmap:not(:empty)) #header .header-lockup{ height:26px; }
+  #app:has(#roadmap:not(:empty)) #roadmap{ padding-top:2px; }
+  #app:has(#roadmap:not(:empty)) #progress-wrap{ padding-top:6px; }
+  #app:has(#roadmap:not(:empty)) #progress-stage-label,
+  #app:has(#roadmap:not(:empty)) #session-timer{ font-size:15px; }
+  #app:has(#roadmap:not(:empty)) #voice-panel{ padding-left:16px; padding-right:16px; }
+  #app:has(#roadmap:not(:empty)) #orb{ width:68px; height:68px; margin:16px auto 10px; }
+  #app:has(#roadmap:not(:empty)) #orb::before{ border-width:1px; box-shadow:none; }
+  #app:has(#roadmap:not(:empty)) #orb svg{ width:20px; height:20px; }
+  #app:has(#roadmap:not(:empty)) #status-pill{ font-size:16px; }
+  #app:has(#roadmap:not(:empty)) .tr-line.agent,
+  #app:has(#roadmap:not(:empty)) .tr-line.agent:nth-last-child(-n+2){ font-size:17px; }
+  #app:has(#roadmap:not(:empty)) .tr-line.user{ font-size:16px; max-width:88%; }
+  #app:has(#roadmap:not(:empty)) #next-bar,
+  #app:has(#roadmap:not(:empty)) #action-bar{ padding-left:16px; padding-right:16px; }
+  #app:has(#roadmap:not(:empty)) #mic-btn,
+  #app:has(#roadmap:not(:empty)) #speaker-btn{ flex:1 1 0; padding:0 10px; font-size:15px; gap:6px; }
+  #app:has(#roadmap:not(:empty)) #end-btn{ font-size:15px; gap:6px; padding:0 8px; }
+  #app:has(#roadmap:not(:empty)) #end-btn.summary-ready{ height:46px; padding:0 16px; }
+}
+@media (min-width:960px){
+  #app:has(#roadmap:not(:empty)) #orb{ width:132px; height:132px; margin:26px auto 18px; }
+  #app:has(#roadmap:not(:empty)) .tr-line.agent,
+  #app:has(#roadmap:not(:empty)) .tr-line.agent:nth-last-child(-n+2){ font-size:20px; }
+  #app:has(#roadmap:not(:empty)) .tr-line.user{ font-size:17px; }
+  #app:has(#roadmap:not(:empty)) #transcript-wrap{ width:100%; margin:0 auto; }
+}
+
 @media print{
   .summary-kept-note{ display:none!important; }
   @page{ margin:12mm 14mm 14mm; }
