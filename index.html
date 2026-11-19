@@ -2696,7 +2696,13 @@ async function startConversation(opts) {
   }
 
   try {
-    await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Ask for the mic here so a denial shows our message, then release it at
+    // once. Leaving this stream open meant three live captures on Android
+    // (this one, the SDK's preliminary one, and the SDK's real input). When
+    // the SDK stops its preliminary stream, Android can re-route audio and
+    // stall both directions ("one word, then silence").
+    const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    permStream.getTracks().forEach((t) => t.stop());
 
     conversation = await Conversation.startSession({
       signedUrl,
@@ -2871,6 +2877,8 @@ async function startConversation(opts) {
       },
 
       onDisconnect: (details) => {
+        // Logged so a phone session that goes quiet shows why it ended.
+        try { console.warn('ClarityIQ voice disconnect:', JSON.stringify(details || {})); } catch (e) {}
         callConnected = false;
         stopCallTimer();
         clearMuteCapTimer();
