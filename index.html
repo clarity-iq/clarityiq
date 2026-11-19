@@ -937,8 +937,13 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 </div>
 
 <script type="module">
-import { Conversation } from 'https://esm.sh/@elevenlabs/client@1.35.0';
+import { Conversation } from 'https://esm.sh/@elevenlabs/client@1.37.1';
 // Pinned so a new SDK release can't change voice behaviour without a test pass. To upgrade: bump the version here, run the E2E, then merge.
+// 1.35.0 → 1.37.1: no breaking public API for this app. 1.36.1 reports WebRTC
+// LiveKit failures as onDisconnect reason "error" (was "agent"); we already
+// treat any reason other than "user" as a drop to the reconnect screen.
+// 1.37.0 adds optional session overrides only, plus Firefox sample-rate fixes.
+// 1.37.1 releases the output audio element and worklet ports when a session ends.
 
 // 4.4: the public agent ID no longer lives here — the Worker calls
 // ElevenLabs' get-signed-url endpoint server-side (with the real API key)
@@ -1476,10 +1481,11 @@ async function checkGatePassword() {
   input.focus();
 }
 
-if (sessionStorage.getItem('clarityiq_unlocked') === '1') {
-  document.getElementById('gate').style.display = 'none';
-  resetUI();
-}
+// Reload / same-tab return used to call resetUI() here, before the
+// conversation state lets (endingIntentionally, callConnected, …) were
+// initialized. That hit the temporal dead zone and blanked the page:
+// "Cannot access 'endingIntentionally' before initialization". The gate
+// listeners can stay; the unlock/reset itself runs at boot, below.
 document.getElementById('gate-submit').addEventListener('click', checkGatePassword);
 document.getElementById('gate-input').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') checkGatePassword();
@@ -2701,7 +2707,7 @@ async function startConversation(opts) {
         // 'NONE' (any code not made in a surgeon dashboard) = standard session.
         practice_profile: practiceProfile,
       },
-      // SDK 1.35.0: override the fixed welcome so a resumed call picks up
+      // SDK 1.37.1: override the fixed welcome so a resumed call picks up
       // at the stage already reached, instead of starting over.
       ...(resume ? { overrides: { agent: { firstMessage: resumeFirstMessage() } } } : {}),
 
@@ -3341,7 +3347,17 @@ document.getElementById('mic-btn').addEventListener('click', () => {
 // Progress bar / roadmap are rendered once the conversation actually starts
 // (onConnect -> initConvoState() -> renderRoadmap()/updateProgressBar()) —
 // there's no state object to render from before that.
-setStatus('', 'Ready to begin');
+//
+// sessionStorage survives a refresh, so a mid-session or after-session reload
+// should skip the gate and show a usable start-over screen (pre-survey). This
+// must run after the conversation state lets are initialized; see the note
+// above the gate-submit listener.
+if (sessionStorage.getItem('clarityiq_unlocked') === '1') {
+  document.getElementById('gate').style.display = 'none';
+  resetUI();
+} else {
+  setStatus('', 'Ready to begin');
+}
 </script>
 
 <!-- Cloudflare Web Analytics (Batch 4.5) — traffic source + bounce rate.
