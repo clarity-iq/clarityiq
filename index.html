@@ -400,7 +400,7 @@ body.summary-expanded #summary-body{ overflow:visible; max-height:none; flex:non
   #app:has(#roadmap:empty) #begin-btn{ width:auto; }
 
   /* summary: paper left, actions rail right */
-  #summary[style*="flex"]{ display:grid!important; grid-template-columns:minmax(0,1fr) 290px; grid-template-rows:max-content max-content max-content max-content max-content 1fr; column-gap:40px; align-content:start; padding:20px max(var(--pad),calc((100% - 1180px)/2)) 40px; }
+  #summary[style*="flex"]{ display:grid!important; grid-template-columns:minmax(0,1fr) 290px; grid-template-rows:max-content max-content max-content max-content 1fr; column-gap:40px; align-content:start; padding:20px max(var(--pad),calc((100% - 1180px)/2)) 40px; }
   #summary-header{ grid-column:1; grid-row:1; padding:34px 44px 28px; border-radius:28px 28px 0 0; }
   .summary-lockup{ height:40px; }
   #summary-header h2{ font-size:46px; }
@@ -430,16 +430,12 @@ body.summary-expanded #summary-body{ overflow:visible; max-height:none; flex:non
 
 /* summary note, ready screen on phone */
 .summary-kept-note{ flex:none; order:8; font-size:15px; line-height:1.5; color:var(--ink-3); text-align:center; margin:14px 8px 0; }
-#email-send-note{ display:none; flex:none; order:8; margin:14px 8px 0; padding:12px 16px; border-radius:16px; background:var(--sage); color:var(--forest); font-size:15px; font-weight:500; line-height:1.5; text-align:center; }
-#email-send-note:not([hidden]){ display:block; }
-#email-send-note.is-failed{ background:var(--blush); color:var(--terra); }
 #share-btn{ text-align:left; }
 @media (max-width:959px){
   #app:has(#roadmap:empty) #orb,#app:has(#roadmap:empty) #status-pill{ display:none; }
 }
 @media (min-width:960px){
-  #email-send-note{ grid-column:1; grid-row:4; text-align:left; margin:16px 4px 0; }
-  .summary-kept-note{ grid-column:1; grid-row:5; text-align:left; margin:12px 4px 0; }
+  .summary-kept-note{ grid-column:1; grid-row:4; text-align:left; margin:16px 4px 0; }
 }
 
 /* ══ Compact call screen (fix after live test, Nov 18) ══
@@ -504,7 +500,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 }
 
 @media print{
-  .summary-kept-note,#email-send-note{ display:none!important; }
+  .summary-kept-note{ display:none!important; }
   @page{ margin:12mm 14mm 14mm; }
   html,body{ height:auto; background:#fff!important; display:block; }
   #app{ display:block!important; height:auto!important; overflow:visible!important; background:#fff!important; }
@@ -914,7 +910,6 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
     </div>
     <div id="summary-body"></div>
     <div id="summary-ref-code"></div>
-    <p id="email-send-note" hidden></p>
     <p class="summary-kept-note">We email you one copy. We don&rsquo;t keep the summary after that.</p>
     <div id="summary-footer">
       <div class="ciq-share-wrap">
@@ -2435,24 +2430,6 @@ function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 }
 
-function emailCaptureOutcome(ok, body) {
-  const sent = !!(ok && body && body.sent === true);
-  return {
-    sent,
-    text: sent
-      ? 'Summary sent to your email.'
-      : 'We couldn\'t email it, so use Save summary or Print.',
-  };
-}
-function showEmailSendNote(ok, body) {
-  const note = document.getElementById('email-send-note');
-  if (!note) return;
-  const out = emailCaptureOutcome(ok, body);
-  note.hidden = false;
-  note.classList.toggle('is-failed', !out.sent);
-  note.textContent = out.text;
-}
-
 async function submitEmailGate() {
   const input = document.getElementById('email-input');
   const email = input.value.trim();
@@ -2463,8 +2440,6 @@ async function submitEmailGate() {
   document.getElementById('email-gate-error').style.display = 'none';
   const btn = document.getElementById('email-gate-submit');
   btn.disabled = true;
-  let captureOk = false;
-  let payload = null;
   try {
     // Stored separately from the anonymous telemetry KV record — email is an
     // identifier and the telemetry data is explicitly identifier-free by
@@ -2474,7 +2449,7 @@ async function submitEmailGate() {
     // persists it (worker.js handleEmailCapture keeps only session_code,
     // email and a timestamp). access_code is sent but the summary is not
     // saved onto the purchase record.
-    const res = await fetch(PROXY_URL + '/email-capture', {
+    await fetch(PROXY_URL + '/email-capture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
       body: JSON.stringify({
@@ -2491,14 +2466,9 @@ async function submitEmailGate() {
         summary: summaryForEmail(pendingSummaryResult),
       }),
     });
-    captureOk = res.ok;
-    if (res.ok) {
-      try { payload = await res.json(); } catch (e) { payload = null; }
-    }
   } catch (e) {
     console.error('Email capture failed (non-blocking — still showing summary):', e);
   }
-  showEmailSendNote(captureOk, payload);
   btn.disabled = false;
 
   renderSummary(pendingSummaryResult);
@@ -3008,8 +2978,6 @@ function resetUI() {
   document.getElementById('post-survey-submit').disabled = true;
   document.getElementById('email-input').value = '';
   document.getElementById('email-gate-error').style.display = 'none';
-  const sendNote = document.getElementById('email-send-note');
-  if (sendNote) { sendNote.hidden = true; sendNote.textContent = ''; sendNote.classList.remove('is-failed'); }
   document.getElementById('transcript-wrap').innerHTML        = '';
   document.getElementById('summary').style.display            = 'none';
   document.body.classList.remove('summary-expanded');
