@@ -69,28 +69,18 @@ button{ font-family:inherit; }
 .roadmap-dot{ width:100%; height:5px; border-radius:3px; border:0; background:var(--rule); font-size:0; line-height:0; color:transparent; overflow:hidden; transition:background .4s; }
 .roadmap-dot.complete{ background:var(--sage-2); }
 .roadmap-dot.active{ background:var(--forest); }
-.roadmap-label{ display:none; margin-top:6px; font-size:11px; font-weight:500; line-height:1.2; letter-spacing:0; color:var(--ink-3); text-align:center; overflow:hidden; }
-.roadmap-label.active{ color:var(--forest); font-weight:600; }
-.roadmap-label.complete{ color:var(--ink-2); }
+.roadmap-label{ display:none; }
 .roadmap-connector{ display:none; }
 #progress-wrap{ order:3; flex:none; padding:8px var(--pad) 0; background:transparent; border:0; }
 #app:has(#roadmap:empty) #progress-wrap{ display:none; }
 #progress-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-#progress-stage{ display:flex; align-items:baseline; gap:8px; min-width:0; }
 #progress-stage-label{ font-size:15px; font-weight:600; color:var(--forest); }
-#progress-stage-count{ display:none; font-size:14px; font-weight:500; color:var(--ink-3); white-space:nowrap; }
-#progress-stage-count:not(:empty)::before{ content:"· "; }
 #session-timer{ font-size:15px; color:var(--ink-3); font-variant-numeric:tabular-nums; white-space:nowrap; display:none; }
 #session-timer.over-goal{ color:var(--terra); }
 #time-bar{ height:4px; border-radius:2px; background:var(--rule); margin-top:10px; overflow:hidden; width:200px; display:none; }
 #time-bar-fill{ height:100%; width:0; background:var(--forest); border-radius:2px; transition:width 1s linear; }
 #time-bar.over-goal #time-bar-fill{ background:var(--terra); }
 @media (max-width:959px){ #time-bar{ display:none!important; } }
-@media (max-width:419px){ #progress-stage-count{ display:inline; } }
-@media (min-width:420px) and (max-width:959px){
-  .roadmap-label{ display:block; }
-  #progress-stage-label,#progress-stage-count{ display:none; }
-}
 
 /* ── Voice panel ── */
 #voice-panel{ order:4; flex:1 1 auto; min-height:0; overflow-y:auto; display:flex; flex-direction:column; align-items:center; padding:8px var(--pad) 8px; gap:10px; }
@@ -237,7 +227,7 @@ button{ font-family:inherit; }
 #access-code-modal.show,#email-verify-modal.show{ display:flex; }
 #access-code-title,#email-verify-title{ font-size:46px; line-height:1.06; margin:12px 0 12px; }
 #access-code-sub,#email-verify-sub{ font-size:18px; color:var(--ink-2); max-width:none; margin:0 0 24px; }
-#access-code-value{ font-family:var(--sans); font-size:36px; font-weight:600; letter-spacing:.12em; color:var(--forest); background:var(--paper); border-radius:22px; padding:22px 20px; text-align:center; box-shadow:inset 0 0 0 1px var(--sage-2),var(--shadow); margin:0 0 12px; font-variant-numeric:tabular-nums; }
+#access-code-value{ font-family:var(--sans); font-size:36px; font-weight:600; letter-spacing:.12em; color:var(--forest); background:#fff; border-radius:22px; padding:22px 20px; text-align:center; box-shadow:var(--shadow); margin:0 0 12px; font-variant-numeric:tabular-nums; }
 #access-code-note{ font-size:15px; color:var(--ink-3); max-width:none; margin:0 0 18px; }
 #access-code-note:empty{ display:none; }
 #email-verify-modal .logo-mark{ display:none; }
@@ -329,25 +319,23 @@ button{ font-family:inherit; }
 #summary-ref-code{ flex:none; font-size:15px; color:var(--ink-3); text-align:right; letter-spacing:.03em; padding:14px 22px 20px; border-radius:0 0 26px 26px; font-variant-numeric:tabular-nums; }
 #summary-ref-code:empty{ padding:10px 22px; }
 /* actions: sticky bar on phone */
-#summary-footer{ flex:none; position:sticky; bottom:0; z-index:5; margin:14px -12px 0; padding:14px 16px 16px; border:0; background:linear-gradient(rgba(239,227,207,0),rgba(239,227,207,.98) 34%); display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:stretch; }
+#summary-footer{ flex:none; position:sticky; bottom:0; z-index:5; margin:14px -12px 0; padding:14px 16px 16px; border:0; background:linear-gradient(rgba(239,227,207,0),rgba(239,227,207,.98) 34%); display:grid; grid-template-columns:1fr 1fr 56px 56px; gap:8px 10px; align-items:center; }
 .summary-footer-row{ display:contents; }
-#save-btn{ grid-column:1 / -1; grid-row:1; --ic:var(--i-save); }
-#print-btn{ grid-column:1; grid-row:2; --ic:var(--i-print); }
-.ciq-share-wrap{ grid-column:2; grid-row:2; position:relative; min-width:0; }
-#expand-btn{ grid-column:1; grid-row:3; --ic:var(--i-expand); }
-#restart-btn{ grid-column:2; grid-row:3; --ic:var(--i-restart); }
-#save-btn,#print-btn,#share-btn{ display:flex; align-items:center; justify-content:center; gap:8px; min-height:56px; height:auto; padding:12px 16px; border:0; border-radius:999px; font-size:16px; font-weight:600; line-height:1.25; cursor:pointer; width:100%; white-space:normal; text-align:center; overflow:visible; }
+#save-btn{ grid-column:1 / span 2; grid-row:1; --ic:var(--i-save); }
+#print-btn{ grid-column:3; grid-row:1; --ic:var(--i-print); }
+.ciq-share-wrap{ grid-column:4; grid-row:1; position:relative; }
+#expand-btn{ grid-column:1; grid-row:2; --ic:var(--i-expand); }
+#restart-btn{ grid-column:2; grid-row:2; --ic:var(--i-restart); }
+#save-btn,#print-btn,#share-btn{ display:flex; align-items:center; justify-content:center; gap:10px; height:56px; padding:0 20px; border:0; border-radius:999px; font-size:17px; font-weight:600; cursor:pointer; width:100%; }
 #save-btn{ background:var(--forest); color:#fff; box-shadow:0 12px 30px rgba(31,61,44,.22); }
 #save-btn:disabled{ opacity:.55; cursor:not-allowed; }
 #print-btn,#share-btn{ background:#fff; color:var(--forest); box-shadow:0 6px 20px rgba(31,61,44,.10); }
 #share-btn{ --ic:var(--i-share); }
 #expand-btn,#restart-btn{ display:flex; align-items:center; justify-content:center; gap:8px; background:none; border:0; color:var(--forest); font-size:15px; font-weight:600; padding:6px 4px; cursor:pointer; }
 #expand-btn::before,#restart-btn::before{ width:18px; height:18px; }
-@media (max-width:419px){
-  #print-btn{ grid-column:1 / -1; grid-row:2; }
-  .ciq-share-wrap{ grid-column:1 / -1; grid-row:3; }
-  #expand-btn{ grid-column:1; grid-row:4; }
-  #restart-btn{ grid-column:2; grid-row:4; }
+@media (max-width:759px){
+  #print-btn,#share-btn{ font-size:0; padding:0; gap:0; }
+  #print-btn::before,#share-btn::before{ width:22px; height:22px; }
 }
 .ciq-share-menu{ position:absolute; z-index:30; top:auto; bottom:calc(100% + 8px); right:0; left:auto; width:260px; background:#fff; border:0; border-radius:18px; box-shadow:0 14px 40px rgba(31,61,44,.18); padding:8px; }
 .ciq-share-menu [data-share-action]{ display:block; width:100%; text-align:left; font-family:inherit; font-size:16px; line-height:1.3; padding:12px 14px; background:none; border:0; border-radius:10px; color:var(--ink); text-decoration:none; cursor:pointer; }
@@ -417,7 +405,7 @@ body.summary-expanded #summary-body{ overflow:visible; max-height:none; flex:non
   .summary-closing-note{ margin:4px -44px 0; padding:26px 44px 28px; font-size:20px; }
   #summary-footer{ grid-column:2; grid-row:1 / span 3; align-self:start; position:sticky; top:0; margin:0; padding:0; background:none; display:flex; flex-direction:column; gap:12px; }
   #save-btn{ order:1; } #print-btn{ order:2; } .ciq-share-wrap{ order:3; } #expand-btn{ order:4; } #restart-btn{ order:5; }
-  #save-btn,#print-btn,#share-btn{ justify-content:flex-start; padding:12px 22px; font-size:16px; }
+  #save-btn,#print-btn,#share-btn{ justify-content:flex-start; padding:0 22px; font-size:16px; }
   #expand-btn,#restart-btn{ justify-content:flex-start; font-size:16px; padding:8px 6px; }
   #expand-btn{ margin-top:4px; }
   .ciq-share-menu{ top:calc(100% + 8px); bottom:auto; left:0; right:0; width:auto; }
@@ -754,11 +742,10 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
       <div class="screen-question-label">Roughly how much would feel fair for a session like this?</div>
       <div class="choice-row" id="as-wtp-choices">
         <button class="choice-btn" data-value="0">$0</button>
-        <button class="choice-btn" data-value="10">$10</button>
-        <button class="choice-btn" data-value="25">$25</button>
-        <button class="choice-btn" data-value="50">$50</button>
-        <button class="choice-btn" data-value="100">$100</button>
-        <button class="choice-btn" data-value="more">More than $100</button>
+        <button class="choice-btn" data-value="49">$49</button>
+        <button class="choice-btn" data-value="99">$99</button>
+        <button class="choice-btn" data-value="249">$249</button>
+        <button class="choice-btn" data-value="more">More than $249</button>
       </div>
     </div>
     <div class="screen-question">
@@ -823,10 +810,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
   <!-- Progress bar -->
   <div id="progress-wrap">
     <div id="progress-row">
-      <div id="progress-stage">
-        <span id="progress-stage-label" aria-live="polite">Getting started</span>
-        <span id="progress-stage-count"></span>
-      </div>
+      <span id="progress-stage-label" aria-live="polite">Getting started</span>
       <span id="session-timer" role="timer" aria-live="off" aria-label="Time so far">0:00 · goal about 30 min</span>
     </div>
     <div id="time-bar" aria-hidden="true"><div id="time-bar-fill"></div></div>
@@ -1960,8 +1944,6 @@ function updateProgressBar() {
   const currentIdx = dots.indexOf(convoState.current_stage);
   const effectiveIdx = currentIdx === -1 ? dots.indexOf('vision_goals') : currentIdx;
   document.getElementById('progress-stage-label').textContent = STAGE_LABELS[dots[effectiveIdx]];
-  const countEl = document.getElementById('progress-stage-count');
-  if (countEl) countEl.textContent = (effectiveIdx + 1) + ' of ' + dots.length;
 }
 
 // ── Status / Orb ──────────────────────────────────────────────────────────────
@@ -3001,8 +2983,6 @@ function resetUI() {
   hideError();
   setStatus('', 'Ready to begin');
   document.getElementById('progress-stage-label').textContent = 'Getting started';
-  const resetCount = document.getElementById('progress-stage-count');
-  if (resetCount) resetCount.textContent = '';
   document.getElementById('roadmap').innerHTML = ''; // rebuilt by renderRoadmap() once the next conversation starts
   applyPreSurveyMode();
   showScreen('pre-survey');
