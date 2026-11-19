@@ -2109,6 +2109,8 @@ SOURCE OF TRUTH RULE: Stage 6 contains an explicit confirmation moment where the
 
 NO INTERNAL TERMINOLOGY RULE: Never use ClarityIQ's own internal system labels anywhere in your output. This includes track letters or names (Track A, Track B, Track C, "the A track," etc.), stage names or numbers (Stage 1 through 6, "the foundations stage," "vision_goals stage," etc.), tier codes, or any other internal categorization term from ClarityIQ's architecture — none of this is meaningful or appropriate for the person to read. Always describe what was actually discussed the way the person would understand it (e.g., "toric lens options," "advanced-technology lens options," "your vision goals and daily routine"), never by its internal label. This applies to every field below, not just the topics fields.
 
+ADDRESS THE PERSON DIRECTLY: Write every field as if speaking to the person. Use "you" and "your" (for example, "your goal," "your daily routine"). Never infer or guess the person's gender, and never use gendered pronouns (he, him, his, she, her, hers) or gendered phrasing such as "his goal" or "her goal." If a third-person wording is unavoidable, say "the stated goal" or "the person," not a pronoun. Do not change what was discussed, and never recommend a lens.
+
 vision_goal: Extract the person's stated goal in their own words, as confirmed in Stage 6. Do not paraphrase into different language than what the person actually said. If the conversation ended before Stage 6 and this was never confirmed, omit the field entirely — do not return an empty string, null, or a placeholder like "not captured."
 
 monovision_history: If the transcript indicates the person has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A". This can apply regardless of tier.
@@ -2405,8 +2407,10 @@ async function buildAndShowSummary() {
   // Confidence shift rides on the same summary object sent to the email
   // endpoint — omitted entirely (not zero-filled) if either half of the
   // pre/post survey was skipped, same "absent, not a placeholder" rule as
-  // every other field.
-  if (preConfidence && postConfidence) {
+  // every other field. email-polish-v1: also omit when the score did not go
+  // up, so the email never shows a flat or lower "2/10 → 2/10" row. The
+  // on-screen and printed summary still do not render this row at all.
+  if (preConfidence && postConfidence && Number(postConfidence) > Number(preConfidence)) {
     pendingSummaryResult.confidence_before = preConfidence;
     pendingSummaryResult.confidence_after = postConfidence;
     pendingSummaryResult.confidence_scale_max = CONFIDENCE_SCALE_MAX;
