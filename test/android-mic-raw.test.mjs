@@ -29,28 +29,32 @@ function extractSrc(name) {
 
 describe('android audio wake / mic helpers', () => {
   const modeFrom = extractFn('ciqMicModeFrom');
-  const rawC = extractFn('ciqMicRawConstraints');
+  const rawC = extractFn('ciqMicConstraints');
   const framePeak = extractFn('ciqFramePeak');
   const bucket = extractFn('ciqPeakBucket');
   const discInfo = extractFn('ciqDisconnectInfo');
 
-  test('mic mode: URL flag wins, then saved flag, else default', () => {
-    assert.equal(modeFrom('', null), 'default');
-    assert.equal(modeFrom('?code=abc', '0'), 'default');
-    assert.equal(modeFrom('', '1'), 'raw_saved');
-    assert.equal(modeFrom('?mic=raw', null), 'raw_url');
-    assert.equal(modeFrom('?a=1&mic=RAW&b=2', null), 'raw_url');
-    assert.equal(modeFrom('?mic=default', '1'), 'default_url');
-    assert.equal(modeFrom('?mic=rawx', null), 'default');
-    assert.equal(modeFrom('?nomic=raw', null), 'default');
+  test('mic mode: URL flag wins, then saved ec, then old raw flag migrates to ec, else default', () => {
+    assert.deepEqual(modeFrom('', null, null), { mode: 'default', src: 'default' });
+    assert.deepEqual(modeFrom('?code=abc', null, '0'), { mode: 'default', src: 'default' });
+    assert.deepEqual(modeFrom('', 'ec', null), { mode: 'ec', src: 'saved' });
+    assert.deepEqual(modeFrom('', null, '1'), { mode: 'ec', src: 'migrated' });
+    assert.deepEqual(modeFrom('', 'raw', null), { mode: 'default', src: 'default' });
+    assert.deepEqual(modeFrom('?mic=ec', null, null), { mode: 'ec', src: 'url' });
+    assert.deepEqual(modeFrom('?a=1&mic=RAW&b=2', 'ec', null), { mode: 'raw', src: 'url' });
+    assert.deepEqual(modeFrom('?mic=default', 'ec', '1'), { mode: 'default', src: 'url' });
+    assert.deepEqual(modeFrom('?mic=ecx', null, null), { mode: 'default', src: 'default' });
+    assert.deepEqual(modeFrom('?nomic=ec', null, null), { mode: 'default', src: 'default' });
   });
 
-  test('raw constraints turn processing off and keep the rest', () => {
-    assert.deepEqual(rawC(true), { echoCancellation: false, noiseSuppression: false, autoGainControl: false, voiceIsolation: false });
+  test('constraints: default unchanged; ec keeps echo cancellation only; raw all off', () => {
     const sdk = { voiceIsolation: true, sampleRate: { ideal: 16000 }, echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: { ideal: 1 }, deviceId: { exact: 'x' } };
-    const out = rawC(sdk);
-    assert.deepEqual(out, { voiceIsolation: false, sampleRate: { ideal: 16000 }, echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 1 }, deviceId: { exact: 'x' } });
-    assert.equal(sdk.echoCancellation, true, 'input not mutated');
+    assert.equal(rawC(sdk, 'default'), sdk);
+    assert.equal(rawC(true, 'default'), true);
+    assert.deepEqual(rawC(true, 'ec'), { echoCancellation: true, noiseSuppression: false, autoGainControl: false, voiceIsolation: false });
+    assert.deepEqual(rawC(sdk, 'ec'), { voiceIsolation: false, sampleRate: { ideal: 16000 }, echoCancellation: true, noiseSuppression: false, autoGainControl: false, channelCount: { ideal: 1 }, deviceId: { exact: 'x' } });
+    assert.deepEqual(rawC(true, 'raw'), { echoCancellation: false, noiseSuppression: false, autoGainControl: false, voiceIsolation: false });
+    assert.equal(sdk.noiseSuppression, true, 'input not mutated');
   });
 
   test('frame peak and dB buckets', () => {
@@ -72,20 +76,21 @@ describe('android audio wake / mic helpers', () => {
     assert.deepEqual(discInfo(undefined), { reason: 'other', code: null });
   });
 
-  test('mic check action: raw swap only when the input context went to sleep and would not wake', () => {
+  test('mic check action: ec switch only when the input context went to sleep and would not wake', () => {
     const act = extractFn('ciqMicCheckAction');
-    assert.equal(act('suspended', false), 'swap');
-    assert.equal(act('suspended', true), 'tap');
-    assert.equal(act('not_running', false), 'tap');
-    assert.equal(act('silent_running', false), 'log');
-    assert.equal(act('ok', false), 'none');
-    assert.equal(act('muted', false), 'log');
-    assert.equal(act('track_ended', false), 'log');
+    assert.equal(act('suspended', 'default'), 'swap');
+    assert.equal(act('suspended', 'ec'), 'tap');
+    assert.equal(act('suspended', 'raw'), 'tap');
+    assert.equal(act('not_running', 'default'), 'tap');
+    assert.equal(act('silent_running', 'default'), 'log');
+    assert.equal(act('ok', 'default'), 'none');
+    assert.equal(act('muted', 'default'), 'log');
   });
 
   test('wiring: held mic opened in the tap before any await; released on end/drop/failed start; telemetry carries audio_diag', () => {
     assert.match(html, /audio_diag: ciqAudioDiagSnapshot\(\)/);
-    assert.match(html, /if \(ciqMicRawActive\) ciqInstallRawMicWrapper\(\);/);
+    assert.match(html, /if \(ciqMicMode !== 'default'\) ciqInstallMicWrapper\(\);/);
+    assert.match(html, /st\.removeItem\(CIQ_MIC_RAW_KEY\);/);
     const start = html.slice(html.indexOf('async function startConversation(opts) {'), html.indexOf('async function startConversationInner('));
     assert.ok(start.indexOf('ciqHoldMicStart();') > 0 && start.indexOf('ciqHoldMicStart();') < start.indexOf('await'), 'held mic requested before the first await');
     assert.match(start, /finally \{\n    if \(!ciqSessionStarted\) ciqEndAudioSession\(\);/);
