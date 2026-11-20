@@ -1877,41 +1877,27 @@ let callConnected = false;
 //  2. Every AudioContext is watched (constructor wrapper below). If one goes
 //     'suspended' / 'interrupted' during a session we resume() it at once; if
 //     that fails, the next tap anywhere resumes it.
-//  3. (android-mic-ec-v3) Martin's phone test of 2b65110: the held mic did not
-//     help; all-off (raw) works but without echo cancellation the agent hears
-//     itself. /soundcheck 4D (echo cancellation ON, noise suppression + auto
-//     gain OFF) keeps the context running with a live mic. So the fallback is
-//     now 'ec' mode. It switches as soon as a context that was running goes
-//     to sleep and one resume attempt fails (no 3 s wait), swaps the SDK input
-//     in place, and is remembered per device (localStorage ciq_mic_mode='ec')
-//     so the next session opens every capture in ec mode from the start.
-//     Support links: ?mic=ec (saved), ?mic=raw (all off, this page load only,
-//     support use), ?mic=default (clears). Old ciq_mic_raw=1 migrates to ec.
-// Other devices: nothing suspends, so nothing is resumed or swapped; they keep
-// full processing. The only change for them is the held pre-check stream.
-const CIQ_MIC_MODE_KEY = 'ciq_mic_mode';
-const CIQ_MIC_RAW_KEY = 'ciq_mic_raw'; // v2 key, migrated to ciq_mic_mode='ec'
-const CIQ_MIC_WINDOW_MS = 3000;     // mic check: how long to wait for the input to run
-const CIQ_RESUME_CHECK_MS = 400;    // one resume attempt gets this long before ec mode
-const CIQ_MIC_OPEN_WINDOW_MS = 15000; // suspends this soon after the tap count as 'at mic open'
+//  3. Last resort only: if ~3 s in the mic is still silent AND the input
+//     context went suspended and could not be resumed, swap the SDK input to
+//     an unprocessed mic in place (remembered per device: ciq_mic_raw=1).
+//     Support links: ?mic=raw forces raw mode; ?mic=default clears it.
+// Other devices: nothing suspends, so nothing is resumed or swapped; the only
+// change for them is that the pre-check mic stream stays open until the end.
+const CIQ_MIC_RAW_KEY = 'ciq_mic_raw';
+const CIQ_MIC_WINDOW_MS = 3000;     // decide on the last-resort swap after this
 const CIQ_MIC_SILENT_RUN_MS = 2500; // silence needed while running to log 'silent_running'
 const CIQ_MIC_CHECK_MAX_MS = 10000;
 const CIQ_SILENT_PEAK = 0.0001;     // -80 dBFS; a working mic's noise floor is far above this
 
 // Pure helpers (unit tested in test/android-mic-raw.test.mjs).
-// -> { mode: 'default' | 'ec' | 'raw', src: 'default' | 'url' | 'saved' | 'migrated' }
-function ciqMicModeFrom(search, storedMode, storedOldRaw) {
-  const m = /[?&]mic=(ec|raw|default)(?:&|$)/i.exec(search || '');
-  if (m) return { mode: m[1].toLowerCase(), src: 'url' };
-  if (storedMode === 'ec') return { mode: 'ec', src: 'saved' };
-  if (storedOldRaw === '1') return { mode: 'ec', src: 'migrated' };
-  return { mode: 'default', src: 'default' };
+function ciqMicModeFrom(search, stored) {
+  const m = /[?&]mic=(raw|default)(?:&|$)/i.exec(search || '');
+  if (m) return m[1].toLowerCase() === 'raw' ? 'raw_url' : 'default_url';
+  return stored === '1' ? 'raw_saved' : 'default';
 }
-// Audio constraints for a mode. 'default' returns the request unchanged.
-function ciqMicConstraints(audio, mode) {
-  if (mode !== 'ec' && mode !== 'raw') return audio;
+function ciqMicRawConstraints(audio) {
   const c = (audio && typeof audio === 'object') ? Object.assign({}, audio) : {};
-  c.echoCancellation = mode === 'ec';
+  c.echoCancellation = false;
   c.noiseSuppression = false;
   c.autoGainControl = false;
   c.voiceIsolation = false;
@@ -1944,27 +1930,22 @@ function ciqDisconnectInfo(details) {
   return { reason: reason, code: code };
 }
 // What the mic check result means for the session (pure).
-//  'swap'  -> switch to ec mode; 'tap' -> wait for a tap; 'log' -> record only.
-function ciqMicCheckAction(result, mode) {
-  if (result === 'suspended') return mode === 'default' ? 'swap' : 'tap';
+//  'swap'  -> last-resort raw mic; 'tap' -> wait for a tap; 'log' -> record only.
+function ciqMicCheckAction(result, rawActive) {
+  if (result === 'suspended') return rawActive ? 'tap' : 'swap';
   if (result === 'not_running') return 'tap';
   if (result === 'ok') return 'none';
   return 'log';
 }
 
-let ciqMicMode = 'default';     // 'default' | 'ec' | 'raw'
-let ciqMicModeSrc = 'default';  // 'default' | 'url' | 'saved' | 'migrated' | 'auto'
+let ciqMicMode = 'default';
 try {
   const st = ciqStorage('localStorage');
-  const r = ciqMicModeFrom(location.search, st ? st.getItem(CIQ_MIC_MODE_KEY) : null, st ? st.getItem(CIQ_MIC_RAW_KEY) : null);
-  ciqMicMode = r.mode; ciqMicModeSrc = r.src;
-  if (st) {
-    if (r.mode === 'ec' && r.src !== 'saved') st.setItem(CIQ_MIC_MODE_KEY, 'ec');
-    if (r.mode === 'default' && r.src === 'url') st.removeItem(CIQ_MIC_MODE_KEY);
-    st.removeItem(CIQ_MIC_RAW_KEY);
-    // ?mic=raw is for this page load only (support); it does not change what is saved.
-  }
+  ciqMicMode = ciqMicModeFrom(location.search, st ? st.getItem(CIQ_MIC_RAW_KEY) : null);
+  if (st && ciqMicMode === 'raw_url') st.setItem(CIQ_MIC_RAW_KEY, '1');
+  if (st && ciqMicMode === 'default_url') st.removeItem(CIQ_MIC_RAW_KEY);
 } catch (e) {}
+let ciqMicRawActive = ciqMicMode === 'raw_url' || ciqMicMode === 'raw_saved';
 let ciqGumWrapped = false;
 let ciqMicCheckTimer = null;
 let ciqUnlockCtx = null;
@@ -1977,22 +1958,20 @@ let ciqHeldMicToken = 0;
 const ciqCtxs = new Set();      // every AudioContext made on this page (SDK input + output)
 // Rides on session telemetry as audio_diag: codes, counts and states only,
 // never transcript text, device names or error messages.
-let ciqPendingSwitch = null;    // ec switch requested before startSession returned
-let ciqSessionT0 = 0;
-const ciqAudioDiag = { mic_mode: ciqMicMode, mic_mode_src: ciqMicModeSrc, switch_reason: null, switch_ms: null, mic_switch: null, held_mic: null, ctx_suspends: 0, ctx_resume: null, mic_check: null, mic_peak: null, mic_after: null, in_ctx: null, out_ctx: null, wake: null, disconnects: [] };
+const ciqAudioDiag = { mic_mode: ciqMicMode, held_mic: null, ctx_suspends: 0, ctx_resume: null, mic_check: null, mic_peak: null, mic_after: null, in_ctx: null, out_ctx: null, wake: null, disconnects: [] };
 
-function ciqInstallMicWrapper() {
+function ciqInstallRawMicWrapper() {
   if (ciqGumWrapped) return;
   const md = navigator.mediaDevices;
   if (!md || typeof md.getUserMedia !== 'function') return;
   const orig = md.getUserMedia.bind(md);
   md.getUserMedia = function (c) {
-    if (ciqMicMode !== 'default' && c && c.audio) c = Object.assign({}, c, { audio: ciqMicConstraints(c.audio, ciqMicMode) });
+    if (ciqMicRawActive && c && c.audio) c = Object.assign({}, c, { audio: ciqMicRawConstraints(c.audio) });
     return orig(c);
   };
   ciqGumWrapped = true;
 }
-if (ciqMicMode !== 'default') ciqInstallMicWrapper();
+if (ciqMicRawActive) ciqInstallRawMicWrapper();
 
 // ── Held mic ──
 // Called synchronously at the top of the Begin/Resume tap.
@@ -2049,30 +2028,26 @@ function ciqTryResume(ctx) {
     if (ctx.state === 'running') { ciqAudioDiag.ctx_resume = 'ok'; return; }
     ciqAudioDiag.ctx_resume = 'failed';
     ciqArmTapResume();
-    // Only a 'suspended' (not iOS 'interrupted', e.g. a phone call) while the
-    // mic is being opened at session start counts as the mic-open problem.
-    if (ctx.__ciqRan && ctx.state === 'suspended' && ciqSessionT0 && Date.now() - ciqSessionT0 < CIQ_MIC_OPEN_WINDOW_MS) ciqRequestEcSwitch('ctx_suspend_resume_failed');
-  }, CIQ_RESUME_CHECK_MS);
+    ciqScheduleLastResort();
+  }, 500);
 }
-// A context that had been running went to sleep and one resume failed: on
-// this device the full-processing mic is the trigger, so switch to ec mode now
-// and remember it. Any capture opened from here on uses ec constraints.
-function ciqRequestEcSwitch(reason) {
-  if (ciqMicMode !== 'default' || !ciqSessionLive) return;
-  ciqMicMode = 'ec';
-  ciqMicModeSrc = 'auto';
-  ciqAudioDiag.mic_mode = 'ec';
-  ciqAudioDiag.mic_mode_src = 'auto';
-  ciqAudioDiag.switch_reason = reason;
-  ciqAudioDiag.switch_ms = ciqSessionT0 ? Date.now() - ciqSessionT0 : null;
-  try { const st = ciqStorage('localStorage'); if (st) st.setItem(CIQ_MIC_MODE_KEY, 'ec'); } catch (e) {}
-  ciqInstallMicWrapper();
-  // The held full-processing stream can keep the phone in the mode that
-  // suspends audio, so drop it now.
-  ciqReleaseHeldMic();
-  ciqAudioDiag.held_mic = 'released_for_ec';
-  if (conversation && ciqSessionStarted) ciqSwitchToEcMic(conversation);
-  else ciqPendingSwitch = reason; // done right after startSession returns
+// A context that would not resume: give the tap/resume path ~3 s, then, if
+// the SDK input is still asleep (so the mic is silent), use the raw mic.
+let ciqLastResortTimer = null;
+function ciqScheduleLastResort() {
+  if (ciqLastResortTimer || ciqMicRawActive) return;
+  ciqLastResortTimer = setTimeout(() => {
+    ciqLastResortTimer = null;
+    if (!ciqSessionLive || ciqMicRawActive) return;
+    const conv = conversation;
+    if (!conv || !callConnected) { ciqScheduleLastResort(); return; } // still connecting
+    const i = conv.input && conv.input.context;
+    if (i && i.state !== 'running' && i.state !== 'closed') {
+      ciqStopMicCheck();
+      ciqAudioDiag.mic_check = 'suspended';
+      ciqSwitchToRawMic(conv);
+    }
+  }, CIQ_MIC_WINDOW_MS);
 }
 function ciqWatchCtx(ctx) {
   ciqCtxs.add(ctx);
@@ -2231,23 +2206,30 @@ function ciqStartMicCheck(conv) {
     ciqAudioDiag.mic_check = result;
     ciqAudioDiag.mic_peak = ciqPeakBucket(peak);
     ciqNoteAudioStates(conv);
-    const action = ciqMicCheckAction(result, ciqMicMode);
-    if (action === 'swap') { ciqRequestEcSwitch('mic_check_suspended'); return; }
+    const action = ciqMicCheckAction(result, ciqMicRawActive);
+    if (action === 'swap') { ciqSwitchToRawMic(conv); return; }
     if (action === 'tap') ciqArmTapResume();
     if (action !== 'none') sendTelemetry();
   });
 }
-// Swap the SDK's input in place (same session) to an ec-mode capture (the
-// wrapper applies the constraints), then wake every context.
-async function ciqSwitchToEcMic(conv) {
-  ciqStopMicCheck();
+// Last resort: the input context went to sleep with the processed mic and
+// would not wake. Swap the SDK input to an unprocessed mic in place, drop the
+// held processed stream, then wake every context.
+async function ciqSwitchToRawMic(conv) {
+  ciqMicRawActive = true;
+  ciqMicMode = 'raw_auto';
+  ciqAudioDiag.mic_mode = 'raw_auto';
+  try { const st = ciqStorage('localStorage'); if (st) st.setItem(CIQ_MIC_RAW_KEY, '1'); } catch (e) {}
+  ciqInstallRawMicWrapper();
   setStatus('connecting', 'Adjusting your microphone…');
   try {
     await conv.changeInputDevice({});
-    ciqAudioDiag.mic_switch = 'ok';
+    ciqAudioDiag.mic_check = 'suspended_swapped';
   } catch (e) {
-    ciqAudioDiag.mic_switch = 'failed';
+    ciqAudioDiag.mic_check = 'suspended_swap_failed';
   }
+  ciqReleaseHeldMic();
+  ciqAudioDiag.held_mic = 'released_for_raw';
   if (conv !== conversation) return;
   ciqResumeAll(conv);
   setStatus('listening', 'Listening…');
@@ -2268,10 +2250,6 @@ function ciqAudioDiagSnapshot() {
 }
 function ciqResetAudioDiag(keepDisconnects) {
   ciqAudioDiag.mic_mode = ciqMicMode;
-  ciqAudioDiag.mic_mode_src = ciqMicModeSrc;
-  ciqAudioDiag.switch_reason = null;
-  ciqAudioDiag.switch_ms = null;
-  ciqAudioDiag.mic_switch = null;
   ciqAudioDiag.held_mic = null;
   ciqAudioDiag.ctx_suspends = 0;
   ciqAudioDiag.ctx_resume = null;
@@ -2286,7 +2264,7 @@ function ciqResetAudioDiag(keepDisconnects) {
 // Ends the session's audio helpers (end, drop, failed start, reset).
 function ciqEndAudioSession() {
   ciqSessionLive = false;
-  ciqPendingSwitch = null;
+  if (ciqLastResortTimer) { clearTimeout(ciqLastResortTimer); ciqLastResortTimer = null; }
   ciqStopMicCheck();
   ciqClearTapListener();
   ciqReleaseHeldMic();
@@ -3058,8 +3036,6 @@ async function startConversation(opts) {
   ciqResetAudioDiag(resume);
   ciqSessionLive = true;
   ciqSessionStarted = false;
-  ciqPendingSwitch = null;
-  ciqSessionT0 = Date.now();
   ciqAudioUnlock();
   ciqHoldMicStart();
   try {
@@ -3390,8 +3366,6 @@ async function startConversationInner(opts) {
     if (conversation) {
       ciqSessionStarted = true;
       ciqReleaseUnlock();
-      // android-mic-ec-v3: a suspend seen during setup asked for ec mode.
-      if (ciqPendingSwitch) { ciqPendingSwitch = null; ciqSwitchToEcMic(conversation); }
       ciqWakeAudio(conversation);
       ciqStartMicCheck(conversation);
     }
