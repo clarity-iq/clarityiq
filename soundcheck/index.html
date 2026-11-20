@@ -48,7 +48,7 @@ pre{ white-space:pre-wrap; word-break:break-word; font-size:13px; background:var
 <main>
 <header><img src="/brand/clarityiq-horizontal-40h@2x.png" alt="ClarityIQ"></header>
 <h1>Sound check</h1>
-<p class="lead">This page checks your phone's speaker and microphone, one step at a time. It takes about 6 minutes. Nothing is saved or sent anywhere.</p>
+<p class="lead">This page checks your phone's speaker and microphone, one step at a time. It takes about 3 minutes. Nothing is saved or sent anywhere.</p>
 <p class="hint">Turn your volume up. After each test, tap <b>Heard</b> or <b>Didn't hear</b>. At the end, read the short code at the bottom back to us.</p>
 
 <section class="card" id="s1">
@@ -64,11 +64,6 @@ pre{ white-space:pre-wrap; word-break:break-word; font-size:13px; background:var
 <section class="card" id="s3">
   <h2>3. Speaker and mic together</h2>
   <p class="hint">This is what a voice session does. Each button turns the mic on, then plays beeps. Tell us if you hear them.</p>
-</section>
-
-<section class="card" id="s4">
-  <h2>4. Mic, measured other ways</h2>
-  <p class="hint">Each button turns the mic on and measures it a different way. Keep talking the whole time the button is busy. 4A plays your own voice back to you, like the WebRTC test page.</p>
 </section>
 
 <section class="card">
@@ -97,32 +92,20 @@ var TESTS = [
   {id:'3d', s:3, name:'Together D', sub:'Mic filters off + Beep A', mic:'raw', play:'a'},
   {id:'3e', s:3, name:'Together E', sub:'Mic on + Beep A, playback mode, 48 kHz', mic:'default', play:'a', ctx:{latencyHint:'playback', sampleRate:48000}},
   {id:'3f', s:3, name:'Together F', sub:'Mic on + Beep A, 16 kHz', mic:'default', play:'a', ctx:{sampleRate:16000}},
-  {id:'3g', s:3, name:'Together G', sub:'Like a real session (mic and speaker at 16 kHz)', mic:'session', play:'a', ctx:{sampleRate:16000}, micCtx:true},
-  // v2, section 4: measured levels (numbers in Copy results)
-  {id:'4a', s:4, name:'Mic test 4A', sub:'Hear yourself (same as the WebRTC test page), 8 s', fn:t4a, meter:false, yes:'Heard myself', no:"Didn't hear"},
-  {id:'4b', s:4, name:'Mic test 4B', sub:'Normal mic, measured 3 ways, 4 s', fn:t4b},
-  {id:'4c', s:4, name:'Mic test 4C', sub:'Normal mic, 4 timing and rate variants, 12 s', fn:t4c},
-  {id:'4d', s:4, name:'Mic test 4D', sub:'Echo cancel only, 4 s', fn:oneFilter({echoCancellation:true, noiseSuppression:false, autoGainControl:false})},
-  {id:'4e', s:4, name:'Mic test 4E', sub:'Noise filter only, 4 s', fn:oneFilter({echoCancellation:false, noiseSuppression:true, autoGainControl:false})},
-  {id:'4f', s:4, name:'Mic test 4F', sub:'Auto volume only, 4 s', fn:oneFilter({echoCancellation:false, noiseSuppression:false, autoGainControl:true})},
-  {id:'4g', s:4, name:'Mic test 4G', sub:'Same capture as the voice library, 4 s', fn:function(t,ui,n){ return sdkReplica(t,ui,n,false); }},
-  {id:'4h', s:4, name:'Mic test 4H', sub:'Like the app: pre-check mic left open + 4G, 4 s', fn:function(t,ui,n){ return sdkReplica(t,ui,n,true); }}
+  {id:'3g', s:3, name:'Together G', sub:'Like a real session (mic and speaker at 16 kHz)', mic:'session', play:'a', ctx:{sampleRate:16000}, micCtx:true}
 ];
-TESTS.forEach(function(t){ if(t.s===4){ t.mic=null; t.play=null; if(t.meter===undefined) t.meter=true; if(!t.yes){ t.yes='Bar moved'; t.no="Didn't move"; } } });
 // result values: 0 not run, 1 heard / moved, 2 did not hear / did not move, 3 could not start
 var R = {}; TESTS.forEach(function(t){ R[t.id]=0; });
 var NOTES = {};
 var AC = window.AudioContext || window.webkitAudioContext;
-var live = { streams:[], ctxs:[], audios:[], urls:[], timers:[], ivals:[], stops:[], raf:0 };
+var live = { streams:[], ctxs:[], audios:[], urls:[], timers:[], raf:0 };
 var busy = false;
 
 function cleanup(){
-  live.stops.forEach(function(f){ try{ f(); }catch(e){} }); live.stops=[];
-  live.ivals.forEach(clearInterval); live.ivals=[];
   live.timers.forEach(clearTimeout); live.timers=[];
   if(live.raf) cancelAnimationFrame(live.raf); live.raf=0;
   live.streams.forEach(function(s){ s.getTracks().forEach(function(tr){ try{tr.stop();}catch(e){} }); }); live.streams=[];
-  live.audios.forEach(function(a){ try{ a.pause(); a.srcObject=null; a.removeAttribute('src'); a.load(); a.remove(); }catch(e){} }); live.audios=[];
+  live.audios.forEach(function(a){ try{ a.pause(); a.srcObject=null; a.removeAttribute('src'); a.load(); }catch(e){} }); live.audios=[];
   live.ctxs.forEach(function(c){ try{ if(c.state!=='closed') c.close(); }catch(e){} }); live.ctxs=[];
   live.urls.forEach(function(u){ try{URL.revokeObjectURL(u);}catch(e){} }); live.urls=[];
   document.querySelectorAll('.meter i').forEach(function(i){ i.style.width='0'; });
@@ -196,194 +179,12 @@ function meter(stream, bar, c){
   return function(){ return peak; };
 }
 
-// ---- v2 section 4 helpers ----
-// peaks below are % of full scale (sample abs max x 100). v1 meter % = full scale x 2.
-function pk(x, zero){ return (x*100).toFixed(1)+'%'+(zero?' allzero':''); }
-async function gum(c){ var s=await navigator.mediaDevices.getUserMedia(c); live.streams.push(s); return s; }
-function trackState(tr){ return 'muted='+tr.muted+' state='+tr.readyState+' enabled='+tr.enabled; }
-function trackInfo(tr){
-  var st = tr.getSettings ? tr.getSettings() : {};
-  return 'mic ec='+st.echoCancellation+' ns='+st.noiseSuppression+' agc='+st.autoGainControl+
-    (st.voiceIsolation!==undefined ? ' vi='+st.voiceIsolation : '')+' sr='+st.sampleRate+' ch='+st.channelCount+' '+trackState(tr);
-}
-function watchTrack(tr){
-  var ev=[], t0=performance.now();
-  function h(e){ ev.push(e.type+'@'+((performance.now()-t0)/1000).toFixed(1)+'s'); }
-  ['mute','unmute','ended'].forEach(function(k){ tr.addEventListener(k,h); });
-  return function(){ return ev.length ? ev.join(',') : 'none'; };
-}
-function timeout(p, ms, label){
-  return Promise.race([p, new Promise(function(_,rej){ live.timers.push(setTimeout(function(){ rej(new Error(label+' timeout')); }, ms)); })]);
-}
-// AnalyserNode level reader. src: a source node, or an AnalyserNode already in the graph
-function tapLevel(ctx, src, bar){
-  var an = (src instanceof AnalyserNode) ? src : ctx.createAnalyser();
-  if(an!==src){ an.fftSize=2048; src.connect(an); }
-  var buf=new Float32Array(an.fftSize), m={peak:0, zero:true, reads:0};
-  var id=setInterval(function(){
-    an.getFloatTimeDomainData(buf); var x=0;
-    for(var i=0;i<buf.length;i++){ var a=buf[i]<0?-buf[i]:buf[i]; if(a>x) x=a; if(buf[i]!==0) m.zero=false; }
-    m.reads++; if(x>m.peak) m.peak=x;
-    if(bar) bar.style.width=Math.min(100, Math.round(x*200))+'%';
-  }, 40);
-  live.ivals.push(id); m.stop=function(){ clearInterval(id); };
-  return m;
-}
-function samplesPeak(arr, m){ for(var i=0;i<arr.length;i++){ var a=arr[i]<0?-arr[i]:arr[i]; if(a>m.peak) m.peak=a; if(arr[i]!==0) m.zero=false; } }
-// MediaRecorder for ms, then decode the file offline (no live Web Audio graph)
-async function recorderPeak(stream, ms){
-  if(!window.MediaRecorder) return {txt:'rec n/a', peak:null};
-  try{
-    var mr=new MediaRecorder(stream), chunks=[];
-    mr.ondataavailable=function(e){ if(e.data && e.data.size) chunks.push(e.data); };
-    var stopped=new Promise(function(r){ mr.onstop=r; });
-    live.stops.push(function(){ if(mr.state!=='inactive') mr.stop(); });
-    mr.start(500); await wait(ms); if(mr.state!=='inactive') mr.stop(); await timeout(stopped, 3000, 'rec stop');
-    var blob=new Blob(chunks, {type:mr.mimeType}), txt='rec '+(mr.mimeType||'?')+' '+blob.size+'B';
-    if(!blob.size) return {txt:txt+' empty', peak:0};
-    var OAC=window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    var oc=new OAC(1, 48000, 48000);
-    var ab=await timeout(oc.decodeAudioData(await blob.arrayBuffer()), 5000, 'decode');
-    var m={peak:0, zero:true}, d=ab.getChannelData(0), skip=Math.floor(ab.sampleRate*0.06);
-    samplesPeak(d.subarray(Math.min(skip, d.length)), m);
-    return {txt:txt+' '+ab.duration.toFixed(1)+'s peak '+pk(m.peak,m.zero), peak:m.peak};
-  }catch(e){ return {txt:'rec error '+(e && e.name)+': '+(e && e.message), peak:null}; }
-}
-// MediaStreamTrackProcessor (WebCodecs AudioData), on a clone of the track
-async function processorPeak(track, ms){
-  if(!window.MediaStreamTrackProcessor) return {txt:'proc n/a', peak:null};
-  var tr=track.clone(); live.stops.push(function(){ tr.stop(); });
-  try{
-    var rd=new MediaStreamTrackProcessor({track:tr}).readable.getReader();
-    live.stops.push(function(){ try{ rd.cancel(); }catch(e){} });
-    var m={peak:0, zero:true}, frames=0, sr=0, fmtName='', end=performance.now()+ms;
-    while(performance.now()<end){
-      var r=await Promise.race([rd.read(), new Promise(function(res){ live.timers.push(setTimeout(function(){ res({wait:true}); }, 400)); })]);
-      if(r.wait) continue; if(r.done) break;
-      var ad=r.value; frames+=ad.numberOfFrames; sr=ad.sampleRate; fmtName=ad.format;
-      try{
-        var f=new Float32Array(ad.numberOfFrames); ad.copyTo(f, {planeIndex:0, format:'f32-planar'}); samplesPeak(f, m);
-      }catch(e1){
-        var size=ad.allocationSize({planeIndex:0}), fm=ad.format||'';
-        if(/^s16/.test(fm)){ var i16=new Int16Array(size/2); ad.copyTo(i16,{planeIndex:0}); var f2=new Float32Array(i16.length); for(var i=0;i<i16.length;i++) f2[i]=i16[i]/32768; samplesPeak(f2,m); }
-        else { var f3=new Float32Array(size/4); ad.copyTo(f3,{planeIndex:0}); samplesPeak(f3,m); }
-      }
-      ad.close();
-    }
-    try{ rd.cancel(); }catch(e){}
-    tr.stop();
-    return {txt:'proc '+fmtName+' '+sr+'Hz '+frames+'fr peak '+pk(m.peak,m.zero), peak:m.peak};
-  }catch(e){ return {txt:'proc error '+(e && e.name)+': '+(e && e.message), peak:null}; }
-}
-function lvl(x){ return x===null || x===undefined ? 'n/a' : (x*100).toFixed(1)+'%'; }
-
-// 4A: exact WebRTC sample: getUserMedia({audio:true, video:false}) -> <audio autoplay>.srcObject
-async function t4a(t, ui, note){
-  ui.status.textContent='Turning the mic on…';
-  var s=await gum({audio:true, video:false}), tr=s.getAudioTracks()[0], ev=watchTrack(tr);
-  note.push(trackInfo(tr));
-  var a=document.createElement('audio'); a.autoplay=true; a.hidden=true; document.body.appendChild(a); live.audios.push(a);
-  a.srcObject=s;
-  try{ await a.play(); note.push('play ok'); }catch(e){ note.push('play '+(e && e.name)); }
-  ui.status.textContent='Talk now. You should hear yourself…';
-  await wait(8000);
-  note.push('after '+trackState(tr)+' events '+ev());
-  ui.status.textContent='Done. Did you hear your own voice?';
-}
-// 4B: {audio:true}; AnalyserNode on a context made after the mic opens (resumed) + MediaRecorder + TrackProcessor
-async function t4b(t, ui, note){
-  ui.status.textContent='Turning the mic on…';
-  var s=await gum({audio:true}), tr=s.getAudioTracks()[0], ev=watchTrack(tr);
-  note.push(trackInfo(tr));
-  var c=newCtx(), st0=c.state; if(c.state!=='running') await c.resume();
-  var m=tapLevel(c, c.createMediaStreamSource(s), ui.bar);
-  ui.status.textContent='Talk now for 4 seconds…';
-  var res=await Promise.all([recorderPeak(s, 4000), processorPeak(tr, 4000), wait(4000)]);
-  m.stop();
-  note.push('ctx '+st0+'->'+ctxDesc(c)+' analyser peak '+pk(m.peak, m.zero));
-  note.push(res[0].txt); note.push(res[1].txt);
-  note.push('after '+trackState(tr)+' events '+ev());
-  ui.status.textContent='Done. Levels: Web Audio '+lvl(m.peak)+', recorder '+lvl(res[0].peak)+', direct '+lvl(res[1].peak)+'. Did the bar move?';
-}
-// 4C: context made before vs after getUserMedia, default rate vs 16 kHz
-async function t4c(t, ui, note){
-  var V=[{k:'C1 before/default', before:true, o:null}, {k:'C2 after/default', before:false, o:null},
-         {k:'C3 before/16k', before:true, o:{sampleRate:16000}}, {k:'C4 after/16k', before:false, o:{sampleRate:16000}}];
-  var sum=[];
-  for(var i=0;i<V.length;i++){
-    var v=V[i], c=null, s, st0;
-    ui.status.textContent='Part '+(i+1)+' of 4: talk now…';
-    if(v.before){ c=newCtx(v.o); st0=c.state; if(c.state!=='running') await c.resume(); }
-    s=await gum({audio:true}); var tr=s.getAudioTracks()[0];
-    if(!v.before){ c=newCtx(v.o); st0=c.state; if(c.state!=='running') await c.resume(); }
-    var m=tapLevel(c, c.createMediaStreamSource(s), ui.bar);
-    await wait(3000); m.stop();
-    note.push(v.k+': ctx '+st0+'->'+ctxDesc(c)+' '+trackState(tr)+' peak '+pk(m.peak, m.zero));
-    sum.push(lvl(m.peak));
-    s.getTracks().forEach(function(x){ x.stop(); }); try{ c.close(); }catch(e){}
-    ui.bar.style.width='0';
-  }
-  note.unshift('4 fresh mics {audio:true}');
-  ui.status.textContent='Done. Levels: '+sum.join(', ')+'. Did the bar move?';
-}
-// 4D-4F: one filter on; level via AnalyserNode and MediaRecorder
-function oneFilter(cons){
-  return async function(t, ui, note){
-    ui.status.textContent='Turning the mic on…';
-    var s=await gum({audio:cons}), tr=s.getAudioTracks()[0], ev=watchTrack(tr);
-    note.push(trackInfo(tr));
-    var c=newCtx(), st0=c.state; if(c.state!=='running') await c.resume();
-    var m=tapLevel(c, c.createMediaStreamSource(s), ui.bar);
-    ui.status.textContent='Talk now for 4 seconds…';
-    var res=await Promise.all([recorderPeak(s, 4000), wait(4000)]);
-    m.stop();
-    note.push('ctx '+st0+'->'+ctxDesc(c)+' analyser peak '+pk(m.peak, m.zero));
-    note.push(res[0].txt); note.push('after '+trackState(tr)+' events '+ev());
-    ui.status.textContent='Done. Levels: Web Audio '+lvl(m.peak)+', recorder '+lvl(res[0].peak)+'. Did the bar move?';
-  };
-}
-// 4G/4H: replica of @elevenlabs/client 1.37.1 MediaDeviceInput.create (websocket / signedUrl path):
-// AudioContext({sampleRate:16000}) BEFORE getUserMedia, AnalyserNode, raw PCM AudioWorklet, mic constraints
-// {voiceIsolation, sampleRate ideal 16000, ec/ns/agc true, channelCount ideal 1}, source -> analyser -> worklet, then resume().
-var WORKLET = "class ScRaw extends AudioWorkletProcessor{constructor(){super();this.pk=0;this.sq=0;this.n=0;this.z=true;this.q=0;this.e=0;}" +
-  "process(inputs){var i=inputs[0];if(i&&i.length>0){var d=i[0];for(var k=0;k<d.length;k++){var v=d[k],a=v<0?-v:v;if(a>this.pk)this.pk=a;this.sq+=v*v;if(v!==0)this.z=false;}this.n+=d.length;}else{this.e++;}" +
-  "this.q++;if(this.q%20===0){this.port.postMessage({pk:this.pk,rms:this.n?Math.sqrt(this.sq/this.n):0,n:this.n,z:this.z,e:this.e});this.pk=0;this.sq=0;this.n=0;this.z=true;this.e=0;}return true;}}" +
-  "registerProcessor('sc-raw',ScRaw);";
-async function sdkReplica(t, ui, note, precheck){
-  ui.status.textContent='Turning the mic on…';
-  if(precheck){ var ps=await gum({audio:true}); note.push('precheck open '+trackInfo(ps.getAudioTracks()[0])); }
-  var sup=!!navigator.mediaDevices.getSupportedConstraints().sampleRate;
-  var c=newCtx(sup ? {sampleRate:16000} : null), st0=c.state;
-  var an=c.createAnalyser();
-  if(!c.audioWorklet || !window.AudioWorkletNode) throw new Error('No AudioWorklet');
-  var url=URL.createObjectURL(new Blob([WORKLET], {type:'application/javascript'})); live.urls.push(url);
-  await c.audioWorklet.addModule(url);
-  var node=new AudioWorkletNode(c, 'sc-raw');
-  var s=await gum({audio:{voiceIsolation:true, sampleRate:{ideal:16000}, echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:{ideal:1}}});
-  var tr=s.getAudioTracks()[0], ev=watchTrack(tr);
-  note.push('sdk '+trackInfo(tr)+' srConstraint='+sup);
-  var src=c.createMediaStreamSource(s); src.connect(an); an.connect(node);
-  var w={peak:0, rms:0, frames:0, zero:true, empty:0, msgs:0};
-  node.port.onmessage=function(e){ var d=e.data; w.msgs++; if(d.pk>w.peak) w.peak=d.pk; if(d.rms>w.rms) w.rms=d.rms; w.frames+=d.n; if(!d.z) w.zero=false; w.empty+=d.e; };
-  await c.resume();
-  var m=tapLevel(c, an, ui.bar);
-  ui.status.textContent='Talk now for 4 seconds…';
-  await wait(4000); m.stop();
-  note.push('ctx '+st0+'->'+ctxDesc(c));
-  note.push('worklet peak '+pk(w.peak, w.zero && w.frames>0)+' rms '+(w.rms*100).toFixed(1)+'% '+w.frames+'fr '+w.msgs+'msg empty '+w.empty);
-  note.push('analyser peak '+pk(m.peak, m.zero));
-  note.push('after '+trackState(tr)+' events '+ev());
-  ui.status.textContent='Done. Levels: voice library '+lvl(w.peak)+', Web Audio '+lvl(m.peak)+'. Did the bar move?';
-}
-
 async function run(t, ui){
   if(busy) return; busy=true; cleanup(); setAll(true);
   ui.status.className='status'; ui.status.textContent='Starting…';
   var note=[];
   try{
     var stream=null, peakFn=null;
-    if(t.fn){ await t.fn(t, ui, note); }
-    else {
     if(t.mic){
       ui.status.textContent='Turning the mic on…';
       stream=await navigator.mediaDevices.getUserMedia(micConstraints(t.mic)); live.streams.push(stream);
@@ -403,7 +204,6 @@ async function run(t, ui){
       if(peakFn) note.push('peak '+Math.round(peakFn()*100)+'%');
     }
     ui.status.textContent = t.play ? 'Done. Did you hear three beeps?' : 'Done. Did the green bar move when you talked?';
-    }
   }catch(e){
     R[t.id]=3; paint(t,ui); note.push('error '+(e && e.name)+': '+(e && e.message));
     ui.status.className='status err'; ui.status.textContent='This one could not start ('+(e && e.name || 'error')+'). You can try the next one.';
@@ -417,11 +217,11 @@ function setAll(d){ uis.forEach(function(u){ u.go.disabled=d; }); }
 function paint(t,ui){ ui.yes.classList.toggle('on',R[t.id]===1); ui.no.classList.toggle('on',R[t.id]===2); }
 TESTS.forEach(function(t){
   var box=document.createElement('div'); box.className='test';
-  box.innerHTML='<div class="tname"></div><button class="go"></button>'+((t.play || t.meter===false)?'':'<div class="meter"><i></i></div>')+
+  box.innerHTML='<div class="tname"></div><button class="go"></button>'+(t.play?'':'<div class="meter"><i></i></div>')+
     '<div class="status"></div><div class="row"><button class="yes"></button><button class="no"></button></div>';
   box.querySelector('.tname').innerHTML = t.id.toUpperCase()+' · '+t.name+'<small>'+t.sub+'</small>';
   var ui={ go:box.querySelector('.go'), yes:box.querySelector('.yes'), no:box.querySelector('.no'), status:box.querySelector('.status'), bar:box.querySelector('.meter i') };
-  ui.go.textContent = t.play ? 'Play '+t.name.toLowerCase() : 'Start '+(t.s===4 ? 'test '+t.id.toUpperCase() : t.name.toLowerCase());
+  ui.go.textContent = t.play ? 'Play '+t.name.toLowerCase() : 'Start '+t.name.toLowerCase();
   ui.yes.textContent = t.yes || 'Heard'; ui.no.textContent = t.no || "Didn't hear";
   ui.go.addEventListener('click', function(){ run(t,ui); });
   ui.yes.addEventListener('click', function(){ R[t.id]=1; paint(t,ui); update(); });
@@ -435,13 +235,10 @@ function browserCode(){
   var p = /Android/.test(ua)?'A' : /iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)?'I' : 'D';
   return b+p;
 }
-// v2 code: <browser><platform>-<5 chars: tests 1A-3G, same as v1>-<4 chars: tests 4A-4H>
-function encode(list, len){
-  var n=0; list.forEach(function(t){ n=n*4+R[t.id]; });
-  var s=n.toString(36).toUpperCase(); while(s.length<len) s='0'+s; return s;
-}
 function resultCode(){
-  return browserCode()+'-'+encode(TESTS.filter(function(t){ return t.s<4; }),5)+'-'+encode(TESTS.filter(function(t){ return t.s===4; }),4);
+  var n=0; TESTS.forEach(function(t){ n=n*4+R[t.id]; });
+  var s=n.toString(36).toUpperCase(); while(s.length<5) s='0'+s;
+  return browserCode()+'-'+s;
 }
 var deviceInfo='';
 function update(){
@@ -449,7 +246,7 @@ function update(){
 }
 async function collectInfo(){
   var L=[];
-  L.push('ClarityIQ sound check v2 · '+new Date().toISOString());
+  L.push('ClarityIQ sound check v1 · '+new Date().toISOString());
   L.push('UA: '+navigator.userAgent);
   try{ var c=new AC(); L.push('AudioContext (no tap): '+ctxDesc(c)); c.close(); }catch(e){ L.push('AudioContext: '+(e&&e.name)); }
   try{ var devs=await navigator.mediaDevices.enumerateDevices();
@@ -459,9 +256,6 @@ async function collectInfo(){
   L.push('setSinkId: audio element '+('setSinkId' in HTMLMediaElement.prototype)+', AudioContext '+(!!AC && 'setSinkId' in AC.prototype));
   L.push('audioSession API: '+(('audioSession' in navigator) ? navigator.audioSession.type : 'no'));
   L.push('Screen: '+screen.width+'x'+screen.height+' @'+window.devicePixelRatio);
-  try{ var sc=navigator.mediaDevices.getSupportedConstraints();
-    L.push('Supported: sampleRate '+!!sc.sampleRate+', voiceIsolation '+!!sc.voiceIsolation+', MediaRecorder '+!!window.MediaRecorder+
-      ', TrackProcessor '+!!window.MediaStreamTrackProcessor+', AudioWorklet '+!!window.AudioWorkletNode); }catch(e){}
   deviceInfo=L.join('\n');
 }
 function fullText(){
