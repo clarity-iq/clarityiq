@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Sound check · ClarityIQ</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root{ --cream:#F7F2E9; --paper:#FFFDF9; --sand:#EFE3CF; --sage:#DCE6D7; --sage-ink:#4f6b58; --forest:#1F3D2C; --terra:#9E4526;
+  --ink:#1F2621; --ink-2:#3d463f; --ink-3:#5d665f; --rule:#e2d9c8; --shadow-sm:0 4px 16px rgba(31,61,44,.08);
+  --serif:Georgia,'Times New Roman',serif; --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif; }
+*{ box-sizing:border-box; }
+html{ -webkit-text-size-adjust:100%; }
+body{ margin:0; font-family:var(--sans); font-size:18px; line-height:1.55; color:var(--ink); background:var(--cream); -webkit-font-smoothing:antialiased; }
+main{ max-width:640px; margin:0 auto; padding:20px 18px 64px; }
+header{ display:flex; align-items:center; gap:10px; padding:4px 0 14px; }
+header img{ height:32px; width:auto; }
+h1{ font-family:var(--serif); font-weight:500; font-size:30px; line-height:1.2; margin:6px 0 8px; color:var(--forest); }
+h2{ font-family:var(--serif); font-weight:500; font-size:23px; margin:0 0 4px; color:var(--forest); }
+p{ margin:0 0 12px; }
+.lead{ color:var(--ink-2); }
+.card{ background:var(--paper); border:1px solid var(--rule); border-radius:18px; padding:18px 16px; margin:16px 0; box-shadow:var(--shadow-sm); }
+.hint{ color:var(--ink-3); font-size:16px; }
+.test{ border-top:1px solid var(--rule); padding:14px 0 6px; }
+.test:first-of-type{ border-top:0; }
+.tname{ font-weight:600; margin-bottom:8px; }
+.tname small{ display:block; font-weight:400; color:var(--ink-3); font-size:15px; }
+button{ font-family:inherit; font-size:18px; font-weight:600; min-height:52px; border-radius:14px; border:2px solid var(--forest); cursor:pointer; padding:10px 16px; touch-action:manipulation; }
+button:focus-visible{ outline:3px solid var(--terra); outline-offset:3px; }
+button:disabled{ opacity:.45; cursor:default; }
+.go{ width:100%; background:var(--forest); color:#fff; }
+.row{ display:flex; gap:10px; margin-top:10px; }
+.row button{ flex:1; background:var(--paper); color:var(--forest); }
+.row button.on{ background:var(--sage); }
+.row button.yes.on{ border-color:var(--sage-ink); }
+.row button.no.on{ background:var(--sand); border-color:var(--terra); color:var(--terra); }
+.status{ font-size:15px; color:var(--ink-3); min-height:22px; margin-top:6px; }
+.status.err{ color:var(--terra); }
+.meter{ height:22px; background:var(--sand); border-radius:11px; overflow:hidden; margin-top:10px; }
+.meter i{ display:block; height:100%; width:0; background:var(--sage-ink); transition:width .06s linear; }
+.code{ font-family:ui-monospace,Menlo,Consolas,monospace; font-size:30px; letter-spacing:2px; text-align:center; background:var(--sage); color:var(--forest); border-radius:14px; padding:14px 8px; margin:8px 0 12px; word-break:break-all; }
+pre{ white-space:pre-wrap; word-break:break-word; font-size:13px; background:var(--cream); border-radius:10px; padding:10px; margin:10px 0 0; max-height:260px; overflow:auto; }
+.second{ width:100%; background:var(--paper); color:var(--forest); margin-top:10px; }
+</style>
+</head>
+<body>
+<main>
+<header><img src="/brand/clarityiq-horizontal-40h@2x.png" alt="ClarityIQ"></header>
+<h1>Sound check</h1>
+<p class="lead">This page checks your phone's speaker and microphone, one step at a time. It takes about 3 minutes. Nothing is saved or sent anywhere.</p>
+<p class="hint">Turn your volume up. After each test, tap <b>Heard</b> or <b>Didn't hear</b>. At the end, read the short code at the bottom back to us.</p>
+
+<section class="card" id="s1">
+  <h2>1. Speaker</h2>
+  <p class="hint">Each button plays three short beeps a different way. The mic stays off.</p>
+</section>
+
+<section class="card" id="s2">
+  <h2>2. Microphone</h2>
+  <p class="hint">Tap a button, allow the mic if asked, and talk for a few seconds. Watch the green bar.</p>
+</section>
+
+<section class="card" id="s3">
+  <h2>3. Speaker and mic together</h2>
+  <p class="hint">This is what a voice session does. Each button turns the mic on, then plays beeps. Tell us if you hear them.</p>
+</section>
+
+<section class="card">
+  <h2>Your result code</h2>
+  <p class="hint">Read this code back to us, or tap Copy results and paste it in a message.</p>
+  <div class="code" id="code">-</div>
+  <button class="go" id="copy">Copy results</button>
+  <div class="status" id="copyStatus"></div>
+  <button class="second" id="showInfo">Show phone details</button>
+  <pre id="info" hidden></pre>
+</section>
+</main>
+
+<script>
+(function(){
+'use strict';
+var TESTS = [
+  {id:'1a', s:1, name:'Beep A', sub:'Web Audio', mic:null, play:'a'},
+  {id:'1b', s:1, name:'Beep B', sub:'Audio file', mic:null, play:'b'},
+  {id:'1c', s:1, name:'Beep C', sub:'Audio stream', mic:null, play:'c'},
+  {id:'2a', s:2, name:'Mic test A', sub:'Normal mic settings', mic:'default', play:null, yes:'Bar moved', no:"Didn't move"},
+  {id:'2b', s:2, name:'Mic test B', sub:'Mic clean-up filters off', mic:'raw', play:null, yes:'Bar moved', no:"Didn't move"},
+  {id:'3a', s:3, name:'Together A', sub:'Mic on + Beep A', mic:'default', play:'a'},
+  {id:'3b', s:3, name:'Together B', sub:'Mic on + Beep B', mic:'default', play:'b'},
+  {id:'3c', s:3, name:'Together C', sub:'Mic on + Beep C', mic:'default', play:'c'},
+  {id:'3d', s:3, name:'Together D', sub:'Mic filters off + Beep A', mic:'raw', play:'a'},
+  {id:'3e', s:3, name:'Together E', sub:'Mic on + Beep A, playback mode, 48 kHz', mic:'default', play:'a', ctx:{latencyHint:'playback', sampleRate:48000}},
+  {id:'3f', s:3, name:'Together F', sub:'Mic on + Beep A, 16 kHz', mic:'default', play:'a', ctx:{sampleRate:16000}},
+  {id:'3g', s:3, name:'Together G', sub:'Like a real session (mic and speaker at 16 kHz)', mic:'session', play:'a', ctx:{sampleRate:16000}, micCtx:true}
+];
+// result values: 0 not run, 1 heard / moved, 2 did not hear / did not move, 3 could not start
+var R = {}; TESTS.forEach(function(t){ R[t.id]=0; });
+var NOTES = {};
+var AC = window.AudioContext || window.webkitAudioContext;
+var live = { streams:[], ctxs:[], audios:[], urls:[], timers:[], raf:0 };
+var busy = false;
+
+function cleanup(){
+  live.timers.forEach(clearTimeout); live.timers=[];
+  if(live.raf) cancelAnimationFrame(live.raf); live.raf=0;
+  live.streams.forEach(function(s){ s.getTracks().forEach(function(tr){ try{tr.stop();}catch(e){} }); }); live.streams=[];
+  live.audios.forEach(function(a){ try{ a.pause(); a.srcObject=null; a.removeAttribute('src'); a.load(); }catch(e){} }); live.audios=[];
+  live.ctxs.forEach(function(c){ try{ if(c.state!=='closed') c.close(); }catch(e){} }); live.ctxs=[];
+  live.urls.forEach(function(u){ try{URL.revokeObjectURL(u);}catch(e){} }); live.urls=[];
+  document.querySelectorAll('.meter i').forEach(function(i){ i.style.width='0'; });
+}
+function wait(ms){ return new Promise(function(r){ live.timers.push(setTimeout(r, ms)); }); }
+
+function micConstraints(kind){
+  if(kind==='raw') return {audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}};
+  if(kind==='session') return {audio:{echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:{ideal:1}, sampleRate:{ideal:16000}}};
+  return {audio:true};
+}
+function newCtx(opts){
+  if(!AC) throw new Error('No Web Audio');
+  var c; try{ c = opts ? new AC(opts) : new AC(); }catch(e){ c = new AC(); NOTES.ctxFallback = (NOTES.ctxFallback||'') + String(e && e.name) + ';'; }
+  live.ctxs.push(c); return c;
+}
+function ctxDesc(c){ return c.state+'/'+c.sampleRate+'Hz/base '+fmt(c.baseLatency)+'/out '+fmt(c.outputLatency); }
+function fmt(x){ return (typeof x==='number') ? x.toFixed(3) : 'n/a'; }
+
+// three beeps, 660 Hz, about 2 seconds total
+function scheduleBeeps(c, dest){
+  var t0 = c.currentTime + 0.08;
+  for(var k=0;k<3;k++){
+    var o=c.createOscillator(), g=c.createGain(), s=t0+k*0.6;
+    o.type='sine'; o.frequency.value=660;
+    g.gain.setValueAtTime(0,s); g.gain.linearRampToValueAtTime(0.35,s+0.03);
+    g.gain.setValueAtTime(0.35,s+0.32); g.gain.linearRampToValueAtTime(0,s+0.38);
+    o.connect(g); g.connect(dest); o.start(s); o.stop(s+0.42);
+  }
+}
+function wavBlob(){
+  var sr=48000, n=Math.floor(sr*1.9), buf=new ArrayBuffer(44+n*2), v=new DataView(buf);
+  function w(o,s){ for(var i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); }
+  w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,n*2,true);
+  for(var i=0;i<n;i++){
+    var t=i/sr, ph=t%0.6, a=0;
+    if(t<1.8 && ph<0.38){ a = ph<0.03 ? ph/0.03 : (ph>0.32 ? (0.38-ph)/0.06 : 1); }
+    v.setInt16(44+i*2, Math.round(Math.sin(2*Math.PI*660*t)*a*0.35*32767), true);
+  }
+  return new Blob([buf],{type:'audio/wav'});
+}
+// returns a short description of what was used
+async function playTone(method, ctxOpts){
+  if(method==='a'){
+    var c=newCtx(ctxOpts); if(c.state!=='running') await c.resume();
+    scheduleBeeps(c, c.destination); return 'A ctx '+ctxDesc(c);
+  }
+  if(method==='b'){
+    var url=URL.createObjectURL(wavBlob()); live.urls.push(url);
+    var a=new Audio(); live.audios.push(a); a.src=url; await a.play(); return 'B audio element';
+  }
+  if(method==='c'){
+    var c2=newCtx(ctxOpts); if(c2.state!=='running') await c2.resume();
+    var d=c2.createMediaStreamDestination(), el=new Audio(); live.audios.push(el);
+    el.srcObject=d.stream; scheduleBeeps(c2, d); await el.play(); return 'C stream ctx '+ctxDesc(c2);
+  }
+}
+function meter(stream, bar, c){
+  var ctx = c || newCtx();
+  if(ctx.state!=='running') ctx.resume();
+  var src=ctx.createMediaStreamSource(stream), an=ctx.createAnalyser(); an.fftSize=512; src.connect(an);
+  var data=new Uint8Array(an.fftSize), peak=0;
+  (function loop(){
+    an.getByteTimeDomainData(data); var m=0;
+    for(var i=0;i<data.length;i++){ var d=Math.abs(data[i]-128); if(d>m) m=d; }
+    var lvl=Math.min(1, m/64); if(lvl>peak) peak=lvl;
+    bar.style.width=Math.round(lvl*100)+'%';
+    live.raf=requestAnimationFrame(loop);
+  })();
+  return function(){ return peak; };
+}
+
+async function run(t, ui){
+  if(busy) return; busy=true; cleanup(); setAll(true);
+  ui.status.className='status'; ui.status.textContent='Starting…';
+  var note=[];
+  try{
+    var stream=null, peakFn=null;
+    if(t.mic){
+      ui.status.textContent='Turning the mic on…';
+      stream=await navigator.mediaDevices.getUserMedia(micConstraints(t.mic)); live.streams.push(stream);
+      var tr=stream.getAudioTracks()[0], st=tr && tr.getSettings ? tr.getSettings() : {};
+      note.push('mic ec='+st.echoCancellation+' ns='+st.noiseSuppression+' agc='+st.autoGainControl+' sr='+st.sampleRate);
+      if(ui.bar){ peakFn = meter(stream, ui.bar, t.micCtx ? newCtx({sampleRate:16000}) : null); }
+      else if(t.micCtx){ var ic=newCtx({sampleRate:16000}); if(ic.state!=='running') await ic.resume(); ic.createMediaStreamSource(stream).connect(ic.createAnalyser()); note.push('micctx '+ctxDesc(ic)); }
+      await wait(500);
+    }
+    if(t.play){
+      ui.status.textContent='Playing beeps now…';
+      note.push(await playTone(t.play, t.ctx));
+      await wait(2300);
+    } else {
+      ui.status.textContent='Talk now for a few seconds…';
+      await wait(6000);
+      if(peakFn) note.push('peak '+Math.round(peakFn()*100)+'%');
+    }
+    ui.status.textContent = t.play ? 'Done. Did you hear three beeps?' : 'Done. Did the green bar move when you talked?';
+  }catch(e){
+    R[t.id]=3; paint(t,ui); note.push('error '+(e && e.name)+': '+(e && e.message));
+    ui.status.className='status err'; ui.status.textContent='This one could not start ('+(e && e.name || 'error')+'). You can try the next one.';
+  }
+  NOTES[t.id]=note.join(' | ');
+  cleanup(); busy=false; setAll(false); update();
+}
+
+var uis=[];
+function setAll(d){ uis.forEach(function(u){ u.go.disabled=d; }); }
+function paint(t,ui){ ui.yes.classList.toggle('on',R[t.id]===1); ui.no.classList.toggle('on',R[t.id]===2); }
+TESTS.forEach(function(t){
+  var box=document.createElement('div'); box.className='test';
+  box.innerHTML='<div class="tname"></div><button class="go"></button>'+(t.play?'':'<div class="meter"><i></i></div>')+
+    '<div class="status"></div><div class="row"><button class="yes"></button><button class="no"></button></div>';
+  box.querySelector('.tname').innerHTML = t.id.toUpperCase()+' · '+t.name+'<small>'+t.sub+'</small>';
+  var ui={ go:box.querySelector('.go'), yes:box.querySelector('.yes'), no:box.querySelector('.no'), status:box.querySelector('.status'), bar:box.querySelector('.meter i') };
+  ui.go.textContent = t.play ? 'Play '+t.name.toLowerCase() : 'Start '+t.name.toLowerCase();
+  ui.yes.textContent = t.yes || 'Heard'; ui.no.textContent = t.no || "Didn't hear";
+  ui.go.addEventListener('click', function(){ run(t,ui); });
+  ui.yes.addEventListener('click', function(){ R[t.id]=1; paint(t,ui); update(); });
+  ui.no.addEventListener('click', function(){ R[t.id]=2; paint(t,ui); update(); });
+  uis.push(ui); document.getElementById('s'+t.s).appendChild(box);
+});
+
+function browserCode(){
+  var ua=navigator.userAgent;
+  var b = /EdgA|Edg\//.test(ua)?'E' : /SamsungBrowser/.test(ua)?'S' : /Firefox|FxiOS/.test(ua)?'F' : /OPR|Opera/.test(ua)?'O' : /CriOS|Chrome\//.test(ua)?'C' : /Safari/.test(ua)?'A' : 'X';
+  var p = /Android/.test(ua)?'A' : /iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)?'I' : 'D';
+  return b+p;
+}
+function resultCode(){
+  var n=0; TESTS.forEach(function(t){ n=n*4+R[t.id]; });
+  var s=n.toString(36).toUpperCase(); while(s.length<5) s='0'+s;
+  return browserCode()+'-'+s;
+}
+var deviceInfo='';
+function update(){
+  document.getElementById('code').textContent = resultCode();
+}
+async function collectInfo(){
+  var L=[];
+  L.push('ClarityIQ sound check v1 · '+new Date().toISOString());
+  L.push('UA: '+navigator.userAgent);
+  try{ var c=new AC(); L.push('AudioContext (no tap): '+ctxDesc(c)); c.close(); }catch(e){ L.push('AudioContext: '+(e&&e.name)); }
+  try{ var devs=await navigator.mediaDevices.enumerateDevices();
+    var k={audioinput:0,audiooutput:0}; devs.forEach(function(d){ if(k[d.kind]!==undefined) k[d.kind]++; });
+    L.push('Devices: '+k.audioinput+' mic, '+k.audiooutput+' speaker outputs listed');
+  }catch(e){ L.push('Devices: '+(e&&e.name)); }
+  L.push('setSinkId: audio element '+('setSinkId' in HTMLMediaElement.prototype)+', AudioContext '+(!!AC && 'setSinkId' in AC.prototype));
+  L.push('audioSession API: '+(('audioSession' in navigator) ? navigator.audioSession.type : 'no'));
+  L.push('Screen: '+screen.width+'x'+screen.height+' @'+window.devicePixelRatio);
+  deviceInfo=L.join('\n');
+}
+function fullText(){
+  var L=['Code: '+resultCode(), deviceInfo, 'Results (1 heard/moved, 2 not, 3 could not start, 0 not run):'];
+  TESTS.forEach(function(t){ L.push(t.id.toUpperCase()+' '+R[t.id]+(NOTES[t.id]?'  ['+NOTES[t.id]+']':'')); });
+  if(NOTES.ctxFallback) L.push('Context option fallback: '+NOTES.ctxFallback);
+  return L.join('\n');
+}
+document.getElementById('copy').addEventListener('click', async function(){
+  await collectInfo(); var txt=fullText(), st=document.getElementById('copyStatus');
+  try{ await navigator.clipboard.writeText(txt); st.textContent='Copied. Paste it in a message to us.'; }
+  catch(e){ var ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); st.textContent='Copied. Paste it in a message to us.'; }catch(e2){ st.textContent='Could not copy. Tap Show phone details and take a screenshot.'; }
+    ta.remove(); }
+});
+document.getElementById('showInfo').addEventListener('click', async function(){
+  await collectInfo(); var p=document.getElementById('info'); p.textContent=fullText(); p.hidden=false;
+});
+collectInfo(); update();
+window.__sc = { R:R, NOTES:NOTES, resultCode:resultCode, fullText:fullText };
+})();
+</script>
+</body>
+</html>
