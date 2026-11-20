@@ -22,7 +22,12 @@ function extractFn(name) {
   throw new Error('unclosed ' + name);
 }
 
-describe('android mic raw helpers', () => {
+function extractSrc(name) {
+  const start = html.indexOf('function ' + name + '(');
+  return html.slice(start, html.indexOf('\n}\n', start) + 2);
+}
+
+describe('android audio wake / mic helpers', () => {
   const modeFrom = extractFn('ciqMicModeFrom');
   const rawC = extractFn('ciqMicRawConstraints');
   const framePeak = extractFn('ciqFramePeak');
@@ -67,10 +72,28 @@ describe('android mic raw helpers', () => {
     assert.deepEqual(discInfo(undefined), { reason: 'other', code: null });
   });
 
-  test('wiring: telemetry carries audio_diag; wrapper only installed in raw mode; pre-check stream released', () => {
+  test('mic check action: raw swap only when the input context went to sleep and would not wake', () => {
+    const act = extractFn('ciqMicCheckAction');
+    assert.equal(act('suspended', false), 'swap');
+    assert.equal(act('suspended', true), 'tap');
+    assert.equal(act('not_running', false), 'tap');
+    assert.equal(act('silent_running', false), 'log');
+    assert.equal(act('ok', false), 'none');
+    assert.equal(act('muted', false), 'log');
+    assert.equal(act('track_ended', false), 'log');
+  });
+
+  test('wiring: held mic opened in the tap before any await; released on end/drop/failed start; telemetry carries audio_diag', () => {
     assert.match(html, /audio_diag: ciqAudioDiagSnapshot\(\)/);
     assert.match(html, /if \(ciqMicRawActive\) ciqInstallRawMicWrapper\(\);/);
-    assert.match(html, /permStream\.getTracks\(\)\.forEach\(\(t\) => t\.stop\(\)\)/);
-    assert.match(html, /async function startConversation\(opts\) \{\n  const resume = !!\(opts && opts\.resume\);\n  \/\/ android-mic-raw-v1: start audio inside the tap, before any await\.\n  ciqAudioUnlock\(\);/);
+    const start = html.slice(html.indexOf('async function startConversation(opts) {'), html.indexOf('async function startConversationInner('));
+    assert.ok(start.indexOf('ciqHoldMicStart();') > 0 && start.indexOf('ciqHoldMicStart();') < start.indexOf('await'), 'held mic requested before the first await');
+    assert.match(start, /finally \{\n    if \(!ciqSessionStarted\) ciqEndAudioSession\(\);/);
+    assert.match(html, /await ciqHeldMicPromise;\n\n    conversation = await Conversation\.startSession\(/);
+    assert.doesNotMatch(html, /permStream/);
+    const endFn = extractSrc('endConversation');
+    assert.match(endFn, /ciqEndAudioSession\(\)/);
+    assert.match(html, /ciqEndAudioSession\(\);\n        callConnected = false;/);
+    assert.match(html, /window\.AudioContext = CiqAudioContext;/);
   });
 });

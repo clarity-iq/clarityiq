@@ -1861,21 +1861,32 @@ let stayOnPageTimer = null;
 let wasBackgrounded = false;
 let callConnected = false;
 
-// ── Android mic fallback + audio wake-up (android-mic-raw-v1, 2026-11-20) ────
-// Some Android phones (seen on a Galaxy S23 Ultra, Chrome and Edge) give a
-// completely silent mic when Android's voice processing is on (echo
-// cancellation / noise suppression / auto gain, the SDK's fixed defaults),
-// and can also mute agent playback while that processed mic is open. The
-// same phone works with processing off (/soundcheck tests 2B and 3D).
-// So: for the first ~2.5 s of a session we read the SDK's own mic analyser.
-// If the mic is a live track but digitally silent, we swap the SDK's input to
-// an unprocessed mic in place (same session, no restart) and remember that
-// for this device (localStorage ciq_mic_raw=1). Other devices never change:
-// the getUserMedia wrapper is only installed once raw mode is on.
-// Support override: ?mic=raw forces raw mode; ?mic=default clears it.
+// ── Android audio wake-up + held mic (android-audio-wake-v2, 2026-11-20) ─────
+// Evidence (/soundcheck v2 on Martin's Galaxy S23 Ultra, Chrome, CA-00000-0KT5):
+// the mic itself is fine (MediaRecorder / TrackProcessor peak 100%), but when
+// the fully processed mic (echo cancellation + noise suppression + auto gain,
+// the SDK's fixed defaults) opens with no other processed capture already
+// open, Android switches audio mode and every AudioContext goes
+// running -> suspended: the SDK's input worklet reads all zeros and its
+// playback stops (4B, 4C, 4G). With a processed {audio:true} stream ALREADY
+// open before the SDK's capture, the SDK's context stays running and the mic
+// works (4H). So:
+//  1. On Begin/Resume we open {audio:true} first and HOLD it for the whole
+//     session (stopped on end / drop / failed start). This replaces PR #30's
+//     "stop the pre-check stream at once": that stream is now held on purpose.
+//  2. Every AudioContext is watched (constructor wrapper below). If one goes
+//     'suspended' / 'interrupted' during a session we resume() it at once; if
+//     that fails, the next tap anywhere resumes it.
+//  3. Last resort only: if ~3 s in the mic is still silent AND the input
+//     context went suspended and could not be resumed, swap the SDK input to
+//     an unprocessed mic in place (remembered per device: ciq_mic_raw=1).
+//     Support links: ?mic=raw forces raw mode; ?mic=default clears it.
+// Other devices: nothing suspends, so nothing is resumed or swapped; the only
+// change for them is that the pre-check mic stream stays open until the end.
 const CIQ_MIC_RAW_KEY = 'ciq_mic_raw';
-const CIQ_MIC_CHECK_MS = 2500;      // how long a silent mic must stay silent
-const CIQ_MIC_CHECK_MAX_MS = 8000;  // give up if the input never starts running
+const CIQ_MIC_WINDOW_MS = 3000;     // decide on the last-resort swap after this
+const CIQ_MIC_SILENT_RUN_MS = 2500; // silence needed while running to log 'silent_running'
+const CIQ_MIC_CHECK_MAX_MS = 10000;
 const CIQ_SILENT_PEAK = 0.0001;     // -80 dBFS; a working mic's noise floor is far above this
 
 // Pure helpers (unit tested in test/android-mic-raw.test.mjs).
@@ -1918,6 +1929,14 @@ function ciqDisconnectInfo(details) {
   else if (d.context && typeof d.context.code === 'number') code = d.context.code;
   return { reason: reason, code: code };
 }
+// What the mic check result means for the session (pure).
+//  'swap'  -> last-resort raw mic; 'tap' -> wait for a tap; 'log' -> record only.
+function ciqMicCheckAction(result, rawActive) {
+  if (result === 'suspended') return rawActive ? 'tap' : 'swap';
+  if (result === 'not_running') return 'tap';
+  if (result === 'ok') return 'none';
+  return 'log';
+}
 
 let ciqMicMode = 'default';
 try {
@@ -1930,10 +1949,16 @@ let ciqMicRawActive = ciqMicMode === 'raw_url' || ciqMicMode === 'raw_saved';
 let ciqGumWrapped = false;
 let ciqMicCheckTimer = null;
 let ciqUnlockCtx = null;
-let ciqWakeListener = null;
-// Rides on session telemetry as audio_diag: codes and states only, never
-// transcript text, device names or error messages.
-const ciqAudioDiag = { mic_mode: ciqMicMode, mic_check: null, mic_peak: null, mic_after: null, in_ctx: null, out_ctx: null, wake: null, disconnects: [] };
+let ciqTapListener = null;
+let ciqSessionLive = false;     // true from the Begin/Resume tap until the session ends
+let ciqSessionStarted = false;  // startSession returned for this attempt
+let ciqHeldMic = null;          // the processed {audio:true} stream held for the session
+let ciqHeldMicPromise = null;
+let ciqHeldMicToken = 0;
+const ciqCtxs = new Set();      // every AudioContext made on this page (SDK input + output)
+// Rides on session telemetry as audio_diag: codes, counts and states only,
+// never transcript text, device names or error messages.
+const ciqAudioDiag = { mic_mode: ciqMicMode, held_mic: null, ctx_suspends: 0, ctx_resume: null, mic_check: null, mic_peak: null, mic_after: null, in_ctx: null, out_ctx: null, wake: null, disconnects: [] };
 
 function ciqInstallRawMicWrapper() {
   if (ciqGumWrapped) return;
@@ -1948,6 +1973,44 @@ function ciqInstallRawMicWrapper() {
 }
 if (ciqMicRawActive) ciqInstallRawMicWrapper();
 
+// ── Held mic ──
+// Called synchronously at the top of the Begin/Resume tap.
+function ciqHoldMicStart() {
+  if (ciqHeldMic && ciqHeldMic.getAudioTracks && ciqHeldMic.getAudioTracks().some((t) => t.readyState === 'live')) {
+    ciqHeldMicPromise = Promise.resolve(ciqHeldMic);
+    ciqAudioDiag.held_mic = 'reused';
+    return;
+  }
+  ciqReleaseHeldMic();
+  const tok = ++ciqHeldMicToken;
+  const md = navigator.mediaDevices;
+  if (!md || typeof md.getUserMedia !== 'function') {
+    ciqHeldMicPromise = Promise.reject(new Error('Microphone not available'));
+    ciqHeldMicPromise.catch(() => {});
+    ciqAudioDiag.held_mic = 'failed';
+    return;
+  }
+  const p = md.getUserMedia({ audio: true }).then((s) => {
+    if (tok !== ciqHeldMicToken) { ciqStopStream(s); return s; } // released while pending
+    ciqHeldMic = s;
+    ciqAudioDiag.held_mic = 'held';
+    return s;
+  });
+  p.catch(() => { if (tok === ciqHeldMicToken) ciqAudioDiag.held_mic = 'failed'; });
+  ciqHeldMicPromise = p;
+}
+function ciqStopStream(s) {
+  try { if (s && s.getTracks) s.getTracks().forEach((t) => t.stop()); } catch (e) {}
+}
+function ciqReleaseHeldMic() {
+  ciqHeldMicToken++;
+  const s = ciqHeldMic;
+  ciqHeldMic = null;
+  ciqHeldMicPromise = null;
+  ciqStopStream(s);
+}
+
+// ── AudioContext watch ──
 function ciqAudioStates(conv) {
   const s = (x) => (x && x.context && x.context.state) || null;
   return { in_ctx: s(conv && conv.input), out_ctx: s(conv && conv.output) };
@@ -1957,13 +2020,76 @@ function ciqNoteAudioStates(conv) {
   if (s.in_ctx) ciqAudioDiag.in_ctx = s.in_ctx;
   if (s.out_ctx) ciqAudioDiag.out_ctx = s.out_ctx;
 }
+function ciqTryResume(ctx) {
+  try { const p = ctx.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) {}
+  // resume() can stay pending forever when blocked, so judge by state.
+  setTimeout(() => {
+    if (!ciqSessionLive || ctx.state === 'closed') return;
+    if (ctx.state === 'running') { ciqAudioDiag.ctx_resume = 'ok'; return; }
+    ciqAudioDiag.ctx_resume = 'failed';
+    ciqArmTapResume();
+    ciqScheduleLastResort();
+  }, 500);
+}
+// A context that would not resume: give the tap/resume path ~3 s, then, if
+// the SDK input is still asleep (so the mic is silent), use the raw mic.
+let ciqLastResortTimer = null;
+function ciqScheduleLastResort() {
+  if (ciqLastResortTimer || ciqMicRawActive) return;
+  ciqLastResortTimer = setTimeout(() => {
+    ciqLastResortTimer = null;
+    if (!ciqSessionLive || ciqMicRawActive) return;
+    const conv = conversation;
+    if (!conv || !callConnected) { ciqScheduleLastResort(); return; } // still connecting
+    const i = conv.input && conv.input.context;
+    if (i && i.state !== 'running' && i.state !== 'closed') {
+      ciqStopMicCheck();
+      ciqAudioDiag.mic_check = 'suspended';
+      ciqSwitchToRawMic(conv);
+    }
+  }, CIQ_MIC_WINDOW_MS);
+}
+function ciqWatchCtx(ctx) {
+  ciqCtxs.add(ctx);
+  ctx.__ciqRan = ctx.state === 'running';
+  let burst = [];
+  ctx.addEventListener('statechange', () => {
+    const st = ctx.state;
+    if (st === 'closed') { ciqCtxs.delete(ctx); return; }
+    ctx.__ciqRan = ctx.__ciqRan || st === 'running';
+    if (!ciqSessionLive || (st !== 'suspended' && st !== 'interrupted')) return;
+    // Never ran (autoplay-style start): only a tap can start it; no raw fallback.
+    if (!ctx.__ciqRan) { ciqArmTapResume(); return; }
+    ciqAudioDiag.ctx_suspends++;
+    const now = Date.now();
+    burst = burst.filter((t) => now - t < 10000);
+    if (burst.length >= 5) { ciqAudioDiag.ctx_resume = 'gave_up'; ciqArmTapResume(); return; }
+    burst.push(now);
+    ciqTryResume(ctx);
+  });
+}
+(function ciqPatchAudioContext() {
+  try {
+    const Native = window.AudioContext;
+    if (!Native || Native.__ciqWatched) return;
+    class CiqAudioContext extends Native {
+      constructor(...args) {
+        super(...args);
+        try { ciqWatchCtx(this); } catch (e) {}
+      }
+    }
+    CiqAudioContext.__ciqWatched = true;
+    CiqAudioContext.__ciqNative = Native;
+    window.AudioContext = CiqAudioContext;
+  } catch (e) {}
+})();
 
 // Call at the very top of the Begin / Resume tap, before any await, so the
-// browser sees a real user gesture start audio (some phones otherwise start
-// audio "asleep" and need a second tap).
+// browser sees a real user gesture start audio. Uses the native constructor so
+// this throwaway context is not watched.
 function ciqAudioUnlock() {
   try {
-    const AC = window.AudioContext || window.webkitAudioContext;
+    const AC = (window.AudioContext && window.AudioContext.__ciqNative) || window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     if (!ciqUnlockCtx || ciqUnlockCtx.state === 'closed') ciqUnlockCtx = new AC();
     const src = ciqUnlockCtx.createBufferSource();
@@ -1971,7 +2097,6 @@ function ciqAudioUnlock() {
     src.connect(ciqUnlockCtx.destination);
     src.start(0);
     ciqUnlockCtx.resume().catch(() => {});
-    // Safety net for paths that return before a session starts.
     const mine = ciqUnlockCtx;
     setTimeout(() => { if (ciqUnlockCtx === mine) ciqReleaseUnlock(); }, 30000);
   } catch (e) {}
@@ -1983,19 +2108,43 @@ function ciqReleaseUnlock() {
 }
 
 function ciqResumeAll(conv) {
-  [conv && conv.input, conv && conv.output].forEach((x) => {
-    if (x && x.context && x.context.state === 'suspended') { try { x.context.resume().catch(() => {}); } catch (e) {} }
+  const set = new Set(ciqCtxs);
+  [conv && conv.input, conv && conv.output].forEach((x) => { if (x && x.context) set.add(x.context); });
+  set.forEach((c) => {
+    if (c.state === 'suspended' || c.state === 'interrupted') { try { c.resume().catch(() => {}); } catch (e) {} }
   });
   const el = conv && conv.output && conv.output.audioElement;
   if (el && el.paused && el.srcObject) { try { const p = el.play(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 }
-function ciqClearWakeListener() {
-  if (!ciqWakeListener) return;
-  ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.removeEventListener(ev, ciqWakeListener, true));
-  ciqWakeListener = null;
+function ciqClearTapListener() {
+  if (!ciqTapListener) return;
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.removeEventListener(ev, ciqTapListener, true));
+  ciqTapListener = null;
 }
-// Makes sure the session's audio is actually running. If the output is
-// still not running shortly after, the next tap anywhere resumes it (once).
+// One-shot: the next tap anywhere resumes every suspended context.
+function ciqArmTapResume() {
+  if (ciqTapListener || !ciqSessionLive) return;
+  ciqTapListener = () => {
+    ciqClearTapListener();
+    const conv = conversation;
+    if (!conv || !ciqSessionLive) return;
+    ciqResumeAll(conv);
+    setTimeout(() => {
+      if (conv !== conversation) return;
+      ciqNoteAudioStates(conv);
+      const o = conv.output && conv.output.context;
+      const i = conv.input && conv.input.context;
+      const ok = (!o || o.state === 'running') && (!i || i.state === 'running');
+      ciqAudioDiag.wake = ok ? 'woke_on_tap' : 'still_asleep';
+      if (ciqAudioDiag.ctx_resume === 'failed' || ciqAudioDiag.ctx_resume === 'gave_up') ciqAudioDiag.ctx_resume = ok ? 'tap_ok' : 'tap_failed';
+      // The mic check stops while the input is asleep; run it again now.
+      if (ok && (ciqAudioDiag.mic_check === 'not_running' || ciqAudioDiag.mic_check === 'suspended')) ciqStartMicCheck(conv);
+      sendTelemetry();
+    }, 300);
+  };
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, ciqTapListener, true));
+}
+// Right after the session starts: make sure its audio is running.
 function ciqWakeAudio(conv) {
   if (!conv) return;
   ciqResumeAll(conv);
@@ -2007,34 +2156,22 @@ function ciqWakeAudio(conv) {
     const asleep = (out && out.state !== 'running') || (el && el.paused && el.srcObject);
     if (!asleep) { if (!ciqAudioDiag.wake) ciqAudioDiag.wake = 'running'; return; }
     ciqAudioDiag.wake = 'asleep';
-    if (ciqWakeListener) return;
-    ciqWakeListener = () => {
-      ciqClearWakeListener();
-      if (conv !== conversation) return;
-      ciqResumeAll(conv);
-      setTimeout(() => {
-        if (conv !== conversation) return;
-        ciqNoteAudioStates(conv);
-        const o = conv.output && conv.output.context;
-        ciqAudioDiag.wake = (o && o.state === 'running') ? 'woke_on_tap' : 'still_asleep';
-        // The mic check gives up while the input is asleep; run it again now.
-        if (ciqAudioDiag.mic_check === 'not_running') ciqStartMicCheck(conv);
-        sendTelemetry();
-      }, 300);
-    };
-    ['pointerdown', 'touchend', 'click', 'keydown'].forEach((ev) => document.addEventListener(ev, ciqWakeListener, true));
+    ciqArmTapResume();
     sendTelemetry();
   }, 400);
 }
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && conversation) ciqResumeAll(conversation);
+  if (!document.hidden && conversation && ciqSessionLive) ciqResumeAll(conversation);
 });
 
+// ── Mic check ──
 function ciqStopMicCheck() {
   if (ciqMicCheckTimer) { clearInterval(ciqMicCheckTimer); ciqMicCheckTimer = null; }
 }
-// Watches the SDK's input analyser. onDone(result, peak) with result one of
-// 'ok' | 'silent' | 'track_ended' | 'not_running' | 'muted' | 'unavailable'.
+// Watches the SDK's input analyser. onDone(result, peak), result one of
+// 'ok' | 'suspended' (input context went to sleep and resume failed) |
+// 'not_running' (never started; waits for a tap) | 'silent_running' |
+// 'muted' | 'track_ended' | 'unavailable'.
 function ciqWatchMic(conv, onDone) {
   ciqStopMicCheck();
   const input = conv && conv.input;
@@ -2042,36 +2179,42 @@ function ciqWatchMic(conv, onDone) {
   if (!analyser || typeof analyser.getFloatTimeDomainData !== 'function') { onDone('unavailable', null); return; }
   const buf = new Float32Array(analyser.fftSize || 2048);
   const started = Date.now();
-  let silentMs = 0, peak = 0;
+  let silentRunMs = 0, peak = 0, measured = false;
   ciqMicCheckTimer = setInterval(() => {
-    const finish = (r) => { ciqStopMicCheck(); onDone(r, peak); };
+    const finish = (r) => { ciqStopMicCheck(); onDone(r, measured ? peak : null); };
     if (conv !== conversation || !callConnected) { ciqStopMicCheck(); return; }
     if (isMicMuted) return finish('muted');
     const track = input.inputStream && input.inputStream.getAudioTracks && input.inputStream.getAudioTracks()[0];
     if (!track || track.readyState !== 'live') return finish('track_ended');
+    const elapsed = Date.now() - started;
     const ctx = input.context;
     if (ctx && ctx.state !== 'running') {
-      try { ctx.resume().catch(() => {}); } catch (e) {}
-      if (Date.now() - started > CIQ_MIC_CHECK_MAX_MS) finish('not_running');
+      if (elapsed >= CIQ_MIC_WINDOW_MS) return finish(ctx.__ciqRan ? 'suspended' : 'not_running');
       return;
     }
     analyser.getFloatTimeDomainData(buf);
+    measured = true;
     const p = ciqFramePeak(buf);
     if (p > peak) peak = p;
     if (p >= CIQ_SILENT_PEAK) return finish('ok');
-    silentMs += 100;
-    if (silentMs >= CIQ_MIC_CHECK_MS) finish('silent');
+    silentRunMs += 100;
+    if ((silentRunMs >= CIQ_MIC_SILENT_RUN_MS && elapsed >= CIQ_MIC_WINDOW_MS) || elapsed >= CIQ_MIC_CHECK_MAX_MS) finish('silent_running');
   }, 100);
 }
 function ciqStartMicCheck(conv) {
   ciqWatchMic(conv, (result, peak) => {
     ciqAudioDiag.mic_check = result;
-    ciqAudioDiag.mic_peak = (result === 'ok' || result === 'silent') ? ciqPeakBucket(peak) : null;
+    ciqAudioDiag.mic_peak = ciqPeakBucket(peak);
     ciqNoteAudioStates(conv);
-    if (result === 'silent' && !ciqMicRawActive) ciqSwitchToRawMic(conv);
-    else if (result !== 'ok') sendTelemetry();
+    const action = ciqMicCheckAction(result, ciqMicRawActive);
+    if (action === 'swap') { ciqSwitchToRawMic(conv); return; }
+    if (action === 'tap') ciqArmTapResume();
+    if (action !== 'none') sendTelemetry();
   });
 }
+// Last resort: the input context went to sleep with the processed mic and
+// would not wake. Swap the SDK input to an unprocessed mic in place, drop the
+// held processed stream, then wake every context.
 async function ciqSwitchToRawMic(conv) {
   ciqMicRawActive = true;
   ciqMicMode = 'raw_auto';
@@ -2080,28 +2223,36 @@ async function ciqSwitchToRawMic(conv) {
   ciqInstallRawMicWrapper();
   setStatus('connecting', 'Adjusting your microphone…');
   try {
-    // Same SDK call it uses for a device change; the wrapper makes the new
-    // stream unprocessed. The old processed stream is stopped by the SDK.
     await conv.changeInputDevice({});
-    ciqAudioDiag.mic_check = 'silent_swapped';
+    ciqAudioDiag.mic_check = 'suspended_swapped';
   } catch (e) {
-    ciqAudioDiag.mic_check = 'silent_swap_failed';
+    ciqAudioDiag.mic_check = 'suspended_swap_failed';
   }
+  ciqReleaseHeldMic();
+  ciqAudioDiag.held_mic = 'released_for_raw';
   if (conv !== conversation) return;
+  ciqResumeAll(conv);
   setStatus('listening', 'Listening…');
   ciqWakeAudio(conv);
   sendTelemetry();
-  // One follow-up read so the record shows whether raw mode brought the mic back.
-  ciqWatchMic(conv, (result, peak) => {
-    ciqAudioDiag.mic_after = result + ':' + (ciqPeakBucket(peak) || 'na');
-    sendTelemetry();
-  });
+  setTimeout(() => {
+    if (conv !== conversation) return;
+    ciqWatchMic(conv, (result, peak) => {
+      ciqAudioDiag.mic_after = result + ':' + (ciqPeakBucket(peak) || 'na');
+      ciqNoteAudioStates(conv);
+      if (result === 'not_running' || result === 'suspended') ciqArmTapResume();
+      sendTelemetry();
+    });
+  }, 300);
 }
 function ciqAudioDiagSnapshot() {
   return Object.assign({}, ciqAudioDiag, { disconnects: ciqAudioDiag.disconnects.slice(-5) });
 }
 function ciqResetAudioDiag(keepDisconnects) {
   ciqAudioDiag.mic_mode = ciqMicMode;
+  ciqAudioDiag.held_mic = null;
+  ciqAudioDiag.ctx_suspends = 0;
+  ciqAudioDiag.ctx_resume = null;
   ciqAudioDiag.mic_check = null;
   ciqAudioDiag.mic_peak = null;
   ciqAudioDiag.mic_after = null;
@@ -2109,6 +2260,15 @@ function ciqResetAudioDiag(keepDisconnects) {
   ciqAudioDiag.out_ctx = null;
   ciqAudioDiag.wake = null;
   if (!keepDisconnects) ciqAudioDiag.disconnects = [];
+}
+// Ends the session's audio helpers (end, drop, failed start, reset).
+function ciqEndAudioSession() {
+  ciqSessionLive = false;
+  if (ciqLastResortTimer) { clearTimeout(ciqLastResortTimer); ciqLastResortTimer = null; }
+  ciqStopMicCheck();
+  ciqClearTapListener();
+  ciqReleaseHeldMic();
+  ciqReleaseUnlock();
 }
 
 // ── Telemetry state (Batch 1.1 / 1.2 / 1.3 / 1.4) ──────────────────────────────
@@ -2866,13 +3026,27 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
+// android-audio-wake-v2: runs inside the Begin/Resume tap. Starts audio and
+// opens the held {audio:true} mic BEFORE anything else (see ciqHoldMicStart),
+// and makes sure the held mic is released if no session comes of it.
 async function startConversation(opts) {
   const resume = !!(opts && opts.resume);
-  // android-mic-raw-v1: start audio inside the tap, before any await.
-  ciqAudioUnlock();
   ciqStopMicCheck();
-  ciqClearWakeListener();
+  ciqClearTapListener();
   ciqResetAudioDiag(resume);
+  ciqSessionLive = true;
+  ciqSessionStarted = false;
+  ciqAudioUnlock();
+  ciqHoldMicStart();
+  try {
+    return await startConversationInner(opts);
+  } finally {
+    if (!ciqSessionStarted) ciqEndAudioSession();
+  }
+}
+
+async function startConversationInner(opts) {
+  const resume = !!(opts && opts.resume);
   hideError();
   if (!resume) summaryReady = false;
   // sessionCode/sessionStartedAt are generated at pre-survey submit (2.1),
@@ -2953,13 +3127,14 @@ async function startConversation(opts) {
   }
 
   try {
-    // Ask for the mic here so a denial shows our message, then release it at
-    // once. Leaving this stream open meant three live captures on Android
-    // (this one, the SDK's preliminary one, and the SDK's real input). When
-    // the SDK stops its preliminary stream, Android can re-route audio and
-    // stall both directions ("one word, then silence").
-    const permStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    permStream.getTracks().forEach((t) => t.stop());
+    // android-audio-wake-v2 (replaces PR #30's "stop the pre-check stream at
+    // once"): the {audio:true} stream opened at the tap is HELD until the
+    // session ends. On some Androids the first processed capture suspends
+    // every AudioContext; with this one already open, the SDK's capture and
+    // playback contexts stay running (/soundcheck v2 test 4H). A denial
+    // still lands in the catch below with our message.
+    if (!ciqHeldMicPromise) ciqHoldMicStart();
+    await ciqHeldMicPromise;
 
     conversation = await Conversation.startSession({
       signedUrl,
@@ -3136,17 +3311,18 @@ async function startConversation(opts) {
       onDisconnect: (details) => {
         // Logged so a phone session that goes quiet shows why it ended.
         try { console.warn('ClarityIQ voice disconnect:', JSON.stringify(details || {})); } catch (e) {}
-        // android-mic-raw-v1: keep the reason code + close code (no message
-        // text) and the audio states for the session record.
-        ciqStopMicCheck();
-        ciqClearWakeListener();
+        // android-audio-wake-v2: keep the reason code + close code (no message
+        // text) and the audio states for the session record, then release
+        // the held mic (a Resume opens a new one).
         try {
           const info = ciqDisconnectInfo(details);
           const st = ciqAudioStates(conversation);
           info.in_ctx = st.in_ctx; info.out_ctx = st.out_ctx; info.mic = ciqMicMode;
+          info.suspends = ciqAudioDiag.ctx_suspends;
           ciqAudioDiag.disconnects.push(info);
           if (ciqAudioDiag.disconnects.length > 5) ciqAudioDiag.disconnects.shift();
         } catch (e) {}
+        ciqEndAudioSession();
         callConnected = false;
         stopCallTimer();
         clearMuteCapTimer();
@@ -3186,8 +3362,9 @@ async function startConversation(opts) {
       },
     });
 
-    // android-mic-raw-v1: make sure audio is running, then check the mic.
+    // android-audio-wake-v2: make sure audio is running, then check the mic.
     if (conversation) {
+      ciqSessionStarted = true;
       ciqReleaseUnlock();
       ciqWakeAudio(conversation);
       ciqStartMicCheck(conversation);
@@ -3198,7 +3375,7 @@ async function startConversation(opts) {
     }
 
   } catch(err) {
-    ciqReleaseUnlock();
+    ciqEndAudioSession();
     const msg = err.message || String(err);
     if (resume) {
       const denied = msg.toLowerCase().includes('permission')||msg.toLowerCase().includes('denied');
@@ -3236,8 +3413,7 @@ function triggerPostSession() {
 
 async function endConversation() {
   endingIntentionally = true;
-  ciqStopMicCheck();
-  ciqClearWakeListener();
+  ciqEndAudioSession();
   callConnected = false;
   stopCallTimer();
   clearMuteCapTimer();
@@ -3259,8 +3435,7 @@ async function endConversation() {
 
 function resetUI() {
   endingIntentionally = false;
-  ciqStopMicCheck();
-  ciqClearWakeListener();
+  ciqEndAudioSession();
   ciqResetAudioDiag(false);
   callConnected = false;
   wasBackgrounded = false;
