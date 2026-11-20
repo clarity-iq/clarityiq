@@ -45,8 +45,8 @@ redirected to the surgeon — this reference supports general education only.
 
 ## Posterior capsule opacification (PCO)
 
-- PCO is the most common complication after cataract surgery — sometimes
-  called a "secondary cataract."
+- PCO, or posterior capsule opacity (secondary cataract), is the most common
+  complication after cataract surgery.
 - It occurs when residual lens epithelial cells migrate onto the posterior
   capsule behind the IOL, causing gradual clouding.
 - Hydrophobic acrylic lenses generally have lower PCO rates than hydrophilic
