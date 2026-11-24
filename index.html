@@ -1040,8 +1040,9 @@ const CIQ_SRC = CIQ_INTERNAL
 // tagged links straight to the app. It is added to the session telemetry
 // record ONLY when it was explicitly tagged, so a buyer coming back from
 // Stripe (no tag in that URL) stays "untagged" in the funnel instead of being
-// miscounted as "direct". If /verify-purchase ever returns utm_source, it is
-// adopted the same way (forward-compatible; today's Worker doesn't send it).
+// miscounted as "direct". /verify-purchase returns the sanitized purchase
+// source (utm_source and the other allow-listed tags) so a Stripe return
+// can adopt it before app_open is sent.
 function ciqSessionSource() {
   if (!CIQ_SRC_STATE.tagged) return {};
   const out = {};
@@ -1067,22 +1068,48 @@ function ciqAdoptPurchaseSource(result) {
 // the event name, the page path (no query string) and the coarse source tag
 // only: never a code, email, survey answer or transcript text. A visit that
 // was not explicitly tagged and has no referring site is sent as "untagged"
-// (same rule as session telemetry), so Stripe returns aren't miscounted as
-// "direct". Fire-and-forget; can never block the page.
-(function ciqAppOpen() {
+// (same rule as session telemetry). After a Stripe return the success URL
+// has no UTM tags (Stripe only templates checkout_session_id), so app_open
+// waits for /verify-purchase to adopt the purchase source before firing;
+// otherwise a tagged checkout was recorded as "direct"/"untagged". Other
+// visits fire immediately. Fire-and-forget; can never block the page.
+function ciqHasCheckoutSessionId(search) {
+  try {
+    return new URLSearchParams(search || (typeof location !== 'undefined' ? location.search : '')).has('checkout_session_id');
+  } catch (e) { return false; }
+}
+function ciqAppOpenSource() {
+  return (CIQ_INTERNAL || CIQ_SRC_STATE.tagged || CIQ_SRC.utm_medium === 'referral')
+    ? CIQ_SRC : { utm_source: 'untagged', landing_path: CIQ_SRC.landing_path };
+}
+function ciqSendAppOpen() {
   try {
     const s = ciqStorage('sessionStorage');
     if (s) {
       if (s.getItem('ciq_app_open')) return;
       s.setItem('ciq_app_open', '1');
     }
-    const src = (CIQ_INTERNAL || CIQ_SRC_STATE.tagged || CIQ_SRC.utm_medium === 'referral')
-      ? CIQ_SRC : { utm_source: 'untagged', landing_path: CIQ_SRC.landing_path };
-    const body = JSON.stringify({ name: 'app_open', path: ciqTag(location.pathname) || '/', src: src });
+    const body = JSON.stringify({ name: 'app_open', path: ciqTag(location.pathname) || '/', src: ciqAppOpenSource() });
     const url = PROXY_URL + '/event';
     let sent = false;
     try { sent = !!(navigator.sendBeacon && navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }))); } catch (e) {}
     if (!sent) fetch(url, { method: 'POST', body: body, keepalive: true, mode: 'no-cors', headers: { 'Content-Type': 'text/plain' } }).catch(function () {});
+  } catch (e) {}
+}
+function ciqFlushPendingAppOpen() {
+  try {
+    if (!window.__ciqAppOpenPending) return;
+    window.__ciqAppOpenPending = false;
+    ciqSendAppOpen();
+  } catch (e) {}
+}
+(function ciqAppOpen() {
+  try {
+    if (ciqHasCheckoutSessionId(location.search)) {
+      window.__ciqAppOpenPending = true;
+      return;
+    }
+    ciqSendAppOpen();
   } catch (e) {}
 })();
 
@@ -1318,6 +1345,7 @@ async function verifyAndApplyPurchase() {
   const fromQuery = url.searchParams.get('checkout_session_id');
   const storedCode = localStorage.getItem(ACCESS_CODE_STORAGE_KEY);
 
+  try {
   let result = null;
 
   if (fromQuery) {
@@ -1370,6 +1398,12 @@ async function verifyAndApplyPurchase() {
     // Dead code — stop re-checking it on future loads.
     localStorage.removeItem(ACCESS_CODE_STORAGE_KEY);
     if (result.reason === 'free_used' || result.reason === 'practice_used' || result.message) showGateNotice(result.message || FREE_CODE_MESSAGES[result.reason]);
+  }
+  } finally {
+    // Adopted source (if any) is already on CIQ_SRC. Always flush after a
+    // Stripe return, including a failed or still-pending verify, so the
+    // open is not lost.
+    if (fromQuery) ciqFlushPendingAppOpen();
   }
 }
 
