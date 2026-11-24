@@ -2656,7 +2656,7 @@ async function startConversation(opts) {
       headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
       // practice-profile-v1: the code lets the Worker fill the surgeon's
       // practice profile (only for codes made in a surgeon dashboard).
-      body: JSON.stringify({ session_code: sessionCode, access_code: purchaseInfo ? purchaseInfo.access_code : null, src: CIQ_SRC }),
+      body: JSON.stringify({ session_code: sessionCode, access_code: purchaseInfo ? purchaseInfo.access_code : null }),
     });
     if (voiceRes.status === 429) {
       const data = await voiceRes.json().catch(() => ({}));
