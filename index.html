@@ -801,7 +801,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
   <!-- Email gate (Batch 2.3) — summary content does not render until this is submitted -->
   <div id="email-gate" class="screen">
     <h1 class="screen-title">Your summary is ready</h1>
-    <div class="screen-sub">Enter your email to view and save your personal lens preference summary.</div>
+    <div class="screen-sub">Enter your email to view and save your ClarityIQ session summary.</div>
     <label class="field-label" for="email-input">Email address</label>
     <input id="email-input" type="email" autocomplete="email" placeholder="you@example.com" />
     <div id="email-gate-error">Please enter a valid email address.</div>
@@ -2149,16 +2149,16 @@ vision_goal: Extract the person's stated goal in their own words, as confirmed i
 
 monovision_history: If the transcript indicates the person has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A". This can apply regardless of tier.
 
-topics_by_group: Group the specific topics actually discussed in this conversation into the four sections below — not a generic list, and only topics that came up in this person's session. Omit any group that has nothing in it (or use an empty array). At least one group must contain at least one topic, even for a short or fast-moving conversation — at minimum, list the foundational topics from earlier stages (everyone reaches these regardless of pacing) in the matching group. For session-tier people, also include which lens category was explored, described in plain language exactly as in lens_category_interest below (e.g., "toric lens options," "advanced-technology lens options," "basic monofocal lens option") — never the internal track letter or the word "track" itself (do not write "Track A," "Track B," "Track C," "the B track," or similar). For starter-tier people, list the foundational topics covered (do not list track content, since starter-tier people did not receive it). Do not also return a flat topics_covered list.
+topics_by_group: Group the specific topics actually discussed in this conversation into the four sections below — not a generic list, and only topics that came up in this person's session. Omit any group that has nothing in it (or use an empty array). If the person did not speak, or no topics were actually discussed, omit topics_by_group entirely. Do not invent foundational topics, and do not list topics only because they are part of an earlier stage. For session-tier people, if a lens type was asked about or discussed, include it in the lenses group in plain language (e.g., "toric lens options," "advanced-technology lens options," "basic monofocal lens option") — never the internal track letter or the word "track" itself (do not write "Track A," "Track B," "Track C," "the B track," or similar). For starter-tier people, list only foundational topics that actually came up (do not list track content, since starter-tier people did not receive it). Do not also return a flat topics_covered list.
 
   basics: cataract and lens basics, how surgery works, focus ranges and vision zones, astigmatism basics, glasses and insurance myths, that the lens is meant to stay, that surgery is done one eye at a time, and similar foundational topics.
   your_life: glasses habits, screens, night driving, hobbies, work, daily routine, and other lifestyle or personal-goal details the person shared.
   lenses: lens categories and every specific lens discussed, asked about or compared, by name (e.g. "PureSee vs PanOptix compared"), plus per-eye plans such as monovision or mini-monovision, the adjustable lens, and similar lens-choice topics that came up. Never leave out a named lens or monovision if it was discussed.
   tradeoffs: costs, night-vision effects (glare, halos, contrast), surgical risks, side effects, and other trade-offs.
 
-lens_category_interest: Session tier only — omit entirely for starter tier. Start from the given preferred track, translated to plain language ("advanced technology," "toric," or "basic monofocal"). Then add the person's specific preference within that track: for Track A, their stated range-vs-side-effects tradeoff preference, phrased naturally. For Track B or C, their stated focal point preference (near, far, or both/unsure). Then always add, in plain words, any lens categories or named lenses the person said they were interested in, weighing or comparing anywhere in the conversation (e.g. "Interested in comparing PureSee and PanOptix"), and any per-eye plan they were interested in (e.g. monovision). Never drop a named lens the person said they were interested in or comparing.
+lens_category_interest: Session tier only — omit entirely for starter tier, and omit entirely if the person did not ask about, mention, or compare any lens types or named lenses. State only what the person asked about or said, in their words or a close paraphrase (e.g. "You asked about full-range lens types," "You were comparing PureSee and PanOptix"). Do not start from the preferred track. Do not say a type "matches your goal," "is the direction," "is identified as," or otherwise present a type as a recommendation or a fit. If only the internal preferred_track is known and the person did not discuss lens types, omit the field. Never drop a named lens the person said they were interested in or comparing.
 
-surgeon_questions: Extract the polished version of each surgeon question raised in Stage 5 — the version the agent phrased and the person confirmed, not their raw first attempts and not new re-summarizations of them now. There will be between 1 and 3. Preserve the order they were raised in. Carry each forward as close to verbatim as possible. If the person said they were comparing or interested in specific named lenses and none of the confirmed questions already covers that, add one final question in plain words (e.g. "How do PureSee and PanOptix compare for my eyes and my goals?"), keeping the total to 3 or fewer. Never phrase a question as asking which lens is best or right for them.
+surgeon_questions: Include only questions the person raised or confirmed in the conversation (the version the agent phrased and the person confirmed, not their raw first attempts). Preserve the order they were raised in, close to verbatim. If none were raised or confirmed, omit the field entirely — do not invent questions, and do not require a minimum count. If the person said they were comparing or interested in specific named lenses and none of the confirmed questions already covers that, you may add one final question in plain words (e.g. "How do PureSee and PanOptix compare for my eyes and my goals?"), keeping the total to 3 or fewer. Never phrase a question as asking which lens is best, right, or the one that matches their goal.
 
 starter_scope_note: Starter tier only. Generate one honest, brief sentence noting that this summary reflects the starter session, and that full lens category comparison was outside its scope. Omit entirely for session-tier people.
 
@@ -2202,10 +2202,9 @@ Return only the JSON object below, no other text — omit any field per the rule
 
   // Prefer grouped topics. A flat topics_covered list is kept for
   // backward compatibility (older model output, or when grouping fails).
-  // If grouping fails and topics_covered is also empty, fall back to
-  // known state rather than let the section vanish — still accurate
-  // (everyone reaches the foundational stages regardless of pacing),
-  // just generic instead of transcript-specific.
+  // If grouping fails and topics_covered is also empty, use only
+  // tracks the person actually reached (and only if they spoke).
+  // Leave the list empty rather than invent foundational topics.
   const groups = normalizeTopicGroups(parsed);
   if (groups) {
     parsed.topics_by_group = groups;
@@ -2215,7 +2214,8 @@ Return only the JSON object below, no other text — omit any field per the rule
   } else {
     if (parsed && parsed.topics_by_group) delete parsed.topics_by_group;
     if (!parsed.topics_covered || !parsed.topics_covered.length) {
-      parsed.topics_covered = fallbackTopicsFromState();
+      const fallback = fallbackTopicsFromState();
+      if (fallback.length) parsed.topics_covered = fallback;
     }
   }
   return parsed;
@@ -2258,13 +2258,18 @@ function parseSummaryJSON(raw) {
 }
 
 const TRACK_LABELS = { A: 'Advanced technology lens options', B: 'Toric lens options', C: 'Basic lens option' };
+function personSpoke() {
+  return (transcriptLog || []).some((t) => t && t.role !== 'agent' && String(t.text || '').trim());
+}
+
 function fallbackTopicsFromState() {
-  const topics = ['Cataracts and lens options — the basics', 'Your vision goals and daily routine'];
-  if (convoState) {
-    convoState.tracks_visited.forEach(t => {
-      if (TRACK_LABELS[t]) topics.push(TRACK_LABELS[t]);
-    });
-  }
+  // Only include tracks the agent actually recorded as visited, and only
+  // when the person spoke. Never invent foundational topics.
+  const topics = [];
+  if (!personSpoke() || !convoState) return topics;
+  convoState.tracks_visited.forEach(t => {
+    if (TRACK_LABELS[t]) topics.push(TRACK_LABELS[t]);
+  });
   return topics;
 }
 
@@ -2377,7 +2382,7 @@ function renderSummary(summary) {
   if (summary.lens_category_interest) {
     const lensCard = document.createElement('div');
     lensCard.className = 'summary-card';
-    lensCard.innerHTML = `<div class="summary-card-label">Lens category interest</div><div class="summary-card-value">${escapeHtmlClient(summary.lens_category_interest)}</div>`;
+    lensCard.innerHTML = `<div class="summary-card-label">Lens types you asked about</div><div class="summary-card-value">${escapeHtmlClient(summary.lens_category_interest)}</div>`;
     body.appendChild(lensCard);
   }
 
@@ -2431,10 +2436,6 @@ async function buildAndShowSummary() {
     console.error('AI summary failed:', err);
     const fallbackTier = convoState ? convoState.tier : 'starter';
     pendingSummaryResult = {
-      vision_goal: 'Vision goals discussed during conversation — extraction unavailable, please discuss directly with your surgeon.',
-      topics_covered: fallbackTopicsFromState(),
-      surgeon_questions: ['Ask your surgeon which lens best fits your eye measurements and vision goals.'],
-      ...(fallbackTier === 'session' ? { lens_category_interest: 'To be confirmed with your surgeon.' } : {}),
       ...(fallbackTier === 'starter' ? { starter_scope_note: 'This summary reflects your starter session — full lens category comparison was outside its scope.' } : {}),
     };
   }
@@ -2452,7 +2453,7 @@ async function buildAndShowSummary() {
   document.getElementById('summary-loading').style.display = 'none';
   const completed = convoState ? convoState.current_stage === 'summary' : false;
   sendTelemetry({ completed, summary_status: summaryStatus });
-  if (completed) completeFreeSessionIfNeeded();
+  if (completed) await completeFreeSessionIfNeeded();
   showScreen('email-gate');
   document.getElementById('email-input').focus();
 }
