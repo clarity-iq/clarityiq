@@ -938,6 +938,41 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 
 <script type="module">
 import { Conversation } from 'https://esm.sh/@elevenlabs/client@1.37.1';
+
+// mic-ec-optin-v1 (Nov 24, 2026). Opt-in ONLY: nothing changes for any device
+// unless that device opened a ?mic=ec link. Martin's S23 Ultra goes silent both
+// ways when the full-processing mic opens (Nov 20 and again Nov 24); /soundcheck
+// 4D (echo cancellation on, noise suppression + auto gain off) kept audio
+// running there. No auto-switch and no held mic: the Nov 20 auto version (#40)
+// broke a phone that was fine, so this applies only on request.
+// ?mic=ec saves it on this device; ?mic=default clears it. Uses a NEW key so the
+// stale Nov 20 keys (ciq_mic_mode / ciq_mic_raw) stay ignored.
+const CIQ_MIC_EC_KEY = 'ciq_mic_ec_optin';
+function ciqMicModeFrom(search, stored) {
+  const m = /[?&]mic=(ec|default)(?:&|$)/i.exec(search || '');
+  if (m) return { mode: m[1].toLowerCase(), src: 'url' };
+  if (stored === '1') return { mode: 'ec', src: 'saved' };
+  return { mode: 'default', src: 'default' };
+}
+function ciqMicConstraints(audio, mode) {
+  if (mode !== 'ec') return audio;
+  const c = (audio && typeof audio === 'object') ? Object.assign({}, audio) : {};
+  c.echoCancellation = true;
+  c.noiseSuppression = false;
+  c.autoGainControl = false;
+  return c;
+}
+let ciqMicMode = 'default';
+try {
+  const st = window.localStorage;
+  const r = ciqMicModeFrom(location.search, st ? st.getItem(CIQ_MIC_EC_KEY) : null);
+  ciqMicMode = r.mode;
+  if (st && r.src === 'url') { if (r.mode === 'ec') st.setItem(CIQ_MIC_EC_KEY, '1'); else st.removeItem(CIQ_MIC_EC_KEY); }
+} catch (e) { ciqMicMode = 'default'; }
+if (ciqMicMode === 'ec' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  const ciqOrigGum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia = (c) => ciqOrigGum((c && c.audio) ? Object.assign({}, c, { audio: ciqMicConstraints(c.audio, 'ec') }) : c);
+}
 // Pinned so a new SDK release can't change voice behaviour without a test pass. To upgrade: bump the version here, run the E2E, then merge.
 // 1.35.0 → 1.37.1: no breaking public API for this app. 1.36.1 reports WebRTC
 // LiveKit failures as onDisconnect reason "error" (was "agent"); we already
