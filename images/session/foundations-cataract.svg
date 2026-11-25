@@ -1,66 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
-<title id="t">The eye, before and after cataract surgery</title>
-<desc id="d">Left: a side view of the eye with a cloudy natural lens that scatters light. Right: the same eye with a clear artificial lens (IOL) in its place.</desc>
+<title id="t">Cross-section of the eye with a cataract</title>
+<desc id="d">A side view of the eye: the cornea at the front, the iris, the natural lens behind it clouded by a cataract, the retina lining the back, and the optic nerve. An inset shows the clear lens implant, called an IOL, that surgery puts in its place.</desc>
 <defs>
-  <radialGradient id="ball" cx="45%" cy="40%" r="70%"><stop offset="0" stop-color="#FFFDF9"/><stop offset="1" stop-color="#F1E8DA"/></radialGradient>
-  <radialGradient id="cloud" cx="40%" cy="40%" r="70%"><stop offset="0" stop-color="#F4E2BD"/><stop offset=".7" stop-color="#E2C48E"/><stop offset="1" stop-color="#C9A86E"/></radialGradient>
-  <linearGradient id="iol" x1="0" x2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".5" stop-color="#E4F0EE"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
-  <linearGradient id="vit" x1="0" x2="1"><stop offset="0" stop-color="#FBF7F0"/><stop offset="1" stop-color="#F3EADB"/></linearGradient>
-  <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.2"/></filter>
-  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1F3D2C" flood-opacity=".10"/></filter>
-  <g id="eye">
-    <circle cx="190" cy="215" r="118" fill="url(#vit)" stroke="#BFAE92" stroke-width="2.5"/>
-    <path d="M280,148 A112,112 0 0 1 280,282" fill="none" stroke="#D99A86" stroke-width="5" stroke-linecap="round"/>
-    <path d="M306,205 h34 v20 h-34z" fill="#E7C9B6" stroke="#BFAE92" stroke-width="2"/>
-    <path d="M84,156 Q34,215 84,274" fill="#EAF3F1" fill-opacity=".85" stroke="#4f6b58" stroke-width="3"/>
-    <path d="M104,160 L104,192" stroke="#4f6b58" stroke-width="7" stroke-linecap="round"/>
-    <path d="M104,238 L104,270" stroke="#4f6b58" stroke-width="7" stroke-linecap="round"/>
-  </g>
+  <radialGradient id="vit" cx="45%" cy="45%" r="65%"><stop offset="0" stop-color="#FFFDF9"/><stop offset="1" stop-color="#F4ECDF"/></radialGradient>
+  <radialGradient id="cloud" cx="38%" cy="38%" r="72%"><stop offset="0" stop-color="#F8EBCB"/><stop offset=".55" stop-color="#E6C78F"/><stop offset="1" stop-color="#C79F5E"/></radialGradient>
+  <linearGradient id="corn" x1="0" x2="1"><stop offset="0" stop-color="#DDEFEC"/><stop offset="1" stop-color="#F3FAF8"/></linearGradient>
+  <radialGradient id="optic" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#EAF3F1"/><stop offset="1" stop-color="#C9DDD6"/></radialGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="1.6"/></filter>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1F3D2C" flood-opacity=".12"/></filter>
 </defs>
 <rect width="720" height="480" fill="#F7F2E9"/>
-<g transform="translate(10,0)">
-  <rect x="8" y="24" width="336" height="420" rx="26" fill="#FFFDF9" filter="url(#shadow)"/>
-  <text x="176" y="62" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="19" font-weight="600" fill="#1F3D2C">With a cataract</text>
-  <g transform="translate(-4,10)">
-    <use href="#eye"/>
-    <g stroke="#9E4526" stroke-width="2.2" stroke-linecap="round" opacity=".75">
-      <path d="M10,180 L116,190"/><path d="M10,215 L116,215"/><path d="M10,250 L116,240"/>
-    </g>
-    <ellipse cx="124" cy="215" rx="19" ry="44" fill="url(#cloud)" stroke="#A88957" stroke-width="2"/>
-    <g fill="#FFFFFF" opacity=".55" filter="url(#soft)"><circle cx="118" cy="198" r="5"/><circle cx="128" cy="222" r="6"/><circle cx="120" cy="238" r="4"/><circle cx="130" cy="200" r="3"/></g>
-    <g stroke="#9E4526" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 7" opacity=".45">
-      <path d="M144,195 L250,150"/><path d="M144,212 L280,235"/><path d="M144,228 L245,290"/><path d="M144,205 L270,190"/>
-    </g>
-  </g>
-  <g font-family="Inter,system-ui,sans-serif" font-size="15" fill="#3d463f">
-    <path d="M120,270 L120,330" stroke="#5d665f" stroke-width="1.2"/><circle cx="120" cy="270" r="3" fill="#5d665f"/>
-    <text x="120" y="350" text-anchor="middle">Natural lens,</text><text x="120" y="369" text-anchor="middle">clouded</text>
-    <path d="M58,212 L40,120" stroke="#5d665f" stroke-width="1.2"/><circle cx="58" cy="212" r="3" fill="#5d665f"/>
-    <text x="40" y="110" text-anchor="middle">Cornea</text>
-    <path d="M296,262 L296,350" stroke="#5d665f" stroke-width="1.2"/><circle cx="296" cy="262" r="3" fill="#5d665f"/>
-    <text x="294" y="370" text-anchor="middle">Retina</text>
-  </g>
-  <text x="176" y="420" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="15" fill="#5d665f">Light scatters on the way in</text>
+<!-- light coming in -->
+<g stroke="#9E4526" stroke-width="2.4" stroke-linecap="round" opacity=".7"><path d="M8,206 L170,220"/><path d="M8,240 L170,240"/><path d="M8,274 L170,260"/></g>
+<!-- globe: vitreous, retina, choroid, sclera -->
+<circle cx="290" cy="240" r="157" fill="url(#vit)"/>
+<path d="M157,156.6 A157,157 0 1 1 157,323.4" fill="none" stroke="#E4A595" stroke-width="5"/>
+<path d="M152.8,154 A162,162 0 1 1 152.8,326" fill="none" stroke="#B9786A" stroke-width="4" opacity=".75"/>
+<path d="M146,150 A170,170 0 1 1 146,330" fill="none" stroke="#E9DDC9" stroke-width="13"/>
+<path d="M146,150 A170,170 0 1 1 146,330" fill="none" stroke="#BFAE92" stroke-width="1.6" transform="translate(0,0)"/>
+<!-- optic nerve -->
+<path d="M452,222 h70 a18,18 0 0 1 0,36 h-70z" fill="#EBCDB9" stroke="#BFAE92" stroke-width="1.6"/>
+<path d="M458,232 h60 M458,240 h64 M458,248 h60" stroke="#C99F8B" stroke-width="1.2" opacity=".7"/>
+<!-- cornea and front chamber -->
+<path d="M146,150 Q70,240 146,330 Q130,240 146,150Z" fill="url(#corn)" stroke="#5E8F84" stroke-width="3"/>
+<!-- ciliary body + zonules -->
+<path d="M152,154 L190,172 L164,182Z" fill="#C98F7A" opacity=".85"/><path d="M152,326 L190,308 L164,298Z" fill="#C98F7A" opacity=".85"/>
+<g stroke="#A88957" stroke-width="1" opacity=".7"><path d="M182,190 L172,176 M192,186 L182,174 M202,190 L188,176"/><path d="M182,290 L172,304 M192,294 L182,306 M202,290 L188,304"/></g>
+<!-- iris -->
+<path d="M163,170 V218" stroke="#4f6b58" stroke-width="10" stroke-linecap="round"/><path d="M163,262 V310" stroke="#4f6b58" stroke-width="10" stroke-linecap="round"/>
+<!-- clouded natural lens -->
+<ellipse cx="194" cy="240" rx="24" ry="56" fill="url(#cloud)" stroke="#A88957" stroke-width="2"/>
+<g fill="#FFFFFF" opacity=".5" filter="url(#soft)"><circle cx="188" cy="222" r="6"/><circle cx="200" cy="248" r="7"/><circle cx="190" cy="266" r="5"/></g>
+<!-- scattered light -->
+<g stroke="#9E4526" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 8" opacity=".45"><path d="M222,224 L360,168"/><path d="M222,238 L400,230"/><path d="M222,252 L380,300"/><path d="M222,262 L330,330"/></g>
+<!-- labels -->
+<g font-family="Inter,system-ui,sans-serif" font-size="26" fill="#1F2621">
+  <g stroke="#5d665f" stroke-width="1.4"><path d="M116,196 L74,112"/><path d="M163,178 L205,60"/><path d="M194,296 L194,420"/><path d="M378,110 L448,72"/></g>
+  <g fill="#5d665f"><circle cx="116" cy="196" r="3.5"/><circle cx="163" cy="178" r="3.5"/><circle cx="194" cy="296" r="3.5"/><circle cx="378" cy="110" r="3.5"/></g>
+  <text x="74" y="100" text-anchor="middle">Cornea</text>
+  <text x="212" y="52" text-anchor="middle">Iris</text>
+  <text x="194" y="446" text-anchor="middle" font-weight="600" fill="#9E4526">Natural lens, clouded</text>
+  <text x="456" y="70">Retina</text>
+  <text x="552" y="249">Optic nerve</text>
 </g>
-<g transform="translate(366,0)">
-  <rect x="8" y="24" width="336" height="420" rx="26" fill="#FFFDF9" filter="url(#shadow)"/>
-  <text x="176" y="62" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="19" font-weight="600" fill="#1F3D2C">After surgery</text>
-  <g transform="translate(-4,10)">
-    <use href="#eye"/>
-    <g stroke="#1F3D2C" stroke-width="2.2" stroke-linecap="round" opacity=".7">
-      <path d="M10,180 L116,190"/><path d="M10,215 L116,215"/><path d="M10,250 L116,240"/>
-      <path d="M136,191 L300,215"/><path d="M136,215 L300,215"/><path d="M136,239 L300,215"/>
-    </g>
-    <g fill="none" stroke="#4f6b58" stroke-width="2.6" stroke-linecap="round">
-      <path d="M126,178 C146,170 150,152 136,140"/><path d="M126,252 C106,260 102,278 116,290"/>
-    </g>
-    <ellipse cx="126" cy="215" rx="13" ry="38" fill="url(#iol)" stroke="#1F3D2C" stroke-width="2.2"/>
-    <circle cx="300" cy="215" r="4.5" fill="#1F3D2C"/>
+<!-- inset: lens implant -->
+<g transform="translate(548,300)">
+  <rect x="-20" y="-24" width="172" height="166" rx="22" fill="#FFFDF9" filter="url(#shadow)"/>
+  <g transform="translate(66,48)">
+    <path d="M-4,-30 C14,-38 24,-48 18,-58" fill="none" stroke="#4f6b58" stroke-width="3" stroke-linecap="round"/>
+    <path d="M4,30 C-14,38 -24,48 -18,58" fill="none" stroke="#4f6b58" stroke-width="3" stroke-linecap="round"/>
+    <circle r="32" fill="url(#optic)" stroke="#1F3D2C" stroke-width="2.2"/>
+    <ellipse cx="-10" cy="-12" rx="8" ry="5" fill="#fff" opacity=".85"/>
   </g>
-  <g font-family="Inter,system-ui,sans-serif" font-size="15" fill="#3d463f">
-    <path d="M122,262 L122,330" stroke="#5d665f" stroke-width="1.2"/><circle cx="122" cy="262" r="3" fill="#5d665f"/>
-    <text x="122" y="350" text-anchor="middle">Clear artificial</text><text x="122" y="369" text-anchor="middle">lens (IOL)</text>
-  </g>
-  <text x="176" y="420" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="15" fill="#5d665f">A clear lens takes its place</text>
+  <text x="66" y="128" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="22" font-weight="600" fill="#1F3D2C">Lens implant</text>
 </g>
 </svg>

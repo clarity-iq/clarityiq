@@ -25,8 +25,8 @@
     <g stroke="#9E4526" stroke-width="1.4" opacity=".6"><path d="M-36,130 h26 M-36,140 h26 M-36,150 h20 M8,130 h26 M8,140 h26 M8,150 h18"/></g>
     <!-- phone -->
     <rect x="30" y="84" width="24" height="42" rx="5" fill="#fff" stroke="#1F3D2C" stroke-width="2"/>
-    <text y="196" font-size="18" font-weight="600" fill="#1F3D2C">Near</text>
-    <text y="296" font-size="15" fill="#3d463f">Reading,</text><text y="316" font-size="15" fill="#3d463f">your phone</text>
+    <text y="196" font-size="22" font-weight="600" fill="#1F3D2C">Near</text>
+    <text y="296" font-size="18" fill="#3d463f">Reading,</text><text y="316" font-size="18" fill="#3d463f">your phone</text>
   </g>
   <g transform="translate(420,0)">
     <rect x="-80" y="56" width="160" height="150" rx="22" fill="#FFFDF9" filter="url(#shadow)"/>
@@ -37,8 +37,8 @@
     <path d="M30,122 h30 v20 q0,8 -8,8 h-14 q-8,0 -8,-8z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2"/>
     <path d="M26,122 h38" stroke="#9E4526" stroke-width="2.5" stroke-linecap="round"/>
     <path d="M40,112 q4,-6 0,-12 M50,112 q4,-6 0,-12" fill="none" stroke="#9E4526" stroke-width="1.5" opacity=".6"/>
-    <text y="196" font-size="18" font-weight="600" fill="#1F3D2C">Arm's length</text>
-    <text y="296" font-size="15" fill="#3d463f">Computer, dashboard,</text><text y="316" font-size="15" fill="#3d463f">cooking</text>
+    <text y="196" font-size="22" font-weight="600" fill="#1F3D2C">Arm's length</text>
+    <text y="296" font-size="18" fill="#3d463f">Computer, dashboard,</text><text y="316" font-size="18" fill="#3d463f">cooking</text>
   </g>
   <g transform="translate(620,0)">
     <rect x="-80" y="56" width="160" height="150" rx="22" fill="#FFFDF9" filter="url(#shadow)"/>
@@ -48,10 +48,10 @@
     <path d="M-60,96 h120" stroke="#c9d8c3" stroke-width="2"/>
     <circle cx="-38" cy="84" r="12" fill="#c9d8c3"/><rect x="-40" y="90" width="4" height="10" fill="#4f6b58"/>
     <rect x="22" y="72" width="28" height="18" rx="3" fill="#fff" stroke="#1F3D2C" stroke-width="2"/>
-    <text y="196" font-size="18" font-weight="600" fill="#1F3D2C">Far</text>
-    <text y="296" font-size="15" fill="#3d463f">Driving, TV,</text><text y="316" font-size="15" fill="#3d463f">faces across a room</text>
+    <text y="196" font-size="22" font-weight="600" fill="#1F3D2C">Far</text>
+    <text y="296" font-size="18" fill="#3d463f">Driving, TV,</text><text y="316" font-size="18" fill="#3d463f">faces across a room</text>
   </g>
 </g>
-<text x="400" y="410" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="16" fill="#5d665f">A focal point is a range where vision is clearest without glasses.</text>
-<text x="400" y="434" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="16" fill="#5d665f">The three ranges matter equally.</text>
+<text x="400" y="410" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="19" fill="#5d665f">A focal point is a range where vision is clearest without glasses.</text>
+<text x="400" y="434" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="19" fill="#5d665f">The three ranges matter equally.</text>
 </svg>

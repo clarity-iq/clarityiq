@@ -532,7 +532,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
   .surgeon-q-text::before,.surgeon-q-list li::before{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
 
-/* ══ session-visuals-v1: in-call image + words panel (hidden by default) ══
+/* ══ session-visuals-v2: in-call image + words panel (always starts hidden) ══
    Only applies in a call (#roadmap not empty) and only with #app.ciq-visuals. */
 #visual-panel,#words-toggle{ display:none; }
 #app.ciq-visuals:has(#roadmap:not(:empty)) #voice-panel[style*="flex"]{
@@ -540,10 +540,19 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
   grid-template-columns:auto minmax(0,1fr) auto; grid-template-rows:minmax(0,1fr) auto auto auto auto;
   grid-template-areas:"vis vis vis" "banner banner banner" "err err err" "orb status toggle" "words words words";
   column-gap:12px; row-gap:8px; }
-#app.ciq-visuals:has(#roadmap:not(:empty)) #visual-panel{ grid-area:vis; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:0; min-width:0; gap:10px; }
-#visual-figure{ display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; min-height:0; margin:0; gap:12px; }
-#visual-img,#lens-map{ display:block; width:100%; max-width:860px; flex:0 1 auto; min-height:0; height:auto; aspect-ratio:720/484; object-fit:contain; border-radius:22px; }
-#visual-img[hidden],#lens-map[hidden]{ display:none; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #visual-panel{ grid-area:vis; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:0; min-width:0; gap:10px; }
+#visual-figure{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; width:100%; height:100%; min-height:0; margin:0; gap:10px; }
+#visual-kicker{ flex:none; align-self:center; font-size:14px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--terra); }
+#visual-kicker:empty{ display:none; }
+#lens-map{ display:flex; justify-content:center; width:100%; max-width:860px; flex:0 1 auto; min-height:0; }
+#lens-map[hidden]{ display:none; }
+#lens-map .lens-map-defs{ position:absolute; width:0; height:0; }
+#lens-map .lens-map{ display:block; width:100%; height:auto; max-height:100%; }
+#lens-map .lens-map-wide{ aspect-ratio:720/420; }
+#lens-map .lens-map-tall{ display:none; aspect-ratio:360/438; }
+@media (max-width:759px){ #lens-map .lens-map-wide{ display:none; } #lens-map .lens-map-tall{ display:block; } }
+#visual-img{ display:block; width:100%; max-width:860px; flex:0 1 auto; min-height:0; height:auto; aspect-ratio:720/480; object-fit:contain; border-radius:22px; }
+#visual-img[hidden]{ display:none; }
 #visual-caption{ flex:none; max-width:640px; text-align:center; font-size:16px; line-height:1.45; color:var(--ink-2); text-wrap:pretty; }
 #visual-panel.vis-swap #visual-img,#visual-panel.vis-swap #lens-map{ animation:ciq-vis-in .45s ease-out; }
 @keyframes ciq-vis-in{ from{ opacity:.25; } to{ opacity:1; } }
@@ -552,16 +561,23 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 #lens-map .lz{ transition:opacity .35s; }
 #lens-map .lz-hap{ fill:none; stroke:#4f6b58; stroke-width:3; stroke-linecap:round; }
 #lens-map .lz-optic{ stroke:#1F3D2C; stroke-width:2.2; }
-#lens-map .lz-name{ font-family:var(--sans); font-size:25px; font-weight:600; fill:#1F3D2C; }
-#lens-map .lz-sub{ font-family:var(--sans); font-size:15px; font-weight:600; letter-spacing:.1em; fill:#9E4526; }
-#lens-map .lz-rl{ font-family:var(--sans); font-size:16px; fill:#5d665f; text-anchor:middle; }
+#lens-map .lz-name{ font-family:var(--sans); font-weight:600; fill:#1F3D2C; }
+#lens-map .lz-tag{ font-family:var(--sans); font-weight:600; letter-spacing:.1em; fill:#9E4526; }
+#lens-map .lz-fam{ font-family:var(--sans); fill:#3d463f; }
+#lens-map .lz-rl{ font-family:var(--sans); fill:#5d665f; text-anchor:middle; }
+#lens-map .lz-ring{ fill:none; stroke:#4f6b58; stroke-width:1.3; }
+#lens-map .lz-toric{ display:none; fill:#1F3D2C; }
+#lens-map .lz-axis{ stroke:#9E4526; stroke-width:2; stroke-dasharray:4 5; }
+#lens-map.toric-on .lz-toric{ display:inline; }
+#lens-map.toric-on .lz-card{ fill:#FBF1EA; }
 #lens-map .lz-span{ stroke:#c9d8c3; stroke-width:12; stroke-linecap:round; }
 #lens-map .lz-dot{ fill:#FFFDF9; stroke:#c9d8c3; stroke-width:2.5; }
 #lens-map .lz-dot.on{ fill:#1F3D2C; stroke:#1F3D2C; }
-#lens-map .lz[data-zone="monofocal"] .lz-dot:not(.on),#lens-map .lz[data-zone="toric"] .lz-dot:not(.on){ stroke-dasharray:3 4; }
-#lens-map.has-focus .lz{ opacity:.34; }
+#lens-map .lz[data-zone="monofocal"] .lz-dot:not(.on){ stroke-dasharray:3 4; }
+#lens-map.has-focus .lz{ opacity:.32; }
 #lens-map.has-focus .lz.is-on{ opacity:1; }
 #lens-map .lz.is-on .lz-card{ fill:#F2F6EF; stroke:#1F3D2C; }
+#lens-map.toric-on .lz.is-on .lz-card{ fill:#F8E9DE; stroke:#9E4526; }
 /* orb row: small orb, status, words toggle */
 #app.ciq-visuals:has(#roadmap:not(:empty)) #orb{ grid-area:orb; width:44px; height:44px; margin:0 0 0 4px; align-self:center; }
 #app.ciq-visuals:has(#roadmap:not(:empty)) #orb svg{ width:16px; height:16px; }
@@ -580,7 +596,10 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 #app.ciq-visuals[data-words="open"]:has(#roadmap:not(:empty)) #transcript-wrap::before{ content:""; flex:none; align-self:center; width:40px; height:4px; border-radius:2px; background:var(--rule); margin:-8px 0 4px; }
 @keyframes ciq-drawer-up{ from{ transform:translateY(24px); opacity:0; } to{ transform:none; opacity:1; } }
 @media (max-width:759px){
-  #app.ciq-visuals:has(#roadmap:not(:empty)) #visual-caption{ font-size:15px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #voice-panel[style*="flex"]{ padding-top:2px; row-gap:6px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #visual-panel{ margin:0 -10px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #visual-img{ border-radius:16px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #visual-caption{ font-size:16px; padding:0 8px; }
   #app.ciq-visuals:has(#roadmap:not(:empty)) #status-pill{ font-size:15px; }
   #app.ciq-visuals:has(#roadmap:not(:empty)) #words-toggle{ padding:0 14px; font-size:14px; }
 }
@@ -931,18 +950,24 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
       <div class="mic-note">Your browser will ask to use your microphone. Choose Allow so you can talk.</div>
     </div>
 
-    <!-- session-visuals-v1: one picture per stage; the lens map lights the type being discussed -->
+    <!-- session-visuals-v2: one main image per stage (changes on Next); words in the agent's line may pop up a slide inside the stage -->
     <div id="visual-panel">
       <figure id="visual-figure">
+        <div id="visual-kicker"></div>
         <img id="visual-img" alt="" src="images/session/welcome.svg" width="720" height="480" decoding="async">
-        <svg id="lens-map" viewBox="0 0 720 484" role="img" aria-labelledby="lens-map-title" hidden>
-        <title id="lens-map-title">Four lens types: basic (monofocal), toric, extended range (EDOF) and full range (multifocal), each with the ranges it is designed for.</title>
-        <defs><radialGradient id="lm-optic" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#EAF3F1"/><stop offset="1" stop-color="#C9DDD6"/></radialGradient><filter id="lm-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1F3D2C" flood-opacity=".10"/></filter></defs>
-        <g class="lz" data-zone="monofocal" transform="translate(16,16)"><rect class="lz-card" width="336" height="218" rx="24"/><g class="lz-iol" transform="translate(80,100)"><path d="M-6,-44 C20,-54 34,-68 26,-82" class="lz-hap"/><path d="M6,44 C-20,54 -34,68 -26,82" class="lz-hap"/><circle r="46" fill="url(#lm-optic)" class="lz-optic"/><ellipse cx="-14" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="150" y="62">Basic</text><text class="lz-sub" x="150" y="90">MONOFOCAL</text><circle class="lz-dot" cx="168" cy="146" r="10"/><text class="lz-rl" x="168" y="180">Near</text><circle class="lz-dot" cx="236" cy="146" r="10"/><text class="lz-rl" x="236" y="180">Arm’s</text><circle class="lz-dot on" cx="304" cy="146" r="10"/><text class="lz-rl" x="304" y="180">Far</text></g>
-        <g class="lz" data-zone="toric" transform="translate(368,16)"><rect class="lz-card" width="336" height="218" rx="24"/><g class="lz-iol" transform="translate(80,100)"><path d="M-6,-44 C20,-54 34,-68 26,-82" class="lz-hap"/><path d="M6,44 C-20,54 -34,68 -26,82" class="lz-hap"/><circle r="46" fill="url(#lm-optic)" class="lz-optic"/><g fill="#1F3D2C"><circle cx="-36" cy="0" r="3"/><circle cx="-29" cy="0" r="3"/><circle cx="36" cy="0" r="3"/><circle cx="29" cy="0" r="3"/></g><path d="M-22,0 H22" stroke="#9E4526" stroke-width="1.5" stroke-dasharray="3 4" opacity=".6"/><ellipse cx="-14" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="150" y="62">Toric</text><text class="lz-sub" x="150" y="90">FOR ASTIGMATISM</text><circle class="lz-dot" cx="168" cy="146" r="10"/><text class="lz-rl" x="168" y="180">Near</text><circle class="lz-dot" cx="236" cy="146" r="10"/><text class="lz-rl" x="236" y="180">Arm’s</text><circle class="lz-dot on" cx="304" cy="146" r="10"/><text class="lz-rl" x="304" y="180">Far</text></g>
-        <g class="lz" data-zone="edof" transform="translate(16,250)"><rect class="lz-card" width="336" height="218" rx="24"/><g class="lz-iol" transform="translate(80,100)"><path d="M-6,-44 C20,-54 34,-68 26,-82" class="lz-hap"/><path d="M6,44 C-20,54 -34,68 -26,82" class="lz-hap"/><circle r="46" fill="url(#lm-optic)" class="lz-optic"/><circle r="15" fill="none" stroke="#4f6b58" stroke-width="1.6" opacity=".7"/><circle r="24" fill="none" stroke="#4f6b58" stroke-width="1" opacity=".35"/><ellipse cx="-14" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="150" y="62">Extended range</text><text class="lz-sub" x="150" y="90">EDOF</text><path d="M236,146 H304" class="lz-span"/><circle class="lz-dot" cx="168" cy="146" r="10"/><text class="lz-rl" x="168" y="180">Near</text><circle class="lz-dot on" cx="236" cy="146" r="10"/><text class="lz-rl" x="236" y="180">Arm’s</text><circle class="lz-dot on" cx="304" cy="146" r="10"/><text class="lz-rl" x="304" y="180">Far</text></g>
-        <g class="lz" data-zone="multifocal" transform="translate(368,250)"><rect class="lz-card" width="336" height="218" rx="24"/><g class="lz-iol" transform="translate(80,100)"><path d="M-6,-44 C20,-54 34,-68 26,-82" class="lz-hap"/><path d="M6,44 C-20,54 -34,68 -26,82" class="lz-hap"/><circle r="46" fill="url(#lm-optic)" class="lz-optic"/><circle r="9" fill="none" stroke="#4f6b58" stroke-width="1.2" opacity=".55"/><circle r="16" fill="none" stroke="#4f6b58" stroke-width="1.2" opacity=".55"/><circle r="22" fill="none" stroke="#4f6b58" stroke-width="1.2" opacity=".55"/><circle r="27" fill="none" stroke="#4f6b58" stroke-width="1.2" opacity=".55"/><circle r="32" fill="none" stroke="#4f6b58" stroke-width="1.2" opacity=".55"/><circle r="36" fill="none" stroke="#4f6b58" stroke-width="1.2" opacity=".55"/><circle r="40" fill="none" stroke="#4f6b58" stroke-width="1.2" opacity=".55"/><ellipse cx="-14" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="150" y="62">Full range</text><text class="lz-sub" x="150" y="90">MULTIFOCAL</text><path d="M168,146 H304" class="lz-span"/><circle class="lz-dot on" cx="168" cy="146" r="10"/><text class="lz-rl" x="168" y="180">Near</text><circle class="lz-dot on" cx="236" cy="146" r="10"/><text class="lz-rl" x="236" y="180">Arm’s</text><circle class="lz-dot on" cx="304" cy="146" r="10"/><text class="lz-rl" x="304" y="180">Far</text></g>
-        </svg>
+        <div id="lens-map" hidden>
+          <svg class="lens-map-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><radialGradient id="lm-optic" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#EAF3F1"/><stop offset="1" stop-color="#C9DDD6"/></radialGradient><filter id="lm-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1F3D2C" flood-opacity=".10"/></filter></defs></svg>
+          <svg class="lens-map lens-map-wide" viewBox="0 0 720 420" role="img" aria-label="Three lens categories: monofocal, EDOF (extended range) and multifocal (full range), each with the ranges it is designed for.">
+          <g class="lz" data-zone="monofocal" transform="translate(12,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,112)"><path class="lz-hap" d="M-4,-52 C32,-72 49,-96 35,-114"/><path class="lz-hap" d="M4,52 C-32,72 -49,96 -35,114"/><circle class="lz-optic" r="54" fill="url(#lm-optic)"/><g class="lz-toric"><path d="M-44,0 H44" class="lz-axis"/><circle cx="-48" cy="0" r="3.4"/><circle cx="-39" cy="0" r="3.4"/><circle cx="48" cy="0" r="3.4"/><circle cx="39" cy="0" r="3.4"/></g><ellipse cx="-16" cy="-19" rx="11" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">Monofocal</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">ONE FOCAL POINT</text><circle class="lz-dot" cx="52" cy="300" r="11"/><text class="lz-rl" x="52" y="338" font-size="17">Near</text><circle class="lz-dot" cx="112" cy="300" r="11"/><text class="lz-rl" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" cx="172" cy="300" r="11"/><text class="lz-rl" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Includes enhanced monofocal</text></g>
+          <g class="lz" data-zone="edof" transform="translate(248,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,112)"><path class="lz-hap" d="M-4,-52 C32,-72 49,-96 35,-114"/><path class="lz-hap" d="M4,52 C-32,72 -49,96 -35,114"/><circle class="lz-optic" r="54" fill="url(#lm-optic)"/><circle r="17" class="lz-ring" opacity=".75"/><circle r="30" class="lz-ring" opacity=".35"/><g class="lz-toric"><path d="M-44,0 H44" class="lz-axis"/><circle cx="-48" cy="0" r="3.4"/><circle cx="-39" cy="0" r="3.4"/><circle cx="48" cy="0" r="3.4"/><circle cx="39" cy="0" r="3.4"/></g><ellipse cx="-16" cy="-19" rx="11" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">EDOF</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">EXTENDED RANGE</text><path class="lz-span" d="M112,300 H172"/><circle class="lz-dot" cx="52" cy="300" r="11"/><text class="lz-rl" x="52" y="338" font-size="17">Near</text><circle class="lz-dot on" cx="112" cy="300" r="11"/><text class="lz-rl" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" cx="172" cy="300" r="11"/><text class="lz-rl" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Extended depth of focus</text></g>
+          <g class="lz" data-zone="multifocal" transform="translate(484,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,112)"><path class="lz-hap" d="M-4,-52 C32,-72 49,-96 35,-114"/><path class="lz-hap" d="M4,52 C-32,72 -49,96 -35,114"/><circle class="lz-optic" r="54" fill="url(#lm-optic)"/><circle r="9.7" class="lz-ring" opacity=".55"/><circle r="17.3" class="lz-ring" opacity=".55"/><circle r="23.8" class="lz-ring" opacity=".55"/><circle r="29.2" class="lz-ring" opacity=".55"/><circle r="34.0" class="lz-ring" opacity=".55"/><circle r="38.3" class="lz-ring" opacity=".55"/><circle r="42.7" class="lz-ring" opacity=".55"/><circle r="46.4" class="lz-ring" opacity=".55"/><g class="lz-toric"><path d="M-44,0 H44" class="lz-axis"/><circle cx="-48" cy="0" r="3.4"/><circle cx="-39" cy="0" r="3.4"/><circle cx="48" cy="0" r="3.4"/><circle cx="39" cy="0" r="3.4"/></g><ellipse cx="-16" cy="-19" rx="11" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">Multifocal</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">FULL RANGE</text><path class="lz-span" d="M52,300 H172"/><circle class="lz-dot on" cx="52" cy="300" r="11"/><text class="lz-rl" x="52" y="338" font-size="17">Near</text><circle class="lz-dot on" cx="112" cy="300" r="11"/><text class="lz-rl" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" cx="172" cy="300" r="11"/><text class="lz-rl" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Includes trifocal</text></g>
+          </svg>
+          <svg class="lens-map lens-map-tall" viewBox="0 0 360 438" role="img" aria-label="Three lens categories: monofocal, EDOF (extended range) and multifocal (full range), each with the ranges it is designed for.">
+          <g class="lz" data-zone="monofocal" transform="translate(6,6)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M-4,-38 C15,-48 24,-60 17,-69"/><path class="lz-hap" d="M4,38 C-15,48 -24,60 -17,69"/><circle class="lz-optic" r="40" fill="url(#lm-optic)"/><g class="lz-toric"><path d="M-30,0 H30" class="lz-axis"/><circle cx="-34" cy="0" r="3.4"/><circle cx="-25" cy="0" r="3.4"/><circle cx="34" cy="0" r="3.4"/><circle cx="25" cy="0" r="3.4"/></g><ellipse cx="-12" cy="-14" rx="8" ry="5" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">Monofocal</text><text class="lz-tag" x="132" y="66" font-size="13">ONE FOCAL POINT</text><circle class="lz-dot" cx="150" cy="94" r="9"/><text class="lz-rl" x="150" y="124" font-size="14">Near</text><circle class="lz-dot" cx="222" cy="94" r="9"/><text class="lz-rl" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" cx="294" cy="94" r="9"/><text class="lz-rl" x="294" y="124" font-size="14">Far</text></g>
+          <g class="lz" data-zone="edof" transform="translate(6,150)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M-4,-38 C15,-48 24,-60 17,-69"/><path class="lz-hap" d="M4,38 C-15,48 -24,60 -17,69"/><circle class="lz-optic" r="40" fill="url(#lm-optic)"/><circle r="13" class="lz-ring" opacity=".75"/><circle r="22" class="lz-ring" opacity=".35"/><g class="lz-toric"><path d="M-30,0 H30" class="lz-axis"/><circle cx="-34" cy="0" r="3.4"/><circle cx="-25" cy="0" r="3.4"/><circle cx="34" cy="0" r="3.4"/><circle cx="25" cy="0" r="3.4"/></g><ellipse cx="-12" cy="-14" rx="8" ry="5" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">EDOF</text><text class="lz-tag" x="132" y="66" font-size="13">EXTENDED RANGE</text><path class="lz-span" d="M222,94 H294"/><circle class="lz-dot" cx="150" cy="94" r="9"/><text class="lz-rl" x="150" y="124" font-size="14">Near</text><circle class="lz-dot on" cx="222" cy="94" r="9"/><text class="lz-rl" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" cx="294" cy="94" r="9"/><text class="lz-rl" x="294" y="124" font-size="14">Far</text></g>
+          <g class="lz" data-zone="multifocal" transform="translate(6,294)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M-4,-38 C15,-48 24,-60 17,-69"/><path class="lz-hap" d="M4,38 C-15,48 -24,60 -17,69"/><circle class="lz-optic" r="40" fill="url(#lm-optic)"/><circle r="7.2" class="lz-ring" opacity=".55"/><circle r="12.8" class="lz-ring" opacity=".55"/><circle r="17.6" class="lz-ring" opacity=".55"/><circle r="21.6" class="lz-ring" opacity=".55"/><circle r="25.2" class="lz-ring" opacity=".55"/><circle r="28.4" class="lz-ring" opacity=".55"/><circle r="31.6" class="lz-ring" opacity=".55"/><circle r="34.4" class="lz-ring" opacity=".55"/><g class="lz-toric"><path d="M-30,0 H30" class="lz-axis"/><circle cx="-34" cy="0" r="3.4"/><circle cx="-25" cy="0" r="3.4"/><circle cx="34" cy="0" r="3.4"/><circle cx="25" cy="0" r="3.4"/></g><ellipse cx="-12" cy="-14" rx="8" ry="5" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">Multifocal</text><text class="lz-tag" x="132" y="66" font-size="13">FULL RANGE</text><path class="lz-span" d="M150,94 H294"/><circle class="lz-dot on" cx="150" cy="94" r="9"/><text class="lz-rl" x="150" y="124" font-size="14">Near</text><circle class="lz-dot on" cx="222" cy="94" r="9"/><text class="lz-rl" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" cx="294" cy="94" r="9"/><text class="lz-rl" x="294" y="124" font-size="14">Far</text></g>
+          </svg>
+        </div>
         <figcaption id="visual-caption"></figcaption>
       </figure>
     </div>
@@ -1862,224 +1887,210 @@ function isSpokenNext(text) {
 }
 document.getElementById('next-btn').addEventListener('click', () => advanceByUser('tap'));
 
-// ── session-visuals-v1 BEGIN ─────────────────────────────────────────────────
-// In-session visuals. The app owns both the stage (convoState.current_stage,
-// moved only by applyStageTransition) and the visual shown for it. The visual
-// is always recomputed from app state, so it can't drift from the stage:
-//   1. Stage  -> the stage's default image (renderRoadmap calls ciqVisualSync).
-//   2. Track  -> lens-map zones for the current track (track-entry anchors,
-//                record_track_switch).
-//   3. Hint   -> a narrower frame or zone inside the current stage/track, from
-//                a set_visual tool call (preferred, once on the agent) or, as a
-//                fallback, lens words in the agent's own line. A hint can never
-//                change the stage, is ignored if it doesn't belong to the
-//                current stage or track, and expires back to the base after
-//                VISUAL_HINT_TTL_MS. Tool hints win over word hints for a while.
-// No network calls. Words (the transcript) are hidden by default.
+// ── session-visuals-v2 BEGIN ─────────────────────────────────────────────────
+// In-session visuals (Martin, Nov 25):
+//  - Each stage has ONE main image. It changes only when the stage changes,
+//    and the stage moves on Next (button or spoken "next"). The agent's exact
+//    opening sentences still move the stage dot as before (for example when the
+//    person agrees to wrap up), so the image always matches the dots.
+//    Keywords never change the stage or the main image.
+//  - Inside a stage, words in the agent's line may pop up a secondary slide
+//    (Basics: focal points, astigmatism; Lens options: the toric add-on, LAL,
+//    IC-8) or light one lens category. Next always returns to the new stage's
+//    main image.
+//  - Lens options: 3 categories (monofocal incl. enhanced, EDOF, multifocal),
+//    one lit at a time, never an "advanced" group. Toric is a layer that works
+//    with any category, not a category.
+// No network calls. Words (the transcript) always start hidden.
 const VISUALS_ENABLED = true;
-const VISUAL_HINT_TTL_MS = 90 * 1000;
+const VISUAL_CHARS_PER_SEC = 15;        // speech pace used to time cues inside one line
+const VISUAL_MAX_CUE_DELAY_MS = 25000;
 const VISUAL_TOOL_PRIORITY_MS = 45 * 1000;
-const LENS_ZONES = ['monofocal', 'toric', 'edof', 'multifocal'];
-const TRACK_ZONES = { A: ['edof', 'multifocal'], B: ['toric'], C: ['monofocal'] };
+const LENS_CATEGORIES = ['monofocal', 'edof', 'multifocal'];
+const STAGE_MAIN = {
+  welcome: 'welcome', foundations: 'cataract', vision_goals: 'daily_life', tier_gate: 'daily_life',
+  lens_options: 'lens_map', readiness: 'readiness', summary: 'summary',
+};
+const STAGE_SLIDES = { foundations: ['focal_points', 'astigmatism'], lens_options: ['toric', 'lal', 'ic8'] };
 const VISUAL_IMAGES = {
   welcome:     { src: 'images/session/welcome.svg', alt: 'An eye beside two speech bubbles.', caption: 'Let\u2019s start with where you are today.' },
-  cataract:    { src: 'images/session/foundations-cataract.svg', alt: 'Side view of the eye with a cloudy natural lens, and the same eye with a clear artificial lens.', caption: 'A cataract is a clouding of the eye\u2019s natural lens. Surgery replaces it with a clear artificial lens, called an IOL.' },
-  focal_points:{ src: 'images/session/foundations-focal.svg', alt: 'Near, arm\u2019s length and far, with everyday examples of each.', caption: 'A focal point is a range where vision is clearest without glasses: near, arm\u2019s length or far.' },
-  astigmatism: { src: 'images/session/foundations-astigmatism.svg', alt: 'A round eye surface next to one that is not perfectly round.', caption: 'Astigmatism: the eye\u2019s surface isn\u2019t perfectly round, so light doesn\u2019t focus evenly. Your surgeon factors this in.' },
-  daily_life:  { src: 'images/session/goals.svg', alt: 'Everyday activities arranged from near to far.', caption: 'Think about what you do up close, at arm\u2019s length and far away.' },
+  cataract:    { src: 'images/session/foundations-cataract.svg', alt: 'Cross-section of the eye with a clouded natural lens, and a lens implant.', caption: 'A cataract is a clouding of the eye\u2019s natural lens. Surgery replaces it with a clear lens implant, called an IOL.' },
+  focal_points:{ src: 'images/session/foundations-focal.svg', alt: 'Near, arm\u2019s length and far, with everyday examples of each.', caption: 'A focal point is a range where vision is clearest without glasses: near, arm\u2019s length or far.', kicker: 'Focal points' },
+  astigmatism: { src: 'images/session/foundations-astigmatism.svg', alt: 'A round eye surface next to one that is not perfectly round.', caption: 'Astigmatism: the eye\u2019s surface isn\u2019t perfectly round, so light doesn\u2019t focus evenly. Your surgeon factors this in.', kicker: 'Astigmatism' },
+  daily_life:  { src: 'images/session/goals.svg', alt: 'Everyday activities near, at arm\u2019s length and far.', caption: 'Think about what you do up close, at arm\u2019s length and far away.' },
+  lal:         { src: 'images/session/lal.svg', alt: 'A lens implant under a soft beam of light, with a tag pointing back to monofocal.', caption: 'Light Adjustable Lens: a monofocal lens whose power can be fine-tuned with light after the eye heals. The trade-off is extra office visits and UV-protective glasses until the adjustments are done.', kicker: 'Part of: Monofocal' },
+  ic8:         { src: 'images/session/ic8.svg', alt: 'A small-aperture lens implant, with a tag pointing back to EDOF.', caption: 'IC-8: a small-aperture lens used in one eye to lengthen that eye\u2019s range, far through arm\u2019s length. Readers are common for small print. Your surgeon can tell you whether that approach is used for your eyes.', kicker: 'Part of: EDOF' },
   readiness:   { src: 'images/session/readiness.svg', alt: 'A clipboard of questions for your surgeon and a recovery calendar.', caption: 'Your questions for your surgeon, and what recovery usually looks like.' },
   summary:     { src: 'images/session/summary.svg', alt: 'A summary page with what matters to you, what we covered and questions for your surgeon.', caption: 'Next, your summary to bring to your surgeon.' },
 };
 const LENS_CAPTIONS = {
-  overview:   'Four lens types, side by side. Which one is right for your eyes is a decision you make with your surgeon.',
-  monofocal:  'Basic (monofocal): one focal point, usually set for far. Glasses for the other ranges. Usually the least halo or glare of the options.',
-  toric:      'Toric: the same one-focal-point design, built to also correct astigmatism. Glasses for the other ranges.',
-  edof:       'Extended range (EDOF): designed for far through arm\u2019s length. Readers are common for small print; halos at night are usually milder than with full-range lenses.',
-  multifocal: 'Full range (multifocal): designed for far, arm\u2019s length and near. Halos or glare at night are more common, and some people notice lower contrast in dim light.',
-  advanced:   'Advanced lenses: extended range and full range. Each has its own trade-offs, which your surgeon can talk through with you.',
+  overview:   'Three lens categories. We\u2019ll take them one at a time. Which one is right for your eyes is a decision you make with your surgeon.',
+  monofocal:  'Monofocal: one focal point, usually set for far, with glasses for the other ranges. Enhanced monofocal lenses give a bit more arm\u2019s length. Usually the least halo or glare.',
+  edof:       'EDOF (extended range): designed for far through arm\u2019s length. Readers are common for small print. Night halos are usually milder than with multifocal lenses.',
+  multifocal: 'Multifocal (full range): designed for far, arm\u2019s length and near. Halos or glare at night are more common, and some people notice lower contrast in dim light.',
+  toric:      'Toric is an add-on, not a separate type: a toric version of a lens also corrects astigmatism. Which versions are available depends on the lens and how much astigmatism you have, which your surgeon measures.',
 };
-// Which frames each stage may show; the first one is the stage default.
-const STAGE_FRAMES = {
-  welcome: ['welcome'], foundations: ['cataract', 'focal_points', 'astigmatism'],
-  vision_goals: ['daily_life'], tier_gate: ['daily_life'], lens_options: ['lens_map'],
-  readiness: ['readiness'], summary: ['summary'],
+// Cue words (agent lines only; lowercased, straight apostrophes).
+const VISUAL_CUES = {
+  monofocal:   /\b(monofocal|basic lens(es)?|single[- ]focal[- ]point|one focal point|standard lens|enhanced basic|clareon|tecnis 1|eyhance|envista aspire)\b/g,
+  edof:        /\b(edof|extended[- ]range|extended depth|extends? (your |the )?(range|vision)|vivity|puresee|symfony)\b/g,
+  multifocal:  /\b(multifocal|trifocal|full[- ]range|fuller range|panoptix|synergy|odyssey|envy)\b/g,
+  toric:       /\b(toric|astigmatism)\b/g,
+  lal:         /\b(light adjustable|lal\+?|rxsight)(?=\W|$)/g,
+  ic8:         /\b(ic-8|ic 8|apthera|small[- ]aperture)\b/g,
+  focal_points:/\bfocal points?\b/g,
+  astigmatism: /\bastigmatism\b/g,
 };
-// Fallback word hints (agent lines only; lowercased, straight apostrophes).
-const LENS_ZONE_PATTERNS = {
-  monofocal:  /\b(basic lens(es)?|basic \/ monofocal|monofocal|single[- ]focal[- ]point|one focal point|standard lens|clareon|tecnis 1|eyhance|envista aspire|enhanced basic)\b/,
-  toric:      /\btoric\b/,
-  edof:       /\b(extended[- ]range|extended depth|edof|extend(s|ing)? (your |the )?(range|vision)|vivity|puresee|symfony)\b/,
-  multifocal: /\b(multifocal|trifocal|full[- ]range|fuller range|panoptix|synergy|odyssey|envy)\b/,
-};
-const FRAME_PATTERNS = { focal_points: /\bfocal points?\b/, astigmatism: /\bastigmatism\b/ };
+const CUES_BY_STAGE = { foundations: ['focal_points', 'astigmatism'], lens_options: ['monofocal', 'edof', 'multifocal', 'toric', 'lal', 'ic8'] };
 
-let visualState = { stage: null, frame: null, zones: [], hint: null };
+let visualState = { stage: null, slide: null, category: null, toolAt: 0 };
+let visualCueTimers = [];
 
-function lensZonesInText(lower) {
-  return LENS_ZONES.filter(z => LENS_ZONE_PATTERNS[z].test(lower));
-}
-// Last-mentioned frame in the line wins (e.g. "...focal points... astigmatism").
-function foundationsFrameInText(lower) {
-  let pick = null, at = -1;
-  for (const [frame, re] of Object.entries(FRAME_PATTERNS)) {
-    const m = [...lower.matchAll(new RegExp(re.source, 'g'))].pop();
-    if (m && m.index > at) { pick = frame; at = m.index; }
+// Pure: ordered cues in one agent line, each with a delay from the line's start.
+function visualCuePlan(stage, lower) {
+  const kinds = CUES_BY_STAGE[stage] || [];
+  const hits = [];
+  for (const k of kinds) for (const m of lower.matchAll(VISUAL_CUES[k])) hits.push({ cue: k, index: m.index });
+  hits.sort((a, b) => a.index - b.index);
+  const plan = [];
+  for (const h of hits) {
+    if (plan.length && plan[plan.length - 1].cue === h.cue) continue; // repeated word, same cue
+    plan.push({ cue: h.cue, delayMs: Math.min(VISUAL_MAX_CUE_DELAY_MS, Math.round(h.index / VISUAL_CHARS_PER_SEC * 1000)) });
   }
-  return pick;
+  return plan;
 }
-// Base view for the current state, before any hint.
-function visualBaseFor(state) {
-  const stage = state && state.current_stage || 'welcome';
-  const frame = (STAGE_FRAMES[stage] || ['welcome'])[0];
-  const zones = (stage === 'lens_options' && state.current_track) ? (TRACK_ZONES[state.current_track] || []).slice() : [];
-  return { stage, frame, zones };
-}
-// Pure: the visual to show for (state, hint, now). Never changes the stage.
-function resolveVisual(state, hint, now) {
-  const base = visualBaseFor(state);
-  if (!hint || hint.stage !== base.stage || (now - hint.at) > VISUAL_HINT_TTL_MS) return base;
-  if (hint.frame && (STAGE_FRAMES[base.stage] || []).includes(hint.frame)) return { ...base, frame: hint.frame };
-  if (hint.zones && base.stage === 'lens_options') {
-    if (hint.zones.length >= 3) return { ...base, zones: [] };
-    const allowed = base.zones.length ? base.zones : LENS_ZONES;
-    const zones = hint.zones.filter(z => allowed.includes(z));
-    if (zones.length) return { ...base, zones: zones.length >= 3 ? [] : zones };
+// Pure: apply one cue to the state. Never touches the stage.
+function visualApplyCue(state, cue, track) {
+  const v = { ...state };
+  if (cue === 'focal_points' || cue === 'astigmatism') {
+    if (v.stage === 'foundations') v.slide = cue;
+  } else if (v.stage !== 'lens_options') {
+    return v;
+  } else if (LENS_CATEGORIES.includes(cue)) {
+    v.category = cue;
+    if (!(v.slide === 'toric' && track === 'B')) v.slide = null; // back to the map unless the toric lesson is under way
+  } else if (cue === 'toric') {
+    v.slide = 'toric';
+  } else if (cue === 'lal') {
+    v.slide = 'lal'; v.category = 'monofocal';
+  } else if (cue === 'ic8') {
+    v.slide = 'ic8'; v.category = 'edof';
   }
-  return base;
+  return v;
 }
-// Fallback hint from an agent line (only used when no recent tool hint).
-function visualHintFromLine(state, lower, now, lastHint) {
-  if (!state) return null;
-  if (lastHint && lastHint.source === 'tool' && lastHint.stage === state.current_stage && (now - lastHint.at) < VISUAL_TOOL_PRIORITY_MS) return null;
-  const stage = state.current_stage;
-  if (stage === 'foundations') {
-    const frame = foundationsFrameInText(lower);
-    return frame ? { stage, frame, at: now, source: 'words' } : null;
-  }
-  if (stage === 'lens_options') {
-    const zones = lensZonesInText(lower);
-    if (!zones.length) return null;
-    const allowed = state.current_track ? (TRACK_ZONES[state.current_track] || []) : LENS_ZONES;
-    if (!zones.some(z => allowed.includes(z))) return null; // other-track mention: keep the view
-    return { stage, zones, at: now, source: 'words' };
-  }
-  return null;
+// Pure: a new stage always starts on its main image.
+function visualForStage(stage) { return { stage, slide: null, category: null, toolAt: 0 }; }
+// Pure: a track opening (exact track-entry sentence or record_track_switch).
+function visualForTrack(state, track) {
+  if (state.stage !== 'lens_options') return state;
+  if (track === 'C') return { ...state, slide: null, category: 'monofocal' };
+  if (track === 'B') return { ...state, slide: 'toric' };
+  if (track === 'A') return { ...state, slide: null, category: null }; // EDOF or multifocal lights when named
+  return state;
 }
-// set_visual tool values -> hint (design: see Stage-Visual-Map-v1.md).
-const SET_VISUAL_VALUES = {
-  welcome: { frame: 'welcome' }, cataract: { frame: 'cataract' }, focal_points: { frame: 'focal_points' },
-  astigmatism: { frame: 'astigmatism' }, daily_life: { frame: 'daily_life' }, lens_overview: { zones: LENS_ZONES },
-  monofocal: { zones: ['monofocal'] }, toric: { zones: ['toric'] }, edof: { zones: ['edof'] },
-  multifocal: { zones: ['multifocal'] }, readiness: { frame: 'readiness' }, summary: { frame: 'summary' },
-};
-function visualHintFromTool(state, visual, now) {
-  const v = SET_VISUAL_VALUES[visual];
-  if (!state || !v) return null;
-  return { stage: state.current_stage, ...v, at: now, source: 'tool' };
+// set_visual tool values (design; not on the agent). Returns null if not for this stage.
+function visualFromTool(state, visual) {
+  if (visual === STAGE_MAIN[state.stage] || (visual === 'lens_overview' && state.stage === 'lens_options')) return { ...state, slide: null, category: null };
+  const allowed = (STAGE_SLIDES[state.stage] || []).concat(state.stage === 'lens_options' ? LENS_CATEGORIES : []);
+  if (!allowed.includes(visual)) return null;
+  return visualApplyCue(state, visual, 'tool');
 }
+function visualFrameOf(state) { return state.slide || STAGE_MAIN[state.stage] || 'welcome'; }
 
+function ciqVisualClearCues() { visualCueTimers.forEach(clearTimeout); visualCueTimers = []; }
 function ciqVisualRender() {
-  if (!VISUALS_ENABLED || !convoState) return;
-  const v = resolveVisual(convoState, visualState.hint, Date.now());
-  const same = v.stage === visualState.stage && v.frame === visualState.frame && v.zones.join() === visualState.zones.join();
-  visualState = { ...visualState, stage: v.stage, frame: v.frame, zones: v.zones };
+  if (!VISUALS_ENABLED) return;
   const panel = document.getElementById('visual-panel');
   if (!panel) return;
-  panel.dataset.stage = v.stage;
-  panel.dataset.frame = v.frame;
-  if (same && panel.dataset.ready === '1') return;
-  panel.dataset.ready = '1';
+  const v = visualState;
+  const frame = visualFrameOf(v);
+  const key = frame + '|' + (v.category || '');
+  panel.dataset.stage = v.stage || '';
+  panel.dataset.frame = frame;
+  panel.dataset.category = v.category || '';
+  if (panel.dataset.key === key) return;
+  panel.dataset.key = key;
   const img = document.getElementById('visual-img');
   const map = document.getElementById('lens-map');
   const cap = document.getElementById('visual-caption');
-  if (v.frame === 'lens_map') {
+  const kick = document.getElementById('visual-kicker');
+  const isMap = frame === 'lens_map' || frame === 'toric';
+  if (isMap) {
     img.hidden = true;
-    map.removeAttribute('hidden'); // SVG elements have no .hidden property
-    map.dataset.zones = v.zones.join(' ');
-    map.classList.toggle('has-focus', v.zones.length > 0);
-    map.querySelectorAll('.lz').forEach(g => g.classList.toggle('is-on', v.zones.includes(g.dataset.zone)));
-    cap.textContent = !v.zones.length ? LENS_CAPTIONS.overview
-      : v.zones.length === 1 ? LENS_CAPTIONS[v.zones[0]]
-      : (v.zones.join() === 'edof,multifocal' ? LENS_CAPTIONS.advanced : LENS_CAPTIONS.overview);
+    map.hidden = false;
+    map.classList.toggle('toric-on', frame === 'toric');
+    map.classList.toggle('has-focus', !!v.category);
+    map.querySelectorAll('.lz').forEach(g => g.classList.toggle('is-on', g.dataset.zone === v.category));
+    kick.textContent = frame === 'toric' ? 'Add-on: Toric, for astigmatism' : '';
+    cap.textContent = frame === 'toric' ? LENS_CAPTIONS.toric : LENS_CAPTIONS[v.category || 'overview'];
   } else {
-    const meta = VISUAL_IMAGES[v.frame] || VISUAL_IMAGES.welcome;
-    map.setAttribute('hidden', '');
+    const meta = VISUAL_IMAGES[frame] || VISUAL_IMAGES.welcome;
+    map.hidden = true;
     img.hidden = false;
     if (img.getAttribute('src') !== meta.src) img.setAttribute('src', meta.src);
     img.alt = meta.alt;
+    kick.textContent = meta.kicker || '';
     cap.textContent = meta.caption;
   }
   panel.classList.remove('vis-swap'); void panel.offsetWidth; panel.classList.add('vis-swap');
 }
 // Called from renderRoadmap() on every stage/tier change, connect and resume.
 function ciqVisualSync() {
-  if (visualState.hint && convoState && visualState.hint.stage !== convoState.current_stage) visualState.hint = null;
+  if (!VISUALS_ENABLED || !convoState) return;
+  if (visualState.stage !== convoState.current_stage) {
+    ciqVisualClearCues();
+    visualState = visualForStage(convoState.current_stage);
+  }
   ciqVisualRender();
 }
 function ciqVisualOnAgentLine(lower) {
   if (!VISUALS_ENABLED || !convoState) return;
-  const h = visualHintFromLine(convoState, lower, Date.now(), visualState.hint);
-  if (h) visualState.hint = h;
-  ciqVisualRender();
+  ciqVisualClearCues(); // a new line replaces any cues still pending from the last one
+  if (Date.now() - visualState.toolAt < VISUAL_TOOL_PRIORITY_MS) return; // a recent set_visual call wins
+  const stage = visualState.stage;
+  for (const step of visualCuePlan(stage, lower)) {
+    const run = () => {
+      if (!convoState || visualState.stage !== stage) return; // stage moved on: drop it
+      visualState = visualApplyCue(visualState, step.cue, convoState.current_track);
+      ciqVisualRender();
+    };
+    if (step.delayMs <= 0) run(); else visualCueTimers.push(setTimeout(run, step.delayMs));
+  }
 }
 function ciqVisualOnTrack() {
   if (!VISUALS_ENABLED || !convoState) return;
-  visualState.hint = null; // a new track starts from its own zones
+  ciqVisualClearCues();
+  visualState = visualForTrack(visualState, convoState.current_track);
   ciqVisualRender();
-}
-function visualHintValid(state, h) {
-  if (!state || !h) return false;
-  const stage = state.current_stage;
-  if (h.frame) return (STAGE_FRAMES[stage] || []).includes(h.frame);
-  if (h.zones) {
-    if (stage !== 'lens_options') return false;
-    if (h.zones.length >= 3 || !state.current_track) return true;
-    return h.zones.some(z => (TRACK_ZONES[state.current_track] || []).includes(z));
-  }
-  return false;
 }
 function ciqVisualFromTool(visual) {
   if (!VISUALS_ENABLED || !convoState) return 'ignored';
-  const h = visualHintFromTool(convoState, visual, Date.now());
-  if (!h) return 'unknown_visual';
-  if (!visualHintValid(convoState, h)) return 'not_for_this_stage';
-  visualState.hint = h;
+  const v = visualFromTool(visualState, visual);
+  if (!v) return 'not_for_this_stage';
+  ciqVisualClearCues();
+  visualState = { ...v, toolAt: Date.now() };
   ciqVisualRender();
   return 'shown';
 }
-// set_stage tool (design; not on the agent yet): the agent may only ask for
-// the current stage or the single next one. The app decides; anything else is
-// refused, so a tool call can never skip or rewind the stage.
-const SET_STAGE_VALUES = ['foundations', 'vision_goals', 'tier_gate', 'lens_options', 'readiness', 'summary'];
-function stageRequestDecision(state, stage) {
-  if (!state || !SET_STAGE_VALUES.includes(stage)) return 'unknown_stage';
-  if (stage === state.current_stage) return 'already_there';
-  return nextStageFor(state) === stage ? 'apply' : 'refused';
-}
-// Hint expiry: quietly return to the base view (no flicker if unchanged).
-setInterval(() => { if (visualState.hint && convoState) ciqVisualRender(); }, 15000);
 
-// Words panel: hidden by default; the person's choice is kept in this browser.
+// Words panel: always starts hidden in every session (nothing is remembered).
 function ciqWordsOpen() { return document.getElementById('app').dataset.words === 'open'; }
-function ciqSetWords(open, remember) {
+function ciqSetWords(open) {
   const app = document.getElementById('app');
   app.dataset.words = open ? 'open' : 'closed';
   const btn = document.getElementById('words-toggle');
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   document.getElementById('words-toggle-label').textContent = open ? 'Hide words' : 'Show words';
   if (open) { const w = document.getElementById('transcript-wrap'); w.scrollTop = w.scrollHeight; }
-  if (remember) { try { const s = ciqStorage('localStorage'); if (s) s.setItem('ciq_words_open', open ? '1' : '0'); } catch (e) {} }
 }
 (function initVisuals() {
   const app = document.getElementById('app');
   if (!VISUALS_ENABLED) { app.classList.remove('ciq-visuals'); return; }
   app.classList.add('ciq-visuals');
-  let open = false;
-  try { const s = ciqStorage('localStorage'); open = !!(s && s.getItem('ciq_words_open') === '1'); } catch (e) {}
-  ciqSetWords(open, false);
-  document.getElementById('words-toggle').addEventListener('click', () => ciqSetWords(!ciqWordsOpen(), true));
+  ciqSetWords(false);
+  document.getElementById('words-toggle').addEventListener('click', () => ciqSetWords(!ciqWordsOpen()));
 })();
-// ── session-visuals-v1 END ───────────────────────────────────────────────────
+// ── session-visuals-v2 END ───────────────────────────────────────────────────
 
 // ── Tap-next v1: soft timer + wrap-up nudges ───────────────────────────────
 // Goal ~30 min; the timer never ends the call. At 30/35/40 min the agent is
@@ -2185,7 +2196,7 @@ function renderRoadmap() {
       container.appendChild(con);
     }
   });
-  ciqVisualSync(); // session-visuals-v1
+  ciqVisualSync(); // session-visuals-v2
 }
 
 let conversation   = null;
@@ -2392,11 +2403,11 @@ function addTranscriptLine(role, text) {
         }
         touchState();
         sendTelemetry();
-        ciqVisualOnTrack(); // session-visuals-v1
+        ciqVisualOnTrack(); // session-visuals-v2
         break;
       }
     }
-    ciqVisualOnAgentLine(lower); // session-visuals-v1: fallback word hint
+    ciqVisualOnAgentLine(lower); // session-visuals-v2: slides and lens category inside the stage
     // Tap-next v1: highlight the Next button when the agent invites it.
     if (/\btap next\b|\bsay next\b|\bsay "next"/.test(lower)) {
       nextInvited = true;
@@ -3147,7 +3158,7 @@ async function startConversation(opts) {
           if (!convoState.tracks_visited.includes(to_track)) convoState.tracks_visited.push(to_track);
           touchState();
           sendTelemetry();
-          ciqVisualOnTrack(); // session-visuals-v1
+          ciqVisualOnTrack(); // session-visuals-v2
           return 'recorded';
         },
 
@@ -3158,16 +3169,10 @@ async function startConversation(opts) {
           return 'recorded';
         },
 
-        // session-visuals-v1 (design): set_visual shows a picture or lens-map
-        // zone that belongs to the current stage; set_stage asks the app to
-        // open the current or next stage. The app decides both. Not yet
-        // registered on the agent, so today these are never called.
+        // session-visuals-v2 (design): set_visual shows a slide or lens
+        // category that belongs to the current stage. It can never change
+        // the stage. Not registered on the agent, so today it is never called.
         set_visual: async ({ visual }) => ciqVisualFromTool(visual),
-        set_stage: async ({ stage }) => {
-          const d = stageRequestDecision(convoState, stage);
-          if (d === 'apply') { nextInvited = false; applyStageTransition(stage); return 'opened'; }
-          return d;
-        },
 
         record_preferred_track: async ({ track: t }) => {
           convoState.preferred_track = t;

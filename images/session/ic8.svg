@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
+<title id="t">Small-aperture lens (IC-8): part of the EDOF family</title>
+<desc id="d">A lens implant with a dark ring and a small clear opening in the center, used in one eye to lengthen that eye's range of focus. A tag points back to the extended range (EDOF) category.</desc>
+<defs>
+  <radialGradient id="optic" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#EAF3F1"/><stop offset="1" stop-color="#C9DDD6"/></radialGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1F3D2C" flood-opacity=".10"/></filter>
+</defs>
+<rect width="720" height="480" fill="#F7F2E9"/>
+<g font-family="Inter,system-ui,sans-serif">
+  <rect x="24" y="24" width="672" height="432" rx="28" fill="#FFFDF9" filter="url(#shadow)"/>
+  <g transform="translate(220,240)">
+    <path d="M-8,-78 C36,-100 62,-130 48,-156" fill="none" stroke="#4f6b58" stroke-width="4" stroke-linecap="round"/>
+    <path d="M8,78 C-36,100 -62,130 -48,156" fill="none" stroke="#4f6b58" stroke-width="4" stroke-linecap="round"/>
+    <circle r="80" fill="url(#optic)" stroke="#1F3D2C" stroke-width="2.6"/>
+    <circle r="40" fill="none" stroke="#1F2621" stroke-width="34" opacity=".88"/>
+    <circle r="22" fill="none" stroke="#4f6b58" stroke-width="1.5" opacity=".6"/>
+    <ellipse cx="-34" cy="-62" rx="12" ry="6" fill="#fff" opacity=".85"/><ellipse cx="-6" cy="-8" rx="7" ry="4" fill="#fff" opacity=".8"/>
+  </g>
+  <text x="396" y="170" font-size="36" font-weight="600" fill="#1F3D2C">Small-aperture</text>
+  <text x="396" y="218" font-size="36" font-weight="600" fill="#1F3D2C">lens (IC-8)</text>
+  <g transform="translate(396,262)">
+    <rect width="240" height="64" rx="32" fill="#DCE6D7"/>
+    <circle cx="34" cy="32" r="16" fill="#FFFDF9" stroke="#1F3D2C" stroke-width="2"/><circle cx="34" cy="32" r="6" fill="none" stroke="#4f6b58" stroke-width="1.5"/>
+    <text x="62" y="28" font-size="15" font-weight="600" letter-spacing="1.5" fill="#4f6b58">HOME CATEGORY</text>
+    <text x="62" y="51" font-size="22" font-weight="600" fill="#1F3D2C">EDOF</text>
+  </g>
+</g>
+</svg>

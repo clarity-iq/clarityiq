@@ -1,63 +1,56 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
-<title id="t">Your day at every distance</title>
-<desc id="d">Everyday activities arranged from near to far: reading a label, using a phone or tablet, a computer or cooking at arm's length, hobbies like cards or golf, and driving at night.</desc>
+<title id="t">Your day, near to far</title>
+<desc id="d">Three scenes: near, with a book, a phone and a medication label; arm's length, with a laptop and cooking on a stove; far, with a road at night with headlights and a golf flag.</desc>
 <defs>
   <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1F3D2C" flood-opacity=".10"/></filter>
+  <linearGradient id="night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1F3D2C"/><stop offset="1" stop-color="#36574A"/></linearGradient>
+  <radialGradient id="beam" cx="50%" cy="0%" r="100%"><stop offset="0" stop-color="#FFF6D8" stop-opacity=".55"/><stop offset="1" stop-color="#FFF6D8" stop-opacity="0"/></radialGradient>
+  <clipPath id="c3"><rect x="0" y="0" width="216" height="300" rx="24"/></clipPath>
 </defs>
 <rect width="720" height="480" fill="#F7F2E9"/>
 <g font-family="Inter,system-ui,sans-serif" text-anchor="middle">
-  <path d="M60,388 L660,388" stroke="#c9d8c3" stroke-width="6" stroke-linecap="round"/>
-  <text x="120" y="426" font-size="16" font-weight="600" fill="#1F3D2C">Near</text>
-  <text x="360" y="426" font-size="16" font-weight="600" fill="#1F3D2C">Arm's length</text>
-  <text x="600" y="426" font-size="16" font-weight="600" fill="#1F3D2C">Far</text>
-  <g fill="#1F3D2C"><circle cx="120" cy="388" r="8"/><circle cx="360" cy="388" r="8"/><circle cx="600" cy="388" r="8"/></g>
-
-  <!-- reading a label (near) -->
-  <g transform="translate(70,60)">
-    <rect width="100" height="120" rx="20" fill="#FFFDF9" filter="url(#shadow)"/>
-    <rect x="34" y="24" width="32" height="58" rx="6" fill="#F5E4D8" stroke="#9E4526" stroke-width="2"/>
-    <rect x="30" y="18" width="40" height="10" rx="3" fill="#9E4526" opacity=".8"/>
-    <path d="M40,46 h20 M40,56 h20 M40,66 h14" stroke="#9E4526" stroke-width="1.5" opacity=".6"/>
-    <text x="50" y="106" font-size="13" fill="#3d463f">Labels, menus</text>
+  <!-- NEAR -->
+  <g transform="translate(14,24)">
+    <rect width="216" height="300" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
+    <path d="M28,206 Q68,186 108,206 L108,270 Q68,252 28,270Z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2.2"/>
+    <path d="M108,206 Q148,186 188,206 L188,270 Q148,252 108,270Z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2.2"/>
+    <g stroke="#9E4526" stroke-width="1.6" opacity=".55"><path d="M42,218 h52 M42,230 h52 M42,242 h40 M122,218 h52 M122,230 h52 M122,242 h44"/></g>
+    <rect x="120" y="58" width="58" height="104" rx="12" fill="#fff" stroke="#1F3D2C" stroke-width="2.4"/>
+    <rect x="128" y="72" width="42" height="70" rx="4" fill="#DCE6D7"/>
+    <rect x="42" y="84" width="52" height="88" rx="8" fill="#F5E4D8" stroke="#9E4526" stroke-width="2.2"/>
+    <rect x="36" y="70" width="64" height="20" rx="5" fill="#9E4526"/>
+    <path d="M52,112 h32 M52,126 h32 M52,140 h22" stroke="#9E4526" stroke-width="2" opacity=".6"/>
   </g>
-  <!-- phone / tablet (near) -->
-  <g transform="translate(80,210)">
-    <rect width="100" height="120" rx="20" fill="#FFFDF9" filter="url(#shadow)"/>
-    <rect x="22" y="20" width="44" height="62" rx="6" fill="#fff" stroke="#1F3D2C" stroke-width="2"/>
-    <rect x="56" y="38" width="24" height="44" rx="5" fill="#DCE6D7" stroke="#1F3D2C" stroke-width="2"/>
-    <text x="50" y="106" font-size="13" fill="#3d463f">Phone, tablet</text>
+  <!-- ARM'S LENGTH -->
+  <g transform="translate(252,24)">
+    <rect width="216" height="300" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
+    <rect x="40" y="52" width="136" height="88" rx="8" fill="#DCE6D7" stroke="#1F3D2C" stroke-width="2.4"/>
+    <path d="M58,76 h70 M58,92 h96 M58,108 h56" stroke="#4f6b58" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+    <path d="M24,146 h168 l-12,14 h-144z" fill="#fff" stroke="#1F3D2C" stroke-width="2.4"/>
+    <rect x="28" y="236" width="160" height="10" rx="5" fill="#BFAE92"/>
+    <path d="M62,198 h88 v26 q0,12 -12,12 h-64 q-12,0 -12,-12z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2.2"/>
+    <path d="M52,198 h108" stroke="#9E4526" stroke-width="4" stroke-linecap="round"/>
+    <path d="M90,186 q6,-9 0,-18 M106,186 q6,-9 0,-18 M122,186 q6,-9 0,-18" fill="none" stroke="#9E4526" stroke-width="2" opacity=".55"/>
   </g>
-  <!-- computer (arm's length) -->
-  <g transform="translate(250,70)">
-    <rect width="104" height="120" rx="20" fill="#FFFDF9" filter="url(#shadow)"/>
-    <rect x="20" y="22" width="64" height="44" rx="4" fill="#DCE6D7" stroke="#1F3D2C" stroke-width="2"/>
-    <path d="M44,66 v10 M32,80 h40" stroke="#1F3D2C" stroke-width="2.5" stroke-linecap="round"/>
-    <text x="52" y="106" font-size="13" fill="#3d463f">Computer</text>
+  <!-- FAR -->
+  <g transform="translate(490,24)">
+    <g clip-path="url(#c3)">
+      <rect width="216" height="300" fill="url(#night)"/>
+      <path d="M0,150 Q60,128 108,138 T216,132 V300 H0Z" fill="#2C4A3B"/>
+      <path d="M30,300 L98,146 L118,146 L186,300Z" fill="#4C665A"/>
+      <path d="M108,156 v12 M108,184 v16 M108,218 v22 M108,258 v30" stroke="#F7F2E9" stroke-width="3" opacity=".65"/>
+      <path d="M60,300 L100,160 L116,160 L156,300Z" fill="url(#beam)"/>
+      <circle cx="100" cy="158" r="5" fill="#FFF6D8"/><circle cx="116" cy="158" r="5" fill="#FFF6D8"/>
+      <circle cx="100" cy="158" r="14" fill="#FFF6D8" opacity=".2"/><circle cx="116" cy="158" r="14" fill="#FFF6D8" opacity=".2"/>
+      <path d="M170,140 V96" stroke="#F7F2E9" stroke-width="2.5"/><path d="M170,96 l22,8 -22,8z" fill="#E4A595"/>
+      <circle cx="44" cy="56" r="16" fill="#F7F2E9" opacity=".85"/><circle cx="52" cy="50" r="14" fill="url(#night)"/>
+    </g>
+    <rect width="216" height="300" rx="24" fill="none" filter="url(#shadow)"/>
   </g>
-  <!-- cooking (arm's length) -->
-  <g transform="translate(366,200)">
-    <rect width="104" height="120" rx="20" fill="#FFFDF9" filter="url(#shadow)"/>
-    <path d="M30,46 h44 v26 q0,10 -10,10 h-24 q-10,0 -10,-10z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2"/>
-    <path d="M24,46 h56" stroke="#9E4526" stroke-width="3" stroke-linecap="round"/>
-    <path d="M44,36 q5,-7 0,-14 M58,36 q5,-7 0,-14" fill="none" stroke="#9E4526" stroke-width="1.6" opacity=".6"/>
-    <text x="52" y="106" font-size="13" fill="#3d463f">Cooking</text>
-  </g>
-  <!-- hobbies: cards / golf -->
-  <g transform="translate(486,64)">
-    <rect width="100" height="120" rx="20" fill="#FFFDF9" filter="url(#shadow)"/>
-    <rect x="22" y="24" width="30" height="44" rx="4" fill="#fff" stroke="#1F3D2C" stroke-width="2" transform="rotate(-10 37 46)"/>
-    <rect x="44" y="24" width="30" height="44" rx="4" fill="#fff" stroke="#9E4526" stroke-width="2" transform="rotate(10 59 46)"/>
-    <path d="M59,40 l5,7 -5,7 -5,-7z" fill="#9E4526"/>
-    <text x="50" y="106" font-size="13" fill="#3d463f">Hobbies</text>
-  </g>
-  <!-- night driving (far) -->
-  <g transform="translate(560,200)">
-    <rect width="120" height="120" rx="20" fill="#1F3D2C" filter="url(#shadow)"/>
-    <path d="M24,84 L52,34 L68,34 L96,84Z" fill="#3C5A47"/>
-    <path d="M60,40 v8 M60,56 v10 M60,72 v10" stroke="#F7F2E9" stroke-width="2.5" opacity=".7"/>
-    <circle cx="48" cy="40" r="6" fill="#FFF6D8"/><circle cx="72" cy="40" r="6" fill="#FFF6D8"/>
-    <circle cx="48" cy="40" r="14" fill="#FFF6D8" opacity=".18"/><circle cx="72" cy="40" r="14" fill="#FFF6D8" opacity=".18"/>
-    <text x="60" y="106" font-size="13" fill="#F7F2E9">Night driving</text>
-  </g>
+  <!-- axis -->
+  <path d="M40,370 L680,370" stroke="#c9d8c3" stroke-width="7" stroke-linecap="round"/>
+  <g fill="#1F3D2C"><circle cx="122" cy="370" r="10"/><circle cx="360" cy="370" r="10"/><circle cx="598" cy="370" r="10"/></g>
+  <g font-size="32" font-weight="600" fill="#1F3D2C"><text x="122" y="420">Near</text><text x="360" y="420">Arm's length</text><text x="598" y="420">Far</text></g>
+  <g font-size="22" fill="#3d463f"><text x="122" y="452">Reading, phone</text><text x="360" y="452">Screens, cooking</text><text x="598" y="452">Driving, hobbies</text></g>
 </g>
 </svg>
