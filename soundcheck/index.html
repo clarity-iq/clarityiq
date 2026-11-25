@@ -106,7 +106,10 @@ var TESTS = [
   {id:'4e', s:4, name:'Mic test 4E', sub:'Noise filter only, 4 s', fn:oneFilter({echoCancellation:false, noiseSuppression:true, autoGainControl:false})},
   {id:'4f', s:4, name:'Mic test 4F', sub:'Auto volume only, 4 s', fn:oneFilter({echoCancellation:false, noiseSuppression:false, autoGainControl:true})},
   {id:'4g', s:4, name:'Mic test 4G', sub:'Same capture as the voice library, 4 s', fn:function(t,ui,n){ return sdkReplica(t,ui,n,false); }},
-  {id:'4h', s:4, name:'Mic test 4H', sub:'Like the app: pre-check mic left open + 4G, 4 s', fn:function(t,ui,n){ return sdkReplica(t,ui,n,true); }}
+  {id:'4h', s:4, name:'Mic test 4H', sub:'Like the app: pre-check mic left open + 4G, 4 s', fn:function(t,ui,n){ return sdkReplica(t,ui,n,true); }},
+  // v3 (mic-ec-optin-v1): full two-way replica of a voice session, talk AND listen
+  {id:'4i', s:4, name:'Session test 4I', sub:'Like a session today: talk while it beeps, 5 s', fn:function(t,ui,n){ return sessionReplica(t,ui,n,'default'); }, yes:'Beeps + bar', no:'Missing one'},
+  {id:'4j', s:4, name:'Session test 4J', sub:'Same with the fix (echo cancel only), 5 s', fn:function(t,ui,n){ return sessionReplica(t,ui,n,'ec'); }, yes:'Beeps + bar', no:'Missing one'}
 ];
 TESTS.forEach(function(t){ if(t.s===4){ t.mic=null; t.play=null; if(t.meter===undefined) t.meter=true; if(!t.yes){ t.yes='Bar moved'; t.no="Didn't move"; } } });
 // result values: 0 not run, 1 heard / moved, 2 did not hear / did not move, 3 could not start
@@ -376,6 +379,55 @@ async function sdkReplica(t, ui, note, precheck){
   ui.status.textContent='Done. Levels: voice library '+lvl(w.peak)+', Web Audio '+lvl(m.peak)+'. Did the bar move?';
 }
 
+// 4I/4J: both halves of an @elevenlabs/client 1.37.1 websocket session, as the app runs it:
+// pre-check mic held open, then INPUT (16 kHz ctx, raw worklet, SDK mic constraints) and
+// OUTPUT (16 kHz ctx -> gain -> MediaStreamDestination -> hidden <audio>) created in parallel,
+// like the SDK's Promise.all. Beeps play through the output while the person talks.
+// mode 'ec' applies the mic-ec-optin-v1 constraints (EC on, NS/AGC off) to both mic opens.
+function ciqScCons(base, mode){
+  if(mode!=='ec') return base;
+  var c = (base && typeof base==='object') ? Object.assign({}, base) : {};
+  c.echoCancellation=true; c.noiseSuppression=false; c.autoGainControl=false; return c;
+}
+async function sessionReplica(t, ui, note, mode){
+  ui.status.textContent='Turning the mic on…';
+  var ps=await gum({audio:ciqScCons(true, mode)}); note.push(mode+' precheck '+trackInfo(ps.getAudioTracks()[0]));
+  var sup=!!navigator.mediaDevices.getSupportedConstraints().sampleRate;
+  var w={peak:0, frames:0, zero:true, msgs:0}, inCtx, outCtx, el, an, tr;
+  var input=(async function(){
+    inCtx=newCtx(sup ? {sampleRate:16000} : null);
+    an=inCtx.createAnalyser();
+    var url=URL.createObjectURL(new Blob([WORKLET], {type:'application/javascript'})); live.urls.push(url);
+    await inCtx.audioWorklet.addModule(url);
+    var node=new AudioWorkletNode(inCtx, 'sc-raw');
+    var s=await gum({audio:ciqScCons({voiceIsolation:true, sampleRate:{ideal:16000}, echoCancellation:true, noiseSuppression:true, autoGainControl:true, channelCount:{ideal:1}}, mode)});
+    tr=s.getAudioTracks()[0];
+    var src=inCtx.createMediaStreamSource(s); src.connect(an); an.connect(node);
+    node.port.onmessage=function(e){ var d=e.data; w.msgs++; if(d.pk>w.peak) w.peak=d.pk; w.frames+=d.n; if(!d.z) w.zero=false; };
+    await inCtx.resume();
+  })();
+  var output=(async function(){
+    outCtx=newCtx({sampleRate:16000});
+    var g=outCtx.createGain(), d=outCtx.createMediaStreamDestination();
+    el=new Audio(); live.audios.push(el); el.autoplay=true; el.style.display='none'; document.body.appendChild(el);
+    el.srcObject=d.stream; g.connect(d);
+    await outCtx.resume();
+    return g;
+  })();
+  var res=await Promise.all([input, output]), outGain=res[1];
+  note.push('sdk '+trackInfo(tr));
+  var m=tapLevel(inCtx, an, ui.bar);
+  ui.status.textContent='Talk now; you should also hear three beeps…';
+  await wait(1000);
+  var outAt=ctxDesc(outCtx);
+  scheduleBeeps(outCtx, outGain); try{ await el.play(); }catch(e){ note.push('el.play '+(e&&e.name)); }
+  await wait(4000); m.stop();
+  note.push('in ctx '+ctxDesc(inCtx)+' worklet peak '+pk(w.peak, w.zero && w.frames>0)+' '+w.frames+'fr');
+  note.push('out ctx at beeps '+outAt+' end '+ctxDesc(outCtx));
+  note.push('analyser peak '+pk(m.peak, m.zero));
+  ui.status.textContent='Done. Voice library level '+lvl(w.peak)+'. Did you hear the beeps AND see the bar move?';
+}
+
 async function run(t, ui){
   if(busy) return; busy=true; cleanup(); setAll(true);
   ui.status.className='status'; ui.status.textContent='Starting…';
@@ -435,7 +487,7 @@ function browserCode(){
   var p = /Android/.test(ua)?'A' : /iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)?'I' : 'D';
   return b+p;
 }
-// v2 code: <browser><platform>-<5 chars: tests 1A-3G, same as v1>-<4 chars: tests 4A-4H>
+// v2 code: <browser><platform>-<5 chars: tests 1A-3G, same as v1>-<4 chars: tests 4A-4J (4^10 fits in 4 base36 chars)>
 function encode(list, len){
   var n=0; list.forEach(function(t){ n=n*4+R[t.id]; });
   var s=n.toString(36).toUpperCase(); while(s.length<len) s='0'+s; return s;
@@ -449,7 +501,7 @@ function update(){
 }
 async function collectInfo(){
   var L=[];
-  L.push('ClarityIQ sound check v2 · '+new Date().toISOString());
+  L.push('ClarityIQ sound check v3 · '+new Date().toISOString());
   L.push('UA: '+navigator.userAgent);
   try{ var c=new AC(); L.push('AudioContext (no tap): '+ctxDesc(c)); c.close(); }catch(e){ L.push('AudioContext: '+(e&&e.name)); }
   try{ var devs=await navigator.mediaDevices.enumerateDevices();

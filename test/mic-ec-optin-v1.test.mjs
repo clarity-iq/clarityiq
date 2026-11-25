@@ -58,3 +58,11 @@ test('only one change vs main: no audio-wake/held-mic code', () => {
   assert.equal(src.includes('ciqRequestEcSwitch'), false);
   assert.equal(src.includes('ciqHeldMic'), false);
 });
+
+test('soundcheck v3 has the two-way session tests 4I (default) and 4J (ec only)', () => {
+  const sc = readFileSync(join(dirname(indexPath), 'soundcheck/index.html'), 'utf8');
+  assert.match(sc, /id:'4i'.*sessionReplica\(t,ui,n,'default'\)/);
+  assert.match(sc, /id:'4j'.*sessionReplica\(t,ui,n,'ec'\)/);
+  assert.match(sc, /c\.echoCancellation=true; c\.noiseSuppression=false; c\.autoGainControl=false/);
+  assert.ok(4 ** 10 - 1 < 36 ** 4, 'section-4 code still fits in 4 chars');
+});
