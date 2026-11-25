@@ -222,7 +222,7 @@ test('words panel always starts hidden; nothing remembered', () => {
 test('visual copy follows the wording rules and monofocal omits halo/glare claim', () => {
   assert.doesNotMatch(V.VISUALS_MANIFEST.categories.monofocal.caption, /halo|glare/i);
   const svgs = Object.values(V.VISUALS_MANIFEST.slides)
-    .filter(s => s.src)
+    .filter(s => s.src && /\.(svg|html|txt)$/i.test(s.src))
     .map(m => readFileSync(join(root, m.src), 'utf8'))
     .join('\n');
   const mapStart = src.indexOf('<div id="lens-map"');
