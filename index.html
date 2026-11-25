@@ -569,7 +569,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 #lens-map .lz-toric{ display:none; fill:#1F3D2C; }
 #lens-map .lz-axis{ stroke:#9E4526; stroke-width:2; stroke-dasharray:4 5; }
 #lens-map.toric-on .lz-toric{ display:inline; }
-#lens-map.toric-on .lz-card{ fill:#FBF1EA; }
+#lens-map.toric-on .lz-card{ fill:#FBF1EA; stroke:#B85D3B; }
 #lens-map .lz-span{ stroke:#c9d8c3; stroke-width:12; stroke-linecap:round; }
 #lens-map .lz-dot{ fill:#FFFDF9; stroke:#c9d8c3; stroke-width:2.5; }
 #lens-map .lz-dot.on{ fill:#1F3D2C; stroke:#1F3D2C; }
@@ -577,7 +577,6 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 #lens-map.has-focus .lz{ opacity:.32; }
 #lens-map.has-focus .lz.is-on{ opacity:1; }
 #lens-map .lz.is-on .lz-card{ fill:#F2F6EF; stroke:#1F3D2C; }
-#lens-map.toric-on .lz.is-on .lz-card{ fill:#F8E9DE; stroke:#9E4526; }
 /* orb row: small orb, status, words toggle */
 #app.ciq-visuals:has(#roadmap:not(:empty)) #orb{ grid-area:orb; width:44px; height:44px; margin:0 0 0 4px; align-self:center; }
 #app.ciq-visuals:has(#roadmap:not(:empty)) #orb svg{ width:16px; height:16px; }
@@ -1888,69 +1887,178 @@ function isSpokenNext(text) {
 document.getElementById('next-btn').addEventListener('click', () => advanceByUser('tap'));
 
 // ── session-visuals-v2 BEGIN ─────────────────────────────────────────────────
-// In-session visuals (Martin, Nov 25):
-//  - Each stage has ONE main image. It changes only when the stage changes,
-//    and the stage moves on Next (button or spoken "next"). The agent's exact
-//    opening sentences still move the stage dot as before (for example when the
-//    person agrees to wrap up), so the image always matches the dots.
-//    Keywords never change the stage or the main image.
-//  - Inside a stage, words in the agent's line may pop up a secondary slide
-//    (Basics: focal points, astigmatism; Lens options: the toric add-on, LAL,
-//    IC-8) or light one lens category. Next always returns to the new stage's
-//    main image.
-//  - Lens options: 3 categories (monofocal incl. enhanced, EDOF, multifocal),
-//    one lit at a time, never an "advanced" group. Toric is a layer that works
-//    with any category, not a category.
+// In-session visuals (Martin, Nov 25, v3 manifest + Next-only stage control):
+//  - Stage changes ONLY by Next (button or spoken "next" via the existing
+//    mechanism). Agent stage-opening sentences never change the stage.
+//  - Each stage has ONE main image, reset when the stage moves on Next.
+//  - Secondary slides (focal_points, astigmatism, toric, lal, ic8) and stage
+//    images live in VISUALS_MANIFEST (JSON-serializable with enabled flags) so
+//    a future surgeon profile can switch slides on or off without touching code.
+//  - Lens options keeps Tracks A/B/C on the agent side while showing 3 equal
+//    categories (monofocal incl. enhanced, EDOF, multifocal), one lit at a
+//    time. Toric is an add-on layer with axis marks on all 3 lenses equally.
 // No network calls. Words (the transcript) always start hidden.
 const VISUALS_ENABLED = true;
+const STAGE_CHANGE_NEXT_ONLY = true;
 const VISUAL_CHARS_PER_SEC = 15;        // speech pace used to time cues inside one line
 const VISUAL_MAX_CUE_DELAY_MS = 25000;
 const VISUAL_TOOL_PRIORITY_MS = 45 * 1000;
 const LENS_CATEGORIES = ['monofocal', 'edof', 'multifocal'];
-const STAGE_MAIN = {
-  welcome: 'welcome', foundations: 'cataract', vision_goals: 'daily_life', tier_gate: 'daily_life',
-  lens_options: 'lens_map', readiness: 'readiness', summary: 'summary',
+
+// Modular manifest (JSON-safe): every stage image, secondary slide and lens
+// category with an `enabled` flag for future surgeon-profile overrides.
+const VISUALS_MANIFEST = {
+  version: 3,
+  stages: {
+    welcome:      { main: 'welcome',    enabled: true },
+    foundations:  { main: 'cataract',   enabled: true },
+    vision_goals: { main: 'daily_life', enabled: true },
+    tier_gate:    { main: 'daily_life', enabled: true },
+    lens_options: { main: 'lens_map',   enabled: true },
+    readiness:    { main: 'readiness',  enabled: true },
+    summary:      { main: 'summary',    enabled: true },
+  },
+  slides: {
+    welcome: {
+      stage: 'welcome', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/welcome.svg',
+      alt: 'A sketch of an eye beside conversation cards introducing the session.',
+      caption: 'Let\u2019s start with where you are today.',
+    },
+    cataract: {
+      stage: 'foundations', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/foundations-cataract.svg',
+      alt: 'Cross-section of the eye with a clouded natural lens, and a lens implant.',
+      caption: 'A cataract is a clouding of the eye\u2019s natural lens. Surgery replaces it with a clear lens implant, called an IOL.',
+    },
+    focal_points: {
+      stage: 'foundations', role: 'secondary', kind: 'image', enabled: true,
+      src: 'images/session/foundations-focal.svg',
+      alt: 'Near, arm\u2019s length and far, with everyday examples of each.',
+      caption: 'A focal point is a range where vision is clearest without glasses: near, arm\u2019s length or far.',
+      kicker: 'Focal points',
+      cuePattern: '\\bfocal points?\\b',
+    },
+    astigmatism: {
+      stage: 'foundations', role: 'secondary', kind: 'image', enabled: true,
+      src: 'images/session/foundations-astigmatism.svg',
+      alt: 'A round eye surface next to one that is not perfectly round.',
+      caption: 'Astigmatism: the eye\u2019s surface isn\u2019t perfectly round, so light doesn\u2019t focus evenly. Your surgeon factors this in.',
+      kicker: 'Astigmatism',
+      cuePattern: '\\bastigmatism\\b',
+    },
+    daily_life: {
+      stage: 'vision_goals', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/goals.svg',
+      alt: 'Everyday activities near, at arm\u2019s length and far.',
+      caption: 'Think about what you do up close, at arm\u2019s length and far away.',
+    },
+    lens_map: {
+      stage: 'lens_options', role: 'main', kind: 'map', enabled: true,
+      caption: 'Three lens categories. We\u2019ll take them one at a time. Which one is right for your eyes is a decision you make with your surgeon.',
+    },
+    toric: {
+      stage: 'lens_options', role: 'secondary', kind: 'map_overlay', enabled: true,
+      kicker: 'Add-on: Toric, for astigmatism',
+      caption: 'Toric is an add-on, not a separate type: a toric version of a lens also corrects astigmatism. Which versions are available depends on the lens and how much astigmatism you have, which your surgeon measures.',
+      cuePattern: '\\b(toric|astigmatism)\\b',
+    },
+    lal: {
+      stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
+      homeCategory: 'monofocal',
+      src: 'images/session/lal.svg',
+      alt: 'A lens implant under a soft beam of light, with a tag pointing back to monofocal.',
+      caption: 'Light Adjustable Lens: a monofocal lens whose power can be fine-tuned with light after the eye heals. The trade-off is extra office visits and UV-protective glasses until the adjustments are done.',
+      kicker: 'Part of: Monofocal',
+      cuePattern: '\\b(light adjustable|lal\\+?|rxsight)(?=\\W|$)',
+    },
+    ic8: {
+      stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
+      homeCategory: 'edof',
+      src: 'images/session/ic8.svg',
+      alt: 'A small-aperture lens implant, with a tag pointing back to EDOF.',
+      caption: 'IC-8: a small-aperture lens used in one eye to lengthen that eye\u2019s range, far through arm\u2019s length. Readers are common for small print. Your surgeon can tell you whether that approach is used for your eyes.',
+      kicker: 'Part of: EDOF',
+      cuePattern: '\\b(ic-8|ic 8|apthera|small[- ]aperture)\\b',
+    },
+    readiness: {
+      stage: 'readiness', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/readiness.svg',
+      alt: 'A checklist of questions for your surgeon and a recovery visit calendar.',
+      caption: 'Your questions for your surgeon, and what recovery usually looks like.',
+    },
+    summary: {
+      stage: 'summary', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/summary.svg',
+      alt: 'A summary page with what matters to you, what we covered and questions for your surgeon.',
+      caption: 'Next, your summary to bring to your surgeon.',
+    },
+  },
+  categories: {
+    monofocal: {
+      enabled: true,
+      caption: 'Monofocal: one focal point, usually set for far, with glasses for the other ranges. Enhanced monofocal lenses give a bit more arm\u2019s length.',
+      cuePattern: '\\b(monofocal|basic lens(es)?|single[- ]focal[- ]point|one focal point|standard lens|enhanced basic|clareon|tecnis 1|eyhance|envista aspire)\\b',
+    },
+    edof: {
+      enabled: true,
+      caption: 'EDOF (extended range): designed for far through arm\u2019s length. Readers are common for small print. Night halos are usually milder than with multifocal lenses.',
+      cuePattern: '\\b(edof|extended[- ]range|extended depth|extends? (your |the )?(range|vision)|vivity|puresee|symfony)\\b',
+    },
+    multifocal: {
+      enabled: true,
+      caption: 'Multifocal (full range): designed for far, arm\u2019s length and near. Halos or glare at night are more common, and some people notice lower contrast in dim light.',
+      cuePattern: '\\b(multifocal|trifocal|full[- ]range|fuller range|panoptix|synergy|odyssey|envy)\\b',
+    },
+  },
 };
-const STAGE_SLIDES = { foundations: ['focal_points', 'astigmatism'], lens_options: ['toric', 'lal', 'ic8'] };
-const VISUAL_IMAGES = {
-  welcome:     { src: 'images/session/welcome.svg', alt: 'An eye beside two speech bubbles.', caption: 'Let\u2019s start with where you are today.' },
-  cataract:    { src: 'images/session/foundations-cataract.svg', alt: 'Cross-section of the eye with a clouded natural lens, and a lens implant.', caption: 'A cataract is a clouding of the eye\u2019s natural lens. Surgery replaces it with a clear lens implant, called an IOL.' },
-  focal_points:{ src: 'images/session/foundations-focal.svg', alt: 'Near, arm\u2019s length and far, with everyday examples of each.', caption: 'A focal point is a range where vision is clearest without glasses: near, arm\u2019s length or far.', kicker: 'Focal points' },
-  astigmatism: { src: 'images/session/foundations-astigmatism.svg', alt: 'A round eye surface next to one that is not perfectly round.', caption: 'Astigmatism: the eye\u2019s surface isn\u2019t perfectly round, so light doesn\u2019t focus evenly. Your surgeon factors this in.', kicker: 'Astigmatism' },
-  daily_life:  { src: 'images/session/goals.svg', alt: 'Everyday activities near, at arm\u2019s length and far.', caption: 'Think about what you do up close, at arm\u2019s length and far away.' },
-  lal:         { src: 'images/session/lal.svg', alt: 'A lens implant under a soft beam of light, with a tag pointing back to monofocal.', caption: 'Light Adjustable Lens: a monofocal lens whose power can be fine-tuned with light after the eye heals. The trade-off is extra office visits and UV-protective glasses until the adjustments are done.', kicker: 'Part of: Monofocal' },
-  ic8:         { src: 'images/session/ic8.svg', alt: 'A small-aperture lens implant, with a tag pointing back to EDOF.', caption: 'IC-8: a small-aperture lens used in one eye to lengthen that eye\u2019s range, far through arm\u2019s length. Readers are common for small print. Your surgeon can tell you whether that approach is used for your eyes.', kicker: 'Part of: EDOF' },
-  readiness:   { src: 'images/session/readiness.svg', alt: 'A clipboard of questions for your surgeon and a recovery calendar.', caption: 'Your questions for your surgeon, and what recovery usually looks like.' },
-  summary:     { src: 'images/session/summary.svg', alt: 'A summary page with what matters to you, what we covered and questions for your surgeon.', caption: 'Next, your summary to bring to your surgeon.' },
-};
-const LENS_CAPTIONS = {
-  overview:   'Three lens categories. We\u2019ll take them one at a time. Which one is right for your eyes is a decision you make with your surgeon.',
-  monofocal:  'Monofocal: one focal point, usually set for far, with glasses for the other ranges. Enhanced monofocal lenses give a bit more arm\u2019s length. Usually the least halo or glare.',
-  edof:       'EDOF (extended range): designed for far through arm\u2019s length. Readers are common for small print. Night halos are usually milder than with multifocal lenses.',
-  multifocal: 'Multifocal (full range): designed for far, arm\u2019s length and near. Halos or glare at night are more common, and some people notice lower contrast in dim light.',
-  toric:      'Toric is an add-on, not a separate type: a toric version of a lens also corrects astigmatism. Which versions are available depends on the lens and how much astigmatism you have, which your surgeon measures.',
-};
-// Cue words (agent lines only; lowercased, straight apostrophes).
-const VISUAL_CUES = {
-  monofocal:   /\b(monofocal|basic lens(es)?|single[- ]focal[- ]point|one focal point|standard lens|enhanced basic|clareon|tecnis 1|eyhance|envista aspire)\b/g,
-  edof:        /\b(edof|extended[- ]range|extended depth|extends? (your |the )?(range|vision)|vivity|puresee|symfony)\b/g,
-  multifocal:  /\b(multifocal|trifocal|full[- ]range|fuller range|panoptix|synergy|odyssey|envy)\b/g,
-  toric:       /\b(toric|astigmatism)\b/g,
-  lal:         /\b(light adjustable|lal\+?|rxsight)(?=\W|$)/g,
-  ic8:         /\b(ic-8|ic 8|apthera|small[- ]aperture)\b/g,
-  focal_points:/\bfocal points?\b/g,
-  astigmatism: /\bastigmatism\b/g,
-};
-const CUES_BY_STAGE = { foundations: ['focal_points', 'astigmatism'], lens_options: ['monofocal', 'edof', 'multifocal', 'toric', 'lal', 'ic8'] };
+
+function visualApplyProfile(manifest, profile) {
+  const base = JSON.parse(JSON.stringify(manifest));
+  if (!profile) return base;
+  for (const group of ['stages', 'slides', 'categories']) {
+    if (!profile[group]) continue;
+    for (const [k, patch] of Object.entries(profile[group])) {
+      if (base[group][k]) Object.assign(base[group][k], patch);
+    }
+  }
+  return base;
+}
+function visualStageMain(stage, manifest = VISUALS_MANIFEST) {
+  const s = manifest.stages[stage];
+  if (!s || !s.enabled) return 'welcome';
+  const slide = manifest.slides[s.main];
+  return (slide && slide.enabled) ? s.main : 'welcome';
+}
+function visualCueIdsForStage(stage, manifest = VISUALS_MANIFEST) {
+  const ids = [];
+  for (const [id, slide] of Object.entries(manifest.slides)) {
+    if (slide.role === 'secondary' && slide.enabled && slide.stage === stage && slide.cuePattern) ids.push(id);
+  }
+  if (stage === 'lens_options') {
+    for (const id of LENS_CATEGORIES) {
+      const cat = manifest.categories[id];
+      if (cat && cat.enabled && cat.cuePattern) ids.push(id);
+    }
+  }
+  return ids;
+}
+function visualCueRegex(id, manifest = VISUALS_MANIFEST) {
+  const entry = manifest.slides[id] || manifest.categories[id];
+  return entry && entry.cuePattern ? new RegExp(entry.cuePattern, 'g') : null;
+}
 
 let visualState = { stage: null, slide: null, category: null, toolAt: 0 };
 let visualCueTimers = [];
 
 // Pure: ordered cues in one agent line, each with a delay from the line's start.
-function visualCuePlan(stage, lower) {
-  const kinds = CUES_BY_STAGE[stage] || [];
+function visualCuePlan(stage, lower, manifest = VISUALS_MANIFEST) {
   const hits = [];
-  for (const k of kinds) for (const m of lower.matchAll(VISUAL_CUES[k])) hits.push({ cue: k, index: m.index });
+  for (const k of visualCueIdsForStage(stage, manifest)) {
+    const re = visualCueRegex(k, manifest);
+    if (!re) continue;
+    for (const m of lower.matchAll(re)) hits.push({ cue: k, index: m.index });
+  }
   hits.sort((a, b) => a.index - b.index);
   const plan = [];
   for (const h of hits) {
@@ -1960,42 +2068,58 @@ function visualCuePlan(stage, lower) {
   return plan;
 }
 // Pure: apply one cue to the state. Never touches the stage.
-function visualApplyCue(state, cue, track) {
+function visualApplyCue(state, cue, track, manifest = VISUALS_MANIFEST) {
   const v = { ...state };
-  if (cue === 'focal_points' || cue === 'astigmatism') {
-    if (v.stage === 'foundations') v.slide = cue;
-  } else if (v.stage !== 'lens_options') {
-    return v;
-  } else if (LENS_CATEGORIES.includes(cue)) {
+  if (LENS_CATEGORIES.includes(cue)) {
+    const cat = manifest.categories[cue];
+    if (v.stage !== 'lens_options' || !cat || !cat.enabled) return v;
+    if (v.slide === 'toric' && track === 'B') return v; // in the toric lesson, keep the toric layer equal on all 3
     v.category = cue;
-    if (!(v.slide === 'toric' && track === 'B')) v.slide = null; // back to the map unless the toric lesson is under way
-  } else if (cue === 'toric') {
+    v.slide = null;
+    return v;
+  }
+  const slide = manifest.slides[cue];
+  if (!slide || slide.role !== 'secondary' || !slide.enabled || slide.stage !== v.stage) return v;
+  if (cue === 'toric') {
     v.slide = 'toric';
-  } else if (cue === 'lal') {
-    v.slide = 'lal'; v.category = 'monofocal';
-  } else if (cue === 'ic8') {
-    v.slide = 'ic8'; v.category = 'edof';
+    v.category = null; // axis marks on all 3 lenses equally; no single category highlighted
+  } else {
+    v.slide = cue;
+    if (slide.homeCategory) {
+      const home = manifest.categories[slide.homeCategory];
+      v.category = (home && home.enabled) ? slide.homeCategory : null;
+    }
   }
   return v;
 }
 // Pure: a new stage always starts on its main image.
 function visualForStage(stage) { return { stage, slide: null, category: null, toolAt: 0 }; }
 // Pure: a track opening (exact track-entry sentence or record_track_switch).
-function visualForTrack(state, track) {
+function visualForTrack(state, track, manifest = VISUALS_MANIFEST) {
   if (state.stage !== 'lens_options') return state;
-  if (track === 'C') return { ...state, slide: null, category: 'monofocal' };
-  if (track === 'B') return { ...state, slide: 'toric' };
+  if (track === 'C') return { ...state, slide: null, category: manifest.categories.monofocal.enabled ? 'monofocal' : null };
+  if (track === 'B') return manifest.slides.toric.enabled ? { ...state, slide: 'toric', category: null } : { ...state, slide: null, category: null };
   if (track === 'A') return { ...state, slide: null, category: null }; // EDOF or multifocal lights when named
   return state;
 }
-// set_visual tool values (design; not on the agent). Returns null if not for this stage.
-function visualFromTool(state, visual) {
-  if (visual === STAGE_MAIN[state.stage] || (visual === 'lens_overview' && state.stage === 'lens_options')) return { ...state, slide: null, category: null };
-  const allowed = (STAGE_SLIDES[state.stage] || []).concat(state.stage === 'lens_options' ? LENS_CATEGORIES : []);
-  if (!allowed.includes(visual)) return null;
-  return visualApplyCue(state, visual, 'tool');
+// set_visual tool values (design; not on the agent). Returns null if disabled or not for this stage.
+function visualFromTool(state, visual, manifest = VISUALS_MANIFEST) {
+  const mainId = visualStageMain(state.stage, manifest);
+  if (visual === mainId || (visual === 'lens_overview' && state.stage === 'lens_options')) {
+    return { ...state, slide: null, category: null };
+  }
+  if (LENS_CATEGORIES.includes(visual)) {
+    if (state.stage !== 'lens_options' || !manifest.categories[visual]?.enabled) return null;
+    return visualApplyCue(state, visual, 'tool', manifest);
+  }
+  const slide = manifest.slides[visual];
+  if (!slide || slide.role !== 'secondary' || !slide.enabled || slide.stage !== state.stage) return null;
+  return visualApplyCue(state, visual, 'tool', manifest);
 }
-function visualFrameOf(state) { return state.slide || STAGE_MAIN[state.stage] || 'welcome'; }
+function visualFrameOf(state, manifest = VISUALS_MANIFEST) {
+  if (state.slide && manifest.slides[state.slide]?.enabled) return state.slide;
+  return visualStageMain(state.stage, manifest);
+}
 
 function ciqVisualClearCues() { visualCueTimers.forEach(clearTimeout); visualCueTimers = []; }
 function ciqVisualRender() {
@@ -2004,27 +2128,30 @@ function ciqVisualRender() {
   if (!panel) return;
   const v = visualState;
   const frame = visualFrameOf(v);
-  const key = frame + '|' + (v.category || '');
+  const isToric = frame === 'toric';
+  const focusCat = isToric ? null : v.category;
+  const key = frame + '|' + (focusCat || '');
   panel.dataset.stage = v.stage || '';
   panel.dataset.frame = frame;
-  panel.dataset.category = v.category || '';
+  panel.dataset.category = focusCat || '';
   if (panel.dataset.key === key) return;
   panel.dataset.key = key;
   const img = document.getElementById('visual-img');
   const map = document.getElementById('lens-map');
   const cap = document.getElementById('visual-caption');
   const kick = document.getElementById('visual-kicker');
-  const isMap = frame === 'lens_map' || frame === 'toric';
-  if (isMap) {
+  if (frame === 'lens_map' || isToric) {
     img.hidden = true;
     map.hidden = false;
-    map.classList.toggle('toric-on', frame === 'toric');
-    map.classList.toggle('has-focus', !!v.category);
-    map.querySelectorAll('.lz').forEach(g => g.classList.toggle('is-on', g.dataset.zone === v.category));
-    kick.textContent = frame === 'toric' ? 'Add-on: Toric, for astigmatism' : '';
-    cap.textContent = frame === 'toric' ? LENS_CAPTIONS.toric : LENS_CAPTIONS[v.category || 'overview'];
+    map.classList.toggle('toric-on', isToric);
+    map.classList.toggle('has-focus', !!focusCat);
+    map.querySelectorAll('.lz').forEach(g => g.classList.toggle('is-on', g.dataset.zone === focusCat));
+    kick.textContent = isToric ? (VISUALS_MANIFEST.slides.toric.kicker || '') : '';
+    cap.textContent = isToric
+      ? VISUALS_MANIFEST.slides.toric.caption
+      : (focusCat ? VISUALS_MANIFEST.categories[focusCat].caption : VISUALS_MANIFEST.slides.lens_map.caption);
   } else {
-    const meta = VISUAL_IMAGES[frame] || VISUAL_IMAGES.welcome;
+    const meta = VISUALS_MANIFEST.slides[frame] || VISUALS_MANIFEST.slides.welcome;
     map.hidden = true;
     img.hidden = false;
     if (img.getAttribute('src') !== meta.src) img.setAttribute('src', meta.src);
@@ -2379,21 +2506,20 @@ function addTranscriptLine(role, text) {
   // Anchor-phrase detection — agent messages only. See
   // clarityiq_anchor_state_machine_spec_v0_1.md §3 for the phrase table.
   if (role === 'agent' && convoState) {
-    for (const entry of ANCHOR_PHRASES) {
-      if (lower.includes(entry.phrase)) {
-        applyStageTransition(entry.to);
-        break;
+    // Stage changes ONLY by Next (button or spoken "next"). When
+    // STAGE_CHANGE_NEXT_ONLY is true, agent stage-opening sentences and the
+    // track-entry stage catch-up are turned off.
+    if (!STAGE_CHANGE_NEXT_ONLY) {
+      for (const entry of ANCHOR_PHRASES) {
+        if (lower.includes(entry.phrase)) {
+          applyStageTransition(entry.to);
+          break;
+        }
       }
     }
     for (const entry of TRACK_ENTRY_PHRASES) {
       if (lower.includes(entry.phrase)) {
-        // Self-heal: track content is only reachable via lens_options, so if
-        // the stage counter lagged behind — e.g. the agent moved straight
-        // into track content without speaking the Stage 3->4 anchor
-        // verbatim, which can happen if the person pushes it to move
-        // faster — catch it up now. Never regresses: only fires if the
-        // stage is still earlier in the sequence than lens_options.
-        if (STAGE_ORDER.indexOf(convoState.current_stage) < STAGE_ORDER.indexOf('lens_options')) {
+        if (!STAGE_CHANGE_NEXT_ONLY && STAGE_ORDER.indexOf(convoState.current_stage) < STAGE_ORDER.indexOf('lens_options')) {
           applyStageTransition('lens_options');
         }
         checkTrackEntryAnomaly(entry.track);
