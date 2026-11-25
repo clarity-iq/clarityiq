@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
+<title id="t">Getting ready for your appointment</title>
+<desc id="d">A clipboard titled questions for your surgeon with three lines, next to a calendar with follow-up visits marked.</desc>
+<defs>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#1F3D2C" flood-opacity=".12"/></filter>
+</defs>
+<rect width="720" height="480" fill="#F7F2E9"/>
+<g font-family="Inter,system-ui,sans-serif">
+  <g transform="translate(90,48)">
+    <rect width="300" height="384" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
+    <rect x="100" y="-14" width="100" height="34" rx="10" fill="#4f6b58"/>
+    <text x="150" y="70" text-anchor="middle" font-size="19" font-weight="600" fill="#1F3D2C">Questions for</text>
+    <text x="150" y="94" text-anchor="middle" font-size="19" font-weight="600" fill="#1F3D2C">your surgeon</text>
+    <g>
+      <circle cx="44" cy="150" r="14" fill="#DCE6D7"/><text x="44" y="155" text-anchor="middle" font-size="14" font-weight="600" fill="#1F3D2C">1</text>
+      <rect x="72" y="140" width="190" height="9" rx="4.5" fill="#c9d8c3"/><rect x="72" y="156" width="140" height="9" rx="4.5" fill="#c9d8c3"/>
+      <circle cx="44" cy="222" r="14" fill="#DCE6D7"/><text x="44" y="227" text-anchor="middle" font-size="14" font-weight="600" fill="#1F3D2C">2</text>
+      <rect x="72" y="212" width="170" height="9" rx="4.5" fill="#c9d8c3"/><rect x="72" y="228" width="120" height="9" rx="4.5" fill="#c9d8c3"/>
+      <circle cx="44" cy="294" r="14" fill="#DCE6D7"/><text x="44" y="299" text-anchor="middle" font-size="14" font-weight="600" fill="#1F3D2C">3</text>
+      <rect x="72" y="284" width="180" height="9" rx="4.5" fill="#E2D9C8"/><rect x="72" y="300" width="100" height="9" rx="4.5" fill="#E2D9C8"/>
+    </g>
+    <path d="M232,352 l46,-46 10,10 -46,46 -14,4z" fill="#9E4526" opacity=".85"/>
+  </g>
+  <g transform="translate(430,112)">
+    <rect width="210" height="230" rx="22" fill="#FFFDF9" filter="url(#shadow)"/>
+    <path d="M0,22 a22,22 0 0 1 22,-22 h166 a22,22 0 0 1 22,22 v34 h-210z" fill="#1F3D2C"/>
+    <text x="105" y="36" text-anchor="middle" font-size="15" font-weight="600" fill="#F7F2E9">Recovery</text>
+    <g fill="#E2D9C8">
+      <rect x="20" y="74" width="26" height="26" rx="6"/><rect x="54" y="74" width="26" height="26" rx="6"/><rect x="88" y="74" width="26" height="26" rx="6"/><rect x="122" y="74" width="26" height="26" rx="6"/><rect x="156" y="74" width="26" height="26" rx="6"/>
+      <rect x="20" y="110" width="26" height="26" rx="6"/><rect x="54" y="110" width="26" height="26" rx="6"/><rect x="88" y="110" width="26" height="26" rx="6"/><rect x="122" y="110" width="26" height="26" rx="6"/><rect x="156" y="110" width="26" height="26" rx="6"/>
+      <rect x="20" y="146" width="26" height="26" rx="6"/><rect x="54" y="146" width="26" height="26" rx="6"/><rect x="88" y="146" width="26" height="26" rx="6"/><rect x="122" y="146" width="26" height="26" rx="6"/><rect x="156" y="146" width="26" height="26" rx="6"/>
+      <rect x="20" y="182" width="26" height="26" rx="6"/><rect x="54" y="182" width="26" height="26" rx="6"/><rect x="88" y="182" width="26" height="26" rx="6"/>
+    </g>
+    <g fill="#4f6b58"><rect x="54" y="74" width="26" height="26" rx="6"/><rect x="156" y="110" width="26" height="26" rx="6"/><rect x="88" y="182" width="26" height="26" rx="6"/></g>
+  </g>
+  <text x="535" y="374" text-anchor="middle" font-size="15" fill="#5d665f">Follow-up visits</text>
+</g>
+</svg>

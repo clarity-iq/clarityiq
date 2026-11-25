@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
+<title id="t">Three focal ranges: near, arm's length and far</title>
+<desc id="d">An eye on the left looks out along a line marked near, for reading and the phone; arm's length, for a computer, the dashboard or cooking; and far, for driving, TV and faces across a room.</desc>
+<defs>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1F3D2C" flood-opacity=".10"/></filter>
+  <radialGradient id="iris" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#7F9C86"/><stop offset=".75" stop-color="#4f6b58"/><stop offset="1" stop-color="#2F4A39"/></radialGradient>
+</defs>
+<rect width="720" height="480" fill="#F7F2E9"/>
+<!-- eye, front-ish profile -->
+<g transform="translate(70,240)">
+  <path d="M-48,0 Q0,-44 48,0 Q0,44 -48,0Z" fill="#FFFDF9" stroke="#1F3D2C" stroke-width="2.5"/>
+  <circle r="20" fill="url(#iris)"/><circle r="8" fill="#1F2621"/><circle cx="-6" cy="-7" r="4" fill="#fff" opacity=".85"/>
+  <path d="M-46,-6 Q0,-58 46,-6" fill="none" stroke="#5d665f" stroke-width="1.6" opacity=".6"/>
+</g>
+<!-- sight line -->
+<path d="M128,240 L690,240" stroke="#c9d8c3" stroke-width="6" stroke-linecap="round"/>
+<g fill="#1F3D2C"><circle cx="230" cy="240" r="9"/><circle cx="420" cy="240" r="9"/><circle cx="620" cy="240" r="9"/></g>
+<!-- zone cards -->
+<g font-family="Inter,system-ui,sans-serif" text-anchor="middle">
+  <g transform="translate(230,0)">
+    <rect x="-80" y="56" width="160" height="150" rx="22" fill="#FFFDF9" filter="url(#shadow)"/>
+    <!-- open book -->
+    <path d="M-44,120 Q-22,108 0,120 L0,168 Q-22,156 -44,168Z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2"/>
+    <path d="M0,120 Q22,108 44,120 L44,168 Q22,156 0,168Z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2"/>
+    <g stroke="#9E4526" stroke-width="1.4" opacity=".6"><path d="M-36,130 h26 M-36,140 h26 M-36,150 h20 M8,130 h26 M8,140 h26 M8,150 h18"/></g>
+    <!-- phone -->
+    <rect x="30" y="84" width="24" height="42" rx="5" fill="#fff" stroke="#1F3D2C" stroke-width="2"/>
+    <text y="196" font-size="18" font-weight="600" fill="#1F3D2C">Near</text>
+    <text y="296" font-size="15" fill="#3d463f">Reading,</text><text y="316" font-size="15" fill="#3d463f">your phone</text>
+  </g>
+  <g transform="translate(420,0)">
+    <rect x="-80" y="56" width="160" height="150" rx="22" fill="#FFFDF9" filter="url(#shadow)"/>
+    <!-- laptop -->
+    <rect x="-46" y="92" width="64" height="42" rx="4" fill="#DCE6D7" stroke="#1F3D2C" stroke-width="2"/>
+    <path d="M-56,138 h84 l-6,8 h-72z" fill="#fff" stroke="#1F3D2C" stroke-width="2"/>
+    <!-- pot -->
+    <path d="M30,122 h30 v20 q0,8 -8,8 h-14 q-8,0 -8,-8z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2"/>
+    <path d="M26,122 h38" stroke="#9E4526" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M40,112 q4,-6 0,-12 M50,112 q4,-6 0,-12" fill="none" stroke="#9E4526" stroke-width="1.5" opacity=".6"/>
+    <text y="196" font-size="18" font-weight="600" fill="#1F3D2C">Arm's length</text>
+    <text y="296" font-size="15" fill="#3d463f">Computer, dashboard,</text><text y="316" font-size="15" fill="#3d463f">cooking</text>
+  </g>
+  <g transform="translate(620,0)">
+    <rect x="-80" y="56" width="160" height="150" rx="22" fill="#FFFDF9" filter="url(#shadow)"/>
+    <!-- road -->
+    <path d="M-50,166 L-10,96 L10,96 L50,166Z" fill="#E2D9C8"/>
+    <path d="M0,104 v10 M0,124 v12 M0,146 v16" stroke="#fff" stroke-width="3"/>
+    <path d="M-60,96 h120" stroke="#c9d8c3" stroke-width="2"/>
+    <circle cx="-38" cy="84" r="12" fill="#c9d8c3"/><rect x="-40" y="90" width="4" height="10" fill="#4f6b58"/>
+    <rect x="22" y="72" width="28" height="18" rx="3" fill="#fff" stroke="#1F3D2C" stroke-width="2"/>
+    <text y="196" font-size="18" font-weight="600" fill="#1F3D2C">Far</text>
+    <text y="296" font-size="15" fill="#3d463f">Driving, TV,</text><text y="316" font-size="15" fill="#3d463f">faces across a room</text>
+  </g>
+</g>
+<text x="400" y="410" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="16" fill="#5d665f">A focal point is a range where vision is clearest without glasses.</text>
+<text x="400" y="434" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="16" fill="#5d665f">The three ranges matter equally.</text>
+</svg>

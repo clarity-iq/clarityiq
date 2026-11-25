@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
+<title id="t">Astigmatism</title>
+<desc id="d">Left: a round eye surface, shaped like a basketball, brings light to one point. Right: an eye surface that is not perfectly round, shaped more like a football, so light doesn't focus evenly.</desc>
+<defs>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1F3D2C" flood-opacity=".10"/></filter>
+  <radialGradient id="dome" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#E4EFEC"/><stop offset="1" stop-color="#B9D0C8"/></radialGradient>
+</defs>
+<rect width="720" height="480" fill="#F7F2E9"/>
+<g font-family="Inter,system-ui,sans-serif" text-anchor="middle">
+  <g transform="translate(186,0)">
+    <rect x="-168" y="24" width="336" height="420" rx="26" fill="#FFFDF9" filter="url(#shadow)"/>
+    <text y="64" font-size="19" font-weight="600" fill="#1F3D2C">Round surface</text>
+    <circle cx="0" cy="170" r="74" fill="url(#dome)" stroke="#1F3D2C" stroke-width="2.5"/>
+    <ellipse cx="0" cy="170" rx="74" ry="22" fill="none" stroke="#4f6b58" stroke-width="1.4" opacity=".5"/>
+    <ellipse cx="0" cy="170" rx="22" ry="74" fill="none" stroke="#4f6b58" stroke-width="1.4" opacity=".5"/>
+    <g stroke="#1F3D2C" stroke-width="2" opacity=".7" stroke-linecap="round"><path d="M-70,280 L0,350"/><path d="M0,272 L0,350"/><path d="M70,280 L0,350"/></g>
+    <circle cx="0" cy="352" r="6" fill="#1F3D2C"/>
+    <text y="392" font-size="15" fill="#3d463f">Light comes to one point</text>
+  </g>
+  <g transform="translate(534,0)">
+    <rect x="-168" y="24" width="336" height="420" rx="26" fill="#FFFDF9" filter="url(#shadow)"/>
+    <text y="64" font-size="19" font-weight="600" fill="#1F3D2C">Not perfectly round</text>
+    <ellipse cx="0" cy="170" rx="98" ry="60" fill="url(#dome)" stroke="#1F3D2C" stroke-width="2.5"/>
+    <ellipse cx="0" cy="170" rx="98" ry="18" fill="none" stroke="#4f6b58" stroke-width="1.4" opacity=".5"/>
+    <ellipse cx="0" cy="170" rx="22" ry="60" fill="none" stroke="#4f6b58" stroke-width="1.4" opacity=".5"/>
+    <g stroke="#9E4526" stroke-width="2" opacity=".7" stroke-linecap="round"><path d="M-70,280 L-14,340"/><path d="M0,272 L0,356"/><path d="M70,280 L18,362"/></g>
+    <path d="M-22,340 h44" stroke="#9E4526" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+    <path d="M0,330 v40" stroke="#9E4526" stroke-width="4" stroke-linecap="round" opacity=".35"/>
+    <text y="392" font-size="15" fill="#3d463f">Light doesn't focus evenly</text>
+  </g>
+</g>
+<text x="360" y="468" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-size="14" fill="#5d665f">Your surgeon measures this and factors it in.</text>
+</svg>
