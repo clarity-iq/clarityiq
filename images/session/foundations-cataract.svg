@@ -47,8 +47,8 @@
 <g transform="translate(548,300)">
   <rect x="-20" y="-24" width="172" height="166" rx="22" fill="#FFFDF9" filter="url(#shadow)"/>
   <g transform="translate(66,48)">
-    <path d="M-4,-30 C14,-38 24,-48 18,-58" fill="none" stroke="#4f6b58" stroke-width="3" stroke-linecap="round"/>
-    <path d="M4,30 C-14,38 -24,48 -18,58" fill="none" stroke="#4f6b58" stroke-width="3" stroke-linecap="round"/>
+    <path d="M-13.4,-29.1 C-7.0,-43.5 10.9,-49.9 25.0,-40.1" fill="none" stroke="#4f6b58" stroke-width="3" stroke-linecap="round"/>
+    <path d="M13.4,29.1 C7.0,43.5 -10.9,49.9 -25.0,40.1" fill="none" stroke="#4f6b58" stroke-width="3" stroke-linecap="round"/>
     <circle r="32" fill="url(#optic)" stroke="#1F3D2C" stroke-width="2.2"/>
     <ellipse cx="-10" cy="-12" rx="8" ry="5" fill="#fff" opacity=".85"/>
   </g>

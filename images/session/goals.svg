@@ -12,26 +12,20 @@
   <!-- NEAR -->
   <g transform="translate(14,24)">
     <rect width="216" height="300" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
-    <!-- Reading glasses -->
     <g fill="#DCE6D7" fill-opacity=".45" stroke="#1F3D2C" stroke-width="2.6">
-      <circle cx="64" cy="64" r="22"/>
-      <circle cx="122" cy="64" r="22"/>
-      <path d="M86,62 Q93,56 100,62" fill="none"/>
-      <path d="M42,60 L28,44 M144,60 L158,44" fill="none" stroke-linecap="round"/>
+      <circle cx="64" cy="64" r="22"/><circle cx="122" cy="64" r="22"/>
+      <path d="M86,62 Q93,56 100,62" fill="none"/><path d="M42,60 L28,44 M144,60 L158,44" fill="none" stroke-linecap="round"/>
     </g>
-    <!-- Smartphone with message bubbles -->
     <rect x="130" y="88" width="60" height="106" rx="12" fill="#fff" stroke="#1F3D2C" stroke-width="2.4"/>
     <rect x="137" y="102" width="46" height="74" rx="5" fill="#DCE6D7"/>
     <rect x="142" y="112" width="32" height="10" rx="4" fill="#FFFDF9"/>
     <rect x="147" y="130" width="30" height="10" rx="4" fill="#4f6b58" opacity=".6"/>
     <rect x="142" y="148" width="24" height="10" rx="4" fill="#FFFDF9"/>
     <circle cx="160" cy="184" r="3" fill="#1F3D2C"/>
-    <!-- Small pill bottle label -->
     <rect x="30" y="112" width="54" height="76" rx="8" fill="#F5E4D8" stroke="#9E4526" stroke-width="2.2"/>
     <rect x="25" y="100" width="64" height="16" rx="5" fill="#9E4526"/>
     <rect x="38" y="128" width="38" height="36" rx="4" fill="#FFFDF9"/>
     <path d="M44,138 h26 M44,148 h26 M44,158 h18" stroke="#9E4526" stroke-width="2" stroke-linecap="round"/>
-    <!-- Open book -->
     <path d="M26,214 Q67,196 108,214 L108,274 Q67,258 26,274Z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2.2"/>
     <path d="M108,214 Q149,196 190,214 L190,274 Q149,258 108,274Z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2.2"/>
     <g stroke="#9E4526" stroke-width="1.8" opacity=".65" stroke-linecap="round">
@@ -41,7 +35,6 @@
   <!-- ARM'S LENGTH -->
   <g transform="translate(252,24)">
     <rect width="216" height="300" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
-    <!-- Laptop with UI window -->
     <rect x="38" y="42" width="140" height="92" rx="10" fill="#DCE6D7" stroke="#1F3D2C" stroke-width="2.4"/>
     <rect x="48" y="52" width="120" height="72" rx="5" fill="#FFFDF9"/>
     <rect x="48" y="52" width="120" height="16" rx="4" fill="#4f6b58"/>
@@ -49,7 +42,6 @@
     <path d="M58,82 h70 M58,96 h96 M58,110 h54" stroke="#4f6b58" stroke-width="3" stroke-linecap="round" opacity=".7"/>
     <path d="M22,138 h172 l-14,16 h-144z" fill="#fff" stroke="#1F3D2C" stroke-width="2.4"/>
     <rect x="90" y="143" width="36" height="5" rx="2.5" fill="#c9d8c3"/>
-    <!-- Cooking pot on burner with spoon and steam -->
     <path d="M138,200 L158,172" stroke="#9E4526" stroke-width="4.5" stroke-linecap="round"/>
     <ellipse cx="160" cy="170" rx="7" ry="4" fill="#9E4526"/>
     <path d="M56,204 h104 v32 q0,14 -14,14 h-76 q-14,0 -14,-14z" fill="#F5E4D8" stroke="#9E4526" stroke-width="2.4"/>
@@ -63,31 +55,25 @@
   <g transform="translate(490,24)">
     <g clip-path="url(#c3)">
       <rect width="216" height="300" fill="url(#night)"/>
-      <!-- Hills & golf flag -->
       <path d="M0,152 Q62,126 112,138 T216,130 V300 H0Z" fill="#2C4A3B"/>
       <path d="M174,136 V88" stroke="#F7F2E9" stroke-width="2.6"/><path d="M174,88 l26,9 -26,9z" fill="#E4A595"/>
-      <!-- Highway sign -->
       <rect x="20" y="96" width="46" height="26" rx="4" fill="#4f6b58" stroke="#F7F2E9" stroke-width="1.5"/>
       <path d="M43,122 v24" stroke="#F7F2E9" stroke-width="2"/>
       <path d="M28,106 h30 M28,114 h20" stroke="#F7F2E9" stroke-width="2" stroke-linecap="round"/>
-      <!-- Night road + headlights -->
       <path d="M22,300 L96,144 L120,144 L194,300Z" fill="#4C665A"/>
       <path d="M108,154 v12 M108,180 v16 M108,212 v22 M108,252 v34" stroke="#F7F2E9" stroke-width="3.2" opacity=".7"/>
       <path d="M54,300 L98,156 L118,156 L162,300Z" fill="url(#beam)"/>
-      <!-- Oncoming car silhouette + headlights -->
       <rect x="92" y="142" width="32" height="18" rx="5" fill="#1F2621"/>
       <circle cx="99" cy="154" r="5" fill="#FFF6D8"/><circle cx="117" cy="154" r="5" fill="#FFF6D8"/>
       <circle cx="99" cy="154" r="15" fill="#FFF6D8" opacity=".24"/><circle cx="117" cy="154" r="15" fill="#FFF6D8" opacity=".24"/>
-      <!-- Steering wheel arc -->
       <path d="M32,302 Q108,248 184,302" fill="none" stroke="#1F2621" stroke-width="12" opacity=".7"/>
-      <!-- Moon -->
       <circle cx="46" cy="52" r="16" fill="#F7F2E9" opacity=".88"/><circle cx="54" cy="46" r="14" fill="url(#night)"/>
     </g>
     <rect width="216" height="300" rx="24" fill="none" filter="url(#shadow)"/>
   </g>
-  <!-- axis -->
+  <!-- axis (default: none lit) -->
   <path d="M40,370 L680,370" stroke="#c9d8c3" stroke-width="7" stroke-linecap="round"/>
-  <g fill="#1F3D2C"><circle cx="122" cy="370" r="10"/><circle cx="360" cy="370" r="10"/><circle cx="598" cy="370" r="10"/></g>
+  <g fill="#FFFDF9" stroke="#9DB8A2" stroke-width="3"><circle cx="122" cy="370" r="11"/><circle cx="360" cy="370" r="11"/><circle cx="598" cy="370" r="11"/></g>
   <g font-size="32" font-weight="600" fill="#1F3D2C"><text x="122" y="420">Near</text><text x="360" y="420">Arm's length</text><text x="598" y="420">Far</text></g>
   <g font-size="22" fill="#3d463f"><text x="122" y="452">Reading, phone</text><text x="360" y="452">Screens, cooking</text><text x="598" y="452">Driving, outdoors</text></g>
 </g>

@@ -1,56 +1,58 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
 <title id="t">Getting ready for your appointment</title>
-<desc id="d">A checklist of questions for your surgeon next to a recovery calendar and eye drops reminder.</desc>
+<desc id="d">Up to three questions you choose for your surgeon, paired with what vision recovery usually looks like and reassurance that you do not need to leave fully decided.</desc>
 <defs>
-  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#1F3D2C" flood-opacity=".12"/></filter>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#1F3D2C" flood-opacity=".11"/></filter>
 </defs>
 <rect width="720" height="480" fill="#F7F2E9"/>
 <g font-family="Inter,system-ui,sans-serif">
-  <!-- Clipboard: Questions for your surgeon -->
-  <g transform="translate(46,48)">
-    <rect width="360" height="390" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
-    <rect x="120" y="-14" width="120" height="34" rx="10" fill="#4f6b58"/>
-    <text x="180" y="64" text-anchor="middle" font-size="25" font-weight="600" fill="#1F3D2C">Questions for</text>
-    <text x="180" y="94" text-anchor="middle" font-size="25" font-weight="600" fill="#1F3D2C">your surgeon</text>
-    <g>
-      <circle cx="48" cy="154" r="18" fill="#DCE6D7"/><text x="48" y="161" text-anchor="middle" font-size="18" font-weight="600" fill="#1F3D2C">1</text>
-      <text x="80" y="150" font-size="20" font-weight="600" fill="#1F3D2C">My eye health</text>
-      <text x="80" y="174" font-size="17" fill="#5d665f">Measurements &amp; astigmatism</text>
-
-      <circle cx="48" cy="232" r="18" fill="#DCE6D7"/><text x="48" y="239" text-anchor="middle" font-size="18" font-weight="600" fill="#1F3D2C">2</text>
-      <text x="80" y="228" font-size="20" font-weight="600" fill="#1F3D2C">Lens options for me</text>
-      <text x="80" y="252" font-size="17" fill="#5d665f">Daily range &amp; trade-offs</text>
-
-      <circle cx="48" cy="310" r="18" fill="#DCE6D7"/><text x="48" y="317" text-anchor="middle" font-size="18" font-weight="600" fill="#1F3D2C">3</text>
-      <text x="80" y="306" font-size="20" font-weight="600" fill="#1F3D2C">Surgery &amp; recovery</text>
-      <text x="80" y="330" font-size="17" fill="#5d665f">Timing between eyes &amp; drops</text>
+  <!-- Left card: Up to 3 questions for your surgeon -->
+  <g transform="translate(36,36)">
+    <rect width="340" height="332" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
+    <path d="M0,24 a24,24 0 0 1 24,-24 h292 a24,24 0 0 1 24,24 v44 h-340z" fill="#DCE6D7"/>
+    <text x="170" y="42" text-anchor="middle" font-size="22" font-weight="600" fill="#1F3D2C">Questions for your surgeon</text>
+    <g transform="translate(24,96)">
+      <circle cx="18" cy="24" r="18" fill="#DCE6D7"/><text x="18" y="31" text-anchor="middle" font-size="18" font-weight="600" fill="#1F3D2C">1</text>
+      <text x="50" y="21" font-size="19" font-weight="600" fill="#1F3D2C">Your top priority</text>
+      <text x="50" y="43" font-size="16" fill="#5d665f">Shaped in your own words</text>
     </g>
-    <path d="M294,364 l44,-44 10,10 -44,44 -14,4z" fill="#9E4526" opacity=".88"/>
+    <g transform="translate(24,174)">
+      <circle cx="18" cy="24" r="18" fill="#DCE6D7"/><text x="18" y="31" text-anchor="middle" font-size="18" font-weight="600" fill="#1F3D2C">2</text>
+      <text x="50" y="21" font-size="19" font-weight="600" fill="#1F3D2C">Your eye measurements</text>
+      <text x="50" y="43" font-size="16" fill="#5d665f">Astigmatism or trade-offs</text>
+    </g>
+    <g transform="translate(24,252)">
+      <circle cx="18" cy="24" r="18" fill="#F5E4D8"/><text x="18" y="31" text-anchor="middle" font-size="18" font-weight="600" fill="#9E4526">3</text>
+      <text x="50" y="21" font-size="19" font-weight="600" fill="#1F3D2C">Anything else on your mind</text>
+      <text x="50" y="43" font-size="16" fill="#5d665f">Up to 3 saved to your summary</text>
+    </g>
   </g>
-  <!-- Recovery calendar + eye drops -->
-  <g transform="translate(438,68)">
-    <rect width="236" height="350" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
-    <path d="M0,24 a24,24 0 0 1 24,-24 h188 a24,24 0 0 1 24,24 v40 h-236z" fill="#1F3D2C"/>
-    <text x="118" y="41" text-anchor="middle" font-size="21" font-weight="600" fill="#F7F2E9">Recovery</text>
-    <!-- Calendar grid -->
-    <g fill="#E2D9C8">
-      <rect x="24" y="84" width="28" height="28" rx="6"/><rect x="64" y="84" width="28" height="28" rx="6"/><rect x="104" y="84" width="28" height="28" rx="6"/><rect x="144" y="84" width="28" height="28" rx="6"/><rect x="184" y="84" width="28" height="28" rx="6"/>
-      <rect x="24" y="122" width="28" height="28" rx="6"/><rect x="64" y="122" width="28" height="28" rx="6"/><rect x="104" y="122" width="28" height="28" rx="6"/><rect x="144" y="122" width="28" height="28" rx="6"/><rect x="184" y="122" width="28" height="28" rx="6"/>
-      <rect x="24" y="160" width="28" height="28" rx="6"/><rect x="64" y="160" width="28" height="28" rx="6"/><rect x="104" y="160" width="28" height="28" rx="6"/>
+  <!-- Right card: Vision recovery expectations (as covered in Stage 5) -->
+  <g transform="translate(396,36)">
+    <rect width="288" height="332" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
+    <path d="M0,24 a24,24 0 0 1 24,-24 h240 a24,24 0 0 1 24,24 v44 h-288z" fill="#1F3D2C"/>
+    <text x="144" y="42" text-anchor="middle" font-size="22" font-weight="600" fill="#F7F2E9">Vision recovery</text>
+    <!-- Settling curve -->
+    <g transform="translate(24,96)">
+      <text x="0" y="16" font-size="17" font-weight="600" fill="#1F3D2C">How vision settles</text>
+      <path d="M0,74 Q70,70 120,44 T240,28" fill="none" stroke="#4f6b58" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="40" cy="68" r="7" fill="#DCE6D7" stroke="#1F3D2C" stroke-width="2"/>
+      <circle cx="144" cy="36" r="7" fill="#4f6b58"/>
+      <circle cx="226" cy="29" r="7" fill="#1F3D2C"/>
+      <text x="0" y="102" font-size="15" fill="#5d665f">Days to weeks</text>
+      <text x="240" y="102" text-anchor="end" font-size="15" fill="#5d665f">Weeks to months</text>
     </g>
-    <g fill="#4f6b58"><rect x="64" y="84" width="28" height="28" rx="6"/><rect x="184" y="122" width="28" height="28" rx="6"/><rect x="104" y="160" width="28" height="28" rx="6"/></g>
-    <text x="118" y="216" text-anchor="middle" font-size="19" font-weight="600" fill="#1F3D2C">Follow-up visits</text>
-    <!-- Divider + eye drops sketch -->
-    <path d="M24,238 h188" stroke="#E2D9C8" stroke-width="2"/>
-    <g transform="translate(36,256)">
-      <path d="M18,0 l8,18 h-16z" fill="#9E4526"/>
-      <rect x="8" y="18" width="20" height="10" rx="3" fill="#4f6b58"/>
-      <rect x="4" y="28" width="28" height="36" rx="8" fill="#DCE6D7" stroke="#1F3D2C" stroke-width="2"/>
-      <path d="M18,70 q5,7 0,12 q-5,-5 0,-12z" fill="#4f6b58"/>
+    <path d="M24,218 h240" stroke="#E2D9C8" stroke-width="2"/>
+    <g transform="translate(24,246)">
+      <circle cx="8" cy="-5" r="5" fill="#9E4526"/><text x="24" y="0" font-size="17" fill="#1F3D2C">Brain adapts over time</text>
+      <circle cx="8" cy="29" r="5" fill="#9E4526"/><text x="24" y="34" font-size="17" fill="#1F3D2C">Follow-up alignment check</text>
+      <circle cx="8" cy="63" r="5" fill="#9E4526"/><text x="24" y="68" font-size="17" fill="#1F3D2C">Updated glasses if needed</text>
     </g>
-    <text x="90" y="284" font-size="19" font-weight="600" fill="#1F3D2C">Eye drops</text>
-    <text x="90" y="308" font-size="17" fill="#5d665f">Day 1 · Week 1 ·</text>
-    <text x="90" y="328" font-size="17" fill="#5d665f">Month 1</text>
+  </g>
+  <!-- Bottom reassurance pill -->
+  <g transform="translate(120,396)">
+    <rect width="480" height="50" rx="25" fill="#DCE6D7" filter="url(#shadow)"/>
+    <text x="240" y="32" text-anchor="middle" font-size="20" font-weight="600" fill="#1F3D2C">Still weighing options? That's completely fine.</text>
   </g>
 </g>
 </svg>
