@@ -600,7 +600,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
     </div>
 
     <div class="screen-question" id="pre-population-q">
-      <div class="screen-question-label">Do you currently have a cataract consultation scheduled, or has an eye doctor mentioned you may need one?</div>
+      <div class="screen-question-label">Do you currently have a visit with your surgeon scheduled, or has an eye doctor mentioned you may need one?</div>
       <div class="choice-row" id="pre-population-choices">
         <button class="choice-btn" data-value="scheduled_consult">Yes, I have one scheduled</button>
         <button class="choice-btn" data-value="referred_no_date">An eye doctor mentioned it, no date set yet</button>
@@ -909,7 +909,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
       <div class="summary-logo-row">
         <img class="summary-lockup" src="brand/clarityiq-horizontal-40h@2x.png" alt="ClarityIQ" width="186" height="40">
       </div>
-      <h2>Your lens preference summary</h2>
+      <h2>Your ClarityIQ session summary</h2>
       <p>Save this to bring to your surgeon</p>
     </div>
     <div id="summary-body"></div>
@@ -1124,7 +1124,7 @@ function ciqEvent(name, extra) {
 }
 
 const CIQ_SHARE_TITLE = 'ClarityIQ: cataract lens options';
-const CIQ_SHARE_TEXT = 'I just used ClarityIQ, a private way to talk through cataract lens options at any point before the lens is implanted — before a consult, after it, or as a second look. Education only; it does not recommend a lens.';
+const CIQ_SHARE_TEXT = 'I just used ClarityIQ, a private way to talk through cataract lens options at any point before the lens is implanted — before you see your surgeon, after, or as a second look. Education only; it does not recommend a lens.';
 const CIQ_SHARE_URL = 'https://clarityiq.ai/';
 function ciqShareMessage() { return CIQ_SHARE_TEXT + ' ' + CIQ_SHARE_URL; }
 function ciqSmsHref(msg) {
@@ -2332,7 +2332,7 @@ function escapeHtmlClient(s) {
 // Tap-next v1 (Nov 10): the "Your access" card (six-month wording) was removed.
 // Access length lives in the purchase terms, not in the session or its summary,
 // so every pass type sees the same summary.
-const REASSURANCE_NOTE = "It's completely normal to still have questions at this point. Bring this summary to your surgeon — before your consult, after it, or as a second look.";
+const REASSURANCE_NOTE = "It's completely normal to still have questions at this point. Bring this summary to your surgeon — before you see your surgeon, after, or as a second look.";
 
 // Summary Artifact — v0.2 field order: vision_goal (with
 // monovision_history nested as a sub-line) -> topics_covered ->
