@@ -1175,20 +1175,60 @@ const CIQ_SRC_STATE = (function () {
     return { v: 1, at: Date.now(), tagged: false, src: { utm_source: 'unknown' } };
   }
 })();
-// Internal-visit flag: same as the marketing site. Open any page with
-// ?ciq_internal=1 to mark this browser as ours (localStorage key ciq_internal,
-// no expiry); ?ciq_internal=0 removes it. While set, events report
-// utm_source "internal", which the Worker already keeps out of the funnel.
-// Note: app.clarityiq.ai and clarityiq.ai do not share localStorage, so the
-// flag has to be set on this origin too.
+// Internal-visit flag (v2, 2026-11-26): open any page with ?ciq_internal=1 to
+// mark this device as ours. It sets BOTH a first-party cookie (ciq_internal=1,
+// 1 year, Path=/, SameSite=Lax, Secure; Domain=.clarityiq.ai on our own hosts
+// so clarityiq.ai and app.clarityiq.ai share it) AND the localStorage key
+// ciq_internal. Either one being set counts, and each visit renews the cookie.
+// ?ciq_internal=0 clears the localStorage key and turns the cookie off (value 0
+// for 30 days, so the other site's storage is cleared on its next visit too).
+// While set, every event, signup, survey, session start and checkout start
+// reports utm_source "internal", which the Worker already keeps out of the
+// funnel. The cookie holds only 1 or 0: no IP, no id, no personal data.
+const CIQ_INTERNAL_MAX_AGE = 31536000;
+const CIQ_INTERNAL_OFF_AGE = 2592000;
+function ciqInternalCookieState() {
+  try {
+    const c = document.cookie || '';
+    if (/(?:^|;\s*)ciq_internal=1(?:;|$)/.test(c)) return '1';
+    if (/(?:^|;\s*)ciq_internal=0(?:;|$)/.test(c)) return '0';
+  } catch (e) {}
+  return '';
+}
+function ciqInternalCookieWrite(on) {
+  try {
+    const host = String(location.hostname || '').toLowerCase();
+    const shared = /(^|\.)clarityiq\.ai$/.test(host);
+    const secure = location.protocol === 'https:' ? '; Secure' : '';
+    const attrs = '; Path=/; SameSite=Lax' + secure + '; Max-Age=';
+    document.cookie = 'ciq_internal=' + (on ? '1' : '0') + attrs + (on ? CIQ_INTERNAL_MAX_AGE : CIQ_INTERNAL_OFF_AGE) + (shared ? '; Domain=.clarityiq.ai' : '');
+  } catch (e) {}
+}
 const CIQ_INTERNAL = (function () {
   try {
     const store = ciqStorage('localStorage');
-    if (!store) return false;
     const q = new URLSearchParams(location.search).get('ciq_internal');
-    if (q === '1') store.setItem('ciq_internal', '1');
-    else if (q === '0') store.removeItem('ciq_internal');
-    return store.getItem('ciq_internal') === '1';
+    if (q === '1') {
+      if (store) store.setItem('ciq_internal', '1');
+      ciqInternalCookieWrite(true);
+    } else if (q === '0') {
+      if (store) store.removeItem('ciq_internal');
+      ciqInternalCookieWrite(false);
+      return false;
+    }
+    const ck = ciqInternalCookieState();
+    if (ck === '0') { // switched off on another page of ours: clear this origin too
+      if (store) store.removeItem('ciq_internal');
+      return false;
+    }
+    const viaStore = !!store && store.getItem('ciq_internal') === '1';
+    const viaCookie = ck === '1';
+    // Keep the two in step: a device flagged with the old link (storage only)
+    // gains the cookie, the app picks up the cookie set on the site, and every
+    // flagged visit renews the cookie.
+    if (viaStore || viaCookie) ciqInternalCookieWrite(true);
+    if (viaCookie && !viaStore && store) store.setItem('ciq_internal', '1');
+    return viaStore || viaCookie;
   } catch (e) { return false; }
 })();
 const CIQ_SRC = CIQ_INTERNAL
@@ -1202,7 +1242,7 @@ const CIQ_SRC = CIQ_INTERNAL
 // source (utm_source and the other allow-listed tags) so a Stripe return
 // can adopt it before app_open is sent.
 function ciqSessionSource() {
-  if (!CIQ_SRC_STATE.tagged) return {};
+  if (!CIQ_INTERNAL && !CIQ_SRC_STATE.tagged) return {};
   const out = {};
   ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content'].forEach(function (k) {
     if (CIQ_SRC[k]) out[k] = CIQ_SRC[k];
@@ -1212,7 +1252,7 @@ function ciqSessionSource() {
 function ciqAdoptPurchaseSource(result) {
   try {
     const tag = result && ciqTag(result.utm_source);
-    if (!tag || CIQ_SRC_STATE.tagged) return;
+    if (!tag || CIQ_SRC_STATE.tagged || CIQ_INTERNAL) return; // an internal device stays internal
     CIQ_SRC_STATE.tagged = true;
     CIQ_SRC.utm_source = tag;
     ['utm_medium', 'utm_campaign', 'utm_content'].forEach(function (k) { CIQ_SRC[k] = ciqTag(result[k]); });
