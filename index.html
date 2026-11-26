@@ -1179,22 +1179,29 @@ const CIQ_SRC_STATE = (function () {
 // mark this device as ours. It sets BOTH a first-party cookie (ciq_internal=1,
 // 1 year, Path=/, SameSite=Lax, Secure; Domain=.clarityiq.ai on our own hosts
 // so clarityiq.ai and app.clarityiq.ai share it) AND the localStorage key
-// ciq_internal. ?ciq_internal=0 clears both. Either one being set counts.
+// ciq_internal. Either one being set counts, and each visit renews the cookie.
+// ?ciq_internal=0 clears the localStorage key and turns the cookie off (value 0
+// for 30 days, so the other site's storage is cleared on its next visit too).
 // While set, every event, signup, survey, session start and checkout start
 // reports utm_source "internal", which the Worker already keeps out of the
-// funnel. The cookie holds only the value 1: no IP, no id, no personal data.
+// funnel. The cookie holds only 1 or 0: no IP, no id, no personal data.
 const CIQ_INTERNAL_MAX_AGE = 31536000;
-function ciqInternalCookieSet() {
-  try { return /(?:^|;\s*)ciq_internal=1(?:;|$)/.test(document.cookie || ''); } catch (e) { return false; }
+const CIQ_INTERNAL_OFF_AGE = 2592000;
+function ciqInternalCookieState() {
+  try {
+    const c = document.cookie || '';
+    if (/(?:^|;\s*)ciq_internal=1(?:;|$)/.test(c)) return '1';
+    if (/(?:^|;\s*)ciq_internal=0(?:;|$)/.test(c)) return '0';
+  } catch (e) {}
+  return '';
 }
 function ciqInternalCookieWrite(on) {
   try {
     const host = String(location.hostname || '').toLowerCase();
     const shared = /(^|\.)clarityiq\.ai$/.test(host);
     const secure = location.protocol === 'https:' ? '; Secure' : '';
-    const attrs = '; Path=/; SameSite=Lax' + secure + '; Max-Age=' + (on ? CIQ_INTERNAL_MAX_AGE : 0);
-    document.cookie = 'ciq_internal=' + (on ? '1' : '') + attrs + (shared ? '; Domain=.clarityiq.ai' : '');
-    if (!on && shared) document.cookie = 'ciq_internal=' + attrs; // also clear a host-only copy
+    const attrs = '; Path=/; SameSite=Lax' + secure + '; Max-Age=';
+    document.cookie = 'ciq_internal=' + (on ? '1' : '0') + attrs + (on ? CIQ_INTERNAL_MAX_AGE : CIQ_INTERNAL_OFF_AGE) + (shared ? '; Domain=.clarityiq.ai' : '');
   } catch (e) {}
 }
 const CIQ_INTERNAL = (function () {
@@ -1209,11 +1216,17 @@ const CIQ_INTERNAL = (function () {
       ciqInternalCookieWrite(false);
       return false;
     }
+    const ck = ciqInternalCookieState();
+    if (ck === '0') { // switched off on another page of ours: clear this origin too
+      if (store) store.removeItem('ciq_internal');
+      return false;
+    }
     const viaStore = !!store && store.getItem('ciq_internal') === '1';
-    const viaCookie = ciqInternalCookieSet();
+    const viaCookie = ck === '1';
     // Keep the two in step: a device flagged with the old link (storage only)
-    // gains the cookie, and the app picks up the cookie set on the site.
-    if (viaStore && !viaCookie) ciqInternalCookieWrite(true);
+    // gains the cookie, the app picks up the cookie set on the site, and every
+    // flagged visit renews the cookie.
+    if (viaStore || viaCookie) ciqInternalCookieWrite(true);
     if (viaCookie && !viaStore && store) store.setItem('ciq_internal', '1');
     return viaStore || viaCookie;
   } catch (e) { return false; }

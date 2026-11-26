@@ -72,12 +72,19 @@ describe('internal flag v2 in the app', () => {
     assert.equal(r.src.utm_source, 'internal');
     assert.equal(r.src.utm_medium, 'flag');
   });
-  test('?ciq_internal=0 clears both and untags', () => {
+  test('?ciq_internal=0 clears storage, turns the cookie off (0, 30 days) and untags', () => {
     const r = run(html, { url: APP + '?ciq_internal=0', store: { ciq_internal: '1' }, cookies: ['ciq_internal=1'] });
     assert.equal(r.internal, false);
     assert.equal(r.data.has('ciq_internal'), false);
-    assert.equal(r.jar.size, 0);
+    assert.equal(r.jar.get('ciq_internal|clarityiq.ai').value, '0');
     assert.notEqual(r.src.utm_source, 'internal');
+  });
+  test('off marker set on the site clears the app storage and stays off (no resurrection)', () => {
+    const r = run(html, { url: APP, store: { ciq_internal: '1' }, cookies: ['ciq_internal=0'] });
+    assert.equal(r.internal, false);
+    assert.equal(r.data.has('ciq_internal'), false);
+    assert.equal(r.writes.length, 0);
+    assert.deepEqual(JSON.parse(JSON.stringify(r.ciqSessionSource())), {});
   });
   test('cookie set on the site flags the app with no URL tag (carry-over)', () => {
     const r = run(html, { url: APP, cookies: ['ciq_internal=1'] });
