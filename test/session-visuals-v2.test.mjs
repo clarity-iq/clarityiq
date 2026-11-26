@@ -1,4 +1,4 @@
-// session-visuals-v2..v4: modular visuals manifest with enabled flags, stage
+// session-visuals-v2..v4 (launched ON by default; ?v=off is the kill switch): modular visuals manifest with enabled flags, stage
 // changes ONLY by Next, 3 lens categories one at a time, STATIC range dots (v4:
 // no speech-driven dots in Lens options or Goals), toric add-on only on the word
 // "toric" or a Track B call and never over the IC-8 or LAL slide, nuance slides,
@@ -343,36 +343,37 @@ test('set_visual tool (design) is limited to the current stage', () => {
   assert.doesNotMatch(src, /set_stage/);
 });
 
-test('feature flag: OFF by default, ?v=s2 persists in sessionStorage, ?v=off clears it', () => {
+test('feature flag: ON by default; ?v=off is the kill switch (persisted per tab); ?v=s2 is harmless', () => {
   const def = loadVisuals('');
-  assert.equal(def.ctx.VISUALS_ENABLED, false);
-  assert.equal(def.ctx.STAGE_CHANGE_NEXT_ONLY, false);
-  assert.equal(def.storage.getItem('ciq_visuals'), null);
+  assert.equal(def.ctx.VISUALS_ENABLED, true);
+  assert.equal(def.ctx.STAGE_CHANGE_NEXT_ONLY, true); // Next-only behaviour is unchanged from the visuals build
+  assert.equal(def.storage.getItem('ciq_visuals'), null); // default writes nothing
 
-  // Non-obvious flag only: unrelated ?v= values keep visuals off.
-  for (const s of ['?v=1', '?v=true', '?v=on', '?v=visuals', '?visuals=1']) {
-    const other = loadVisuals(s);
-    assert.equal(other.ctx.VISUALS_ENABLED, false, s);
+  // Unrelated ?v= values and unrelated URLs leave the default (ON) alone.
+  for (const s of ['?v=1', '?v=true', '?v=on', '?v=visuals', '?visuals=1', '?checkout_session_id=cs_test_123']) {
+    assert.equal(loadVisuals(s).ctx.VISUALS_ENABLED, true, s);
   }
 
-  // ?v=s2 turns visuals on and persists across gate/checkout reloads in the same tab.
+  // ?v=s2 stays harmless: on, and it clears an earlier off in the same tab.
   const on = loadVisuals('?v=s2');
   assert.equal(on.ctx.VISUALS_ENABLED, true);
   assert.equal(on.ctx.STAGE_CHANGE_NEXT_ONLY, true);
   assert.equal(on.storage.getItem('ciq_visuals'), 's2');
+  assert.equal(loadVisuals('?v=s2', { ciq_visuals: 'off' }).ctx.VISUALS_ENABLED, true);
 
-  const persisted = loadVisuals('?checkout_session_id=cs_test_123', { ciq_visuals: 's2' });
-  assert.equal(persisted.ctx.VISUALS_ENABLED, true);
-  assert.equal(persisted.ctx.STAGE_CHANGE_NEXT_ONLY, true);
-
-  // ?v=off turns visuals off and removes the persisted flag.
-  const off = loadVisuals('?v=off', { ciq_visuals: 's2' });
+  // ?v=off turns visuals off and the kill switch survives gate/checkout reloads in the tab.
+  const off = loadVisuals('?v=off');
   assert.equal(off.ctx.VISUALS_ENABLED, false);
   assert.equal(off.ctx.STAGE_CHANGE_NEXT_ONLY, false);
-  assert.equal(off.storage.getItem('ciq_visuals'), null);
+  assert.equal(off.storage.getItem('ciq_visuals'), 'off');
+  const stays = loadVisuals('?checkout_session_id=cs_test_123', { ciq_visuals: 'off' });
+  assert.equal(stays.ctx.VISUALS_ENABLED, false);
+  assert.equal(stays.ctx.STAGE_CHANGE_NEXT_ONLY, false);
+  // Storage that throws must not break the page.
+  assert.equal(typeof loadVisuals('?v=off', {}).ctx.VISUALS_ENABLED, 'boolean');
 });
 
-test('when visuals flag is OFF: no eager images, no ciq-visuals class, and no visuals JS runs', () => {
+test('when visuals are switched off (?v=off): no eager images, no ciq-visuals class, and no visuals JS runs', () => {
   assert.match(src, /<div id="app" role="main">/);
   assert.doesNotMatch(src, /<div id="app"[^>]*ciq-visuals/);
   assert.match(src, /<div id="visual-panel" hidden>/);
@@ -381,7 +382,7 @@ test('when visuals flag is OFF: no eager images, no ciq-visuals class, and no vi
   assert.doesNotMatch(src, /<image\s+href="images\/session\//);
   assert.match(block, /function initVisuals\(\) \{\s*if \(!VISUALS_ENABLED\) return;/);
 
-  const off = loadVisuals('');
+  const off = loadVisuals('?v=off');
   off.ctx.convoState = { current_stage: 'foundations', current_track: 'C' };
   assert.equal(off.ctx.ciqVisualSync(), undefined);
   assert.equal(off.ctx.ciqVisualOnAgentLine('astigmatism'), undefined);
