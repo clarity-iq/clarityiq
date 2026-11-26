@@ -9,8 +9,8 @@
 <g font-family="Inter,system-ui,sans-serif">
   <rect x="24" y="24" width="672" height="432" rx="28" fill="#FFFDF9" filter="url(#shadow)"/>
   <g transform="translate(220,240)">
-    <path d="M-33.6,-72.8 C-17.6,-106.8 27.2,-121.8 62.4,-98.6" fill="none" stroke="#4f6b58" stroke-width="4" stroke-linecap="round"/>
-    <path d="M33.6,72.8 C17.6,106.8 -27.2,121.8 -62.4,98.6" fill="none" stroke="#4f6b58" stroke-width="4" stroke-linecap="round"/>
+    <path d="M33.6,-72.8 C17.6,-106.8 -27.2,-121.8 -62.4,-98.6" fill="none" stroke="#4f6b58" stroke-width="4" stroke-linecap="round"/>
+    <path d="M-33.6,72.8 C-17.6,106.8 27.2,121.8 62.4,98.6" fill="none" stroke="#4f6b58" stroke-width="4" stroke-linecap="round"/>
     <circle r="80" fill="url(#optic)" stroke="#1F3D2C" stroke-width="2.6"/>
     <circle r="40" fill="none" stroke="#1F2621" stroke-width="34" opacity=".88"/>
     <circle r="22" fill="none" stroke="#4f6b58" stroke-width="1.5" opacity=".6"/>

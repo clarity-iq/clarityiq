@@ -158,6 +158,7 @@ test('C-loop IOL haptics have opposite-shoulder attachment and matching rotation
     assert.ok(paths.length >= 2, file);
     const [a, b] = paths.slice(0, 2).map(m => m.slice(1).map(Number));
     for (let i = 0; i < 8; i++) assert.ok(Math.abs(a[i] + b[i]) < 0.2, `${file} idx ${i}: ${a[i]} vs ${b[i]}`);
+    assert.ok(a[0] > 0 && a[1] < 0, `${file}: superior haptic must exit on the right and sit above the optic`);
   }
   const lm = src.slice(src.indexOf('<div id="lens-map"'), src.indexOf('<div id="goals-map"'));
   const haps = [...lm.matchAll(/class="lz-hap" d="M(-?[\d.]+),(-?[\d.]+) C(-?[\d.]+),(-?[\d.]+) (-?[\d.]+),(-?[\d.]+) (-?[\d.]+),(-?[\d.]+)"/g)];
@@ -165,6 +166,7 @@ test('C-loop IOL haptics have opposite-shoulder attachment and matching rotation
   for (let i = 0; i < haps.length; i += 2) {
     const a = haps[i].slice(1).map(Number), b = haps[i + 1].slice(1).map(Number);
     for (let j = 0; j < 8; j++) assert.ok(Math.abs(a[j] + b[j]) < 0.2, `lens-map pair ${i} idx ${j}`);
+    assert.ok(a[0] > 0 && a[1] < 0, `lens-map pair ${i}: superior haptic must exit on the right and sit above the optic`);
   }
 });
 
