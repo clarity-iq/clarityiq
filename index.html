@@ -567,15 +567,9 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 #visual-caption{ flex:none; max-width:640px; text-align:center; font-size:16px; line-height:1.45; color:var(--ink-2); text-wrap:pretty; }
 #visual-panel.vis-swap #visual-img,#visual-panel.vis-swap #visual-svg,#visual-panel.vis-swap #lens-map,#visual-panel.vis-swap #goals-map{ animation:ciq-vis-in .45s ease-out; }
 @keyframes ciq-vis-in{ from{ opacity:.25; } to{ opacity:1; } }
-/* goals map dynamic dots: default none lit; active goal range lights its dot and card */
-#goals-map .gz{ transition:opacity .35s; }
-#goals-map .gz-card{ stroke:transparent; stroke-width:3; transition:stroke .3s; }
-#goals-map .gz-dot{ fill:#FFFDF9; stroke:#9DB8A2; stroke-width:3; transition:fill .25s, stroke .25s; }
+/* goals board (v4): static, three scenes with labels; nothing lights from speech */
+#goals-map .gz-card{ stroke:transparent; }
 #goals-map .gz-rl{ fill:#1F3D2C; }
-#goals-map.has-focus .gz{ opacity:.38; }
-#goals-map.has-focus .gz.is-on{ opacity:1; }
-#goals-map .gz.is-on .gz-card{ stroke:#1F3D2C; }
-#goals-map .gz.is-on .gz-dot{ fill:#1F3D2C; stroke:#1F3D2C; }
 /* lens map zones: equal size, equal style; the zone being discussed is lit, the rest step back */
 #lens-map .lz-card{ fill:#FFFDF9; stroke:transparent; stroke-width:3; filter:url(#lm-shadow); transition:stroke .3s, fill .3s; }
 #lens-map .lz{ transition:opacity .35s; }
@@ -596,7 +590,12 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 #lens-map.has-focus .lz.is-on{ opacity:1; }
 #lens-map .lz.is-on .lz-card{ fill:#F2F6EF; stroke:#1F3D2C; }
 /* orb row: small orb, status, words toggle */
-#app.ciq-visuals:has(#roadmap:not(:empty)) #orb{ grid-area:orb; width:44px; height:44px; margin:0 0 0 4px; align-self:center; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #orb{ grid-area:orb; width:44px; height:44px; margin:14px 8px 14px 18px; align-self:center; }
+/* v4: room for the echo rings. Max ring = 44px x 1.6 = 70px, so 13px past the orb on every side; the margins above keep it inside the panel (which clips). */
+#app.ciq-visuals:has(#roadmap:not(:empty)) #orb.speaking .orb-ring{ animation-name:ciq-ring-out-mini; }
+@keyframes ciq-ring-out-mini{ 0%{ transform:scale(1); opacity:.7; } 100%{ transform:scale(1.6); opacity:0; } }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #orb{ box-shadow:0 4px 10px rgba(31,61,44,.14), inset 0 -6px 12px rgba(31,61,44,.12); }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #orb.listening{ box-shadow:0 0 0 5px rgba(220,230,215,.55), 0 4px 10px rgba(31,61,44,.14), inset 0 -6px 12px rgba(31,61,44,.12); }
 #app.ciq-visuals:has(#roadmap:not(:empty)) #orb svg{ width:16px; height:16px; }
 #app.ciq-visuals:has(#roadmap:not(:empty)) #orb::before{ border-width:1px; box-shadow:none; }
 #app.ciq-visuals:has(#roadmap:not(:empty)) #status-pill{ grid-area:status; justify-content:flex-start; text-align:left; font-size:17px; align-self:center; }
@@ -996,25 +995,21 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
             <clipPath id="gm-c-far"><rect x="772" y="28" width="352" height="528" rx="22"/></clipPath>
           </defs>
           <rect width="1152" height="768" fill="#F7F2E9"/>
-          <path d="M204,612 H948" stroke="#c9d8c3" stroke-width="8" stroke-linecap="round"/>
           <g class="gz" data-zone="near">
             <image data-href="images/session/v3/goals-near.jpg" x="28" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-near)"/>
             <rect class="gz-card" x="28" y="28" width="352" height="528" rx="22" fill="none"/>
-            <circle class="gz-dot" cx="204" cy="612" r="12"/>
             <text class="gz-rl" x="204" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Near</text>
             <text x="204" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Reading, phone</text>
           </g>
           <g class="gz" data-zone="arms">
             <image data-href="images/session/v3/goals-arms.jpg" x="400" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-arms)"/>
             <rect class="gz-card" x="400" y="28" width="352" height="528" rx="22" fill="none"/>
-            <circle class="gz-dot" cx="576" cy="612" r="12"/>
             <text class="gz-rl" x="576" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Arm's length</text>
             <text x="576" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Screens, dashboard</text>
           </g>
           <g class="gz" data-zone="far">
             <image data-href="images/session/v3/goals-far.jpg" x="772" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-far)"/>
             <rect class="gz-card" x="772" y="28" width="352" height="528" rx="22" fill="none"/>
-            <circle class="gz-dot" cx="948" cy="612" r="12"/>
             <text class="gz-rl" x="948" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Far</text>
             <text x="948" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Driving, outdoors</text>
           </g>
@@ -1980,7 +1975,6 @@ const VISUAL_CHARS_PER_SEC = 15;        // speech pace used to time cues inside 
 const VISUAL_MAX_CUE_DELAY_MS = 25000;
 const VISUAL_TOOL_PRIORITY_MS = 45 * 1000;
 const LENS_CATEGORIES = ['monofocal', 'edof', 'multifocal'];
-const RANGE_KEYS = ['near', 'arms', 'far'];
 
 // Modular manifest (JSON-safe): every stage image, secondary slide, lens
 // category and dynamic range rule with an `enabled` flag.
@@ -1999,7 +1993,7 @@ const VISUALS_MANIFEST = {
     welcome: {
       stage: 'welcome', role: 'main', kind: 'image', enabled: true,
       src: 'images/session/v3/intro.jpg',
-      alt: 'A calm desk with an open notebook, reading glasses and a cup of tea.',
+      alt: 'A calm desk with an open notebook, reading glasses, a plant and a cup of tea.',
       caption: 'Let\u2019s start with where you are today.',
     },
     cataract: {
@@ -2011,11 +2005,11 @@ const VISUALS_MANIFEST = {
     focal_points: {
       stage: 'foundations', role: 'secondary', kind: 'image', enabled: true,
       src: 'images/session/v3/focal.jpg',
-      alt: 'Near, arm\u2019s length and far: an open book and reading glasses up close, a laptop at arm\u2019s length, and a road through the window far away.',
+      alt: 'Near, arm\u2019s length and far: an open book and reading glasses close up in the foreground, a laptop at arm\u2019s length on the desk, and countryside through the window far away.',
       overlay: [
-        { t: 'text', x: 135, y: 446, anchor: 'middle', cls: 'ov-label', s: 'Near' },
-        { t: 'text', x: 405, y: 446, anchor: 'middle', cls: 'ov-label', s: 'Arm\u2019s length' },
-        { t: 'text', x: 615, y: 446, anchor: 'middle', cls: 'ov-label', s: 'Far' },
+        { t: 'text', x: 458, y: 436, anchor: 'middle', cls: 'ov-label', s: 'Near' },
+        { t: 'text', x: 400, y: 300, anchor: 'middle', cls: 'ov-label', s: 'Arm\u2019s length' },
+        { t: 'text', x: 620, y: 236, anchor: 'middle', cls: 'ov-label', s: 'Far' },
       ],
       caption: 'A focal point is a range where vision is clearest without glasses: near, arm\u2019s length or far.',
       kicker: 'Focal points',
@@ -2053,7 +2047,7 @@ const VISUALS_MANIFEST = {
       stage: 'lens_options', role: 'secondary', kind: 'map_overlay', enabled: true,
       kicker: 'Add-on: Toric, for astigmatism',
       caption: 'Toric is an add-on, not a separate type: a toric version of a lens also corrects astigmatism. Which versions are available depends on the lens and how much astigmatism you have, which your surgeon measures.',
-      cuePattern: '\\b(toric|corrects? astigmatism|correcting astigmatism|for astigmatism)\\b',
+      cuePattern: '\\btoric\\b', // v4: the explicit word only; never astigmatism phrases
     },
     lal: {
       stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
@@ -2111,24 +2105,12 @@ const VISUALS_MANIFEST = {
       cuePattern: '\\b(multifocal|trifocal|full[- ]range|fuller range|panoptix|synergy|odyssey|envy)\\b',
     },
   },
-  monoRanges: {
-    near:  { enabled: true, cuePattern: '\\b(up close|set for near|for near|near vision|reading|phone)\\b' },
-    arms:  { enabled: true, cuePattern: '\\b(arm\'?s[- ]length|intermediate|computer|dashboard|cooking)\\b' },
-    far:   { enabled: true, cuePattern: '\\b(farther(?:\\s+out)?|distance|driving|tv|(?<!so )(?<!how )(?<!too )(?<!as )far(?! fewer)(?! more)(?! less)(?! from))\\b' },
-    clear: { enabled: true, cuePattern: '\\b(not sure|more than one|choose one|all three)\\b' },
-  },
-  goalRanges: {
-    near:  { enabled: true, cuePattern: '\\b(up close|reading|books?|menus?|medication|labels?|(?<!readers for )(?:small print|fine print)|phone|tablet|cards|needlework|near)\\b' },
-    arms:  { enabled: true, cuePattern: '\\b(arm\'?s[- ]length|intermediate|computer|screen|screens|laptop|dashboard|cooking|stove|hands in front)\\b' },
-    far:   { enabled: true, cuePattern: '\\b(farther|distance|driving|night driving|headlight|tv|golf|outdoors|faces across|(?<!so )(?<!how )(?<!too )(?<!as )far(?! fewer)(?! more)(?! less)(?! from))\\b' },
-    clear: { enabled: true, cuePattern: '\\b(not sure yet|weighing it up|all three|three zones)\\b' },
-  },
 };
 
 function visualApplyProfile(manifest, profile) {
   const base = JSON.parse(JSON.stringify(manifest));
   if (!profile) return base;
-  for (const group of ['stages', 'slides', 'categories', 'monoRanges', 'goalRanges']) {
+  for (const group of ['stages', 'slides', 'categories']) {
     if (!profile[group]) continue;
     for (const [k, patch] of Object.entries(profile[group])) {
       if (base[group][k]) Object.assign(base[group][k], patch);
@@ -2154,19 +2136,12 @@ function visualCueEntriesForStage(stage, manifest = VISUALS_MANIFEST) {
       const cat = manifest.categories[id];
       if (cat && cat.enabled && cat.cuePattern) entries.push({ cue: id, pattern: cat.cuePattern });
     }
-    for (const [rk, rule] of Object.entries(manifest.monoRanges || {})) {
-      if (rule && rule.enabled && rule.cuePattern) entries.push({ cue: 'mono:' + rk, pattern: rule.cuePattern });
-    }
   }
-  if (stage === 'vision_goals' || stage === 'tier_gate') {
-    for (const [rk, rule] of Object.entries(manifest.goalRanges || {})) {
-      if (rule && rule.enabled && rule.cuePattern) entries.push({ cue: 'goal:' + rk, pattern: rule.cuePattern });
-    }
-  }
+  // v4: no speech-driven range dots (lens cards and goals are static).
   return entries;
 }
 
-let visualState = { stage: null, slide: null, category: null, monoRange: null, goalRange: null, toolAt: 0 };
+let visualState = { stage: null, slide: null, category: null, toolAt: 0 };
 let visualCueTimers = [];
 
 // Fold typographic apostrophes and case so cue patterns can stay ASCII.
@@ -2185,75 +2160,58 @@ function visualCueIsNegated(text, index) {
   if (/\bnot(?: an?)?\b[^,.!?;:]{0,50}\bor\s+$/i.test(before)) return true;
   return false;
 }
-function visualLineIsMonovisionTalk(text) {
-  return /\bmonovision\b|which eye was set|one eye.{0,100}(the other|other eye)/.test(text);
+// v4: "toric" right after a negation in the same clause ("isn't available in a toric version") is not a cue.
+function visualToricIsNegated(text, index) {
+  const before = text.slice(Math.max(0, index - 48), index);
+  const clause = before.split(/[,.!?;:]/).pop();
+  return /(?:\bnot\b|n't\b|\bno\b|\bnever\b|\bwithout\b)/.test(clause);
 }
+// v4: while the IC-8 or LAL slide is up, the toric overlay never replaces it.
+const VISUAL_TORIC_BLOCKERS = ['ic8', 'lal'];
 // Pure: ordered cues in one agent line, each with a delay from the line's start.
 function visualCuePlan(stage, lower, manifest = VISUALS_MANIFEST) {
   const text = visualNormalize(lower);
-  const monovisionTalk = visualLineIsMonovisionTalk(text);
   const hits = [];
   for (const entry of visualCueEntriesForStage(stage, manifest)) {
-    if (monovisionTalk && (entry.cue === 'goal:near' || entry.cue === 'goal:far')) continue;
     const re = new RegExp(entry.pattern, 'g');
     for (const m of text.matchAll(re)) {
       if (visualCueIsNegated(text, m.index)) continue;
+      if (entry.cue === 'toric' && visualToricIsNegated(text, m.index)) continue;
       hits.push({ cue: entry.cue, index: m.index });
     }
   }
   hits.sort((a, b) => a.index - b.index);
   const plan = [];
+  let blockerSeen = false;
   for (const h of hits) {
+    // v4: a line that brings up the IC-8 or the LAL stays on that slide; later category or
+    // toric words in the same line ("the other eye gets a basic or toric lens") don't replace it.
+    if (blockerSeen && (h.cue === 'toric' || LENS_CATEGORIES.includes(h.cue))) continue;
+    if (VISUAL_TORIC_BLOCKERS.includes(h.cue)) blockerSeen = true;
     if (plan.length && plan[plan.length - 1].cue === h.cue) continue; // repeated word, same cue
     plan.push({ cue: h.cue, delayMs: Math.min(VISUAL_MAX_CUE_DELAY_MS, Math.round(h.index / VISUAL_CHARS_PER_SEC * 1000)) });
-  }
-  // A line that names two or more ranges in the same family is an overview, not a choice — finish on the default (none lit).
-  for (const prefix of ['mono:', 'goal:']) {
-    const named = new Set(plan.filter(s => s.cue.startsWith(prefix) && s.cue !== prefix + 'clear').map(s => s.cue));
-    if (named.size >= 2) {
-      const lastFamily = [...plan].reverse().find(s => s.cue.startsWith(prefix));
-      if (lastFamily && lastFamily.cue !== prefix + 'clear') {
-        plan.push({ cue: prefix + 'clear', delayMs: plan[plan.length - 1].delayMs });
-      }
-    }
   }
   return plan;
 }
 // Pure: apply one cue to the state. Never touches the stage.
 function visualApplyCue(state, cue, track, manifest = VISUALS_MANIFEST) {
   const v = { ...state };
-  if (cue.startsWith('goal:')) {
-    if (v.stage !== 'vision_goals' && v.stage !== 'tier_gate') return v;
-    const rk = cue.slice(5);
-    if (!manifest.goalRanges?.[rk]?.enabled) return v;
-    v.goalRange = rk === 'clear' ? null : (RANGE_KEYS.includes(rk) ? rk : v.goalRange);
-    return v;
-  }
-  if (cue.startsWith('mono:')) {
-    if (v.stage !== 'lens_options' || v.category !== 'monofocal' || v.slide) return v;
-    const rk = cue.slice(5);
-    if (!manifest.monoRanges?.[rk]?.enabled) return v;
-    v.monoRange = rk === 'clear' ? null : (RANGE_KEYS.includes(rk) ? rk : v.monoRange);
-    return v;
-  }
   if (LENS_CATEGORIES.includes(cue)) {
     const cat = manifest.categories[cue];
     if (v.stage !== 'lens_options' || !cat || !cat.enabled) return v;
     if (v.slide === 'toric' && track === 'B') return v; // in the toric lesson, keep the toric layer equal on all 3
     v.category = cue;
     v.slide = null;
-    v.monoRange = null; // default: no single monofocal range lit until named
     return v;
   }
   const slide = manifest.slides[cue];
   if (!slide || slide.role !== 'secondary' || !slide.enabled || slide.stage !== v.stage) return v;
   if (cue === 'toric') {
+    if (VISUAL_TORIC_BLOCKERS.includes(v.slide)) return v; // v4: never over the IC-8 or LAL slide
     v.slide = 'toric';
     v.category = null; // axis marks on all 3 lenses equally; no single category highlighted
-    v.monoRange = null;
   } else {
     v.slide = cue;
-    v.monoRange = null;
     if (slide.homeCategory) {
       const home = manifest.categories[slide.homeCategory];
       v.category = (home && home.enabled) ? slide.homeCategory : null;
@@ -2261,27 +2219,24 @@ function visualApplyCue(state, cue, track, manifest = VISUALS_MANIFEST) {
   }
   return v;
 }
-// Pure: a new stage always starts on its main image with default unlit range dots.
-function visualForStage(stage) { return { stage, slide: null, category: null, monoRange: null, goalRange: null, toolAt: 0 }; }
+// Pure: a new stage always starts on its main image.
+function visualForStage(stage) { return { stage, slide: null, category: null, toolAt: 0 }; }
 // Pure: a track opening (exact track-entry sentence or record_track_switch).
 function visualForTrack(state, track, manifest = VISUALS_MANIFEST) {
   if (state.stage !== 'lens_options') return state;
-  if (track === 'C') return { ...state, slide: null, category: manifest.categories.monofocal.enabled ? 'monofocal' : null, monoRange: null };
-  if (track === 'B') return manifest.slides.toric.enabled ? { ...state, slide: 'toric', category: null, monoRange: null } : { ...state, slide: null, category: null, monoRange: null };
-  if (track === 'A') return { ...state, slide: null, category: null, monoRange: null }; // EDOF or multifocal lights when named
+  if (track === 'C') return { ...state, slide: null, category: manifest.categories.monofocal.enabled ? 'monofocal' : null };
+  if (track === 'B') {
+    if (VISUAL_TORIC_BLOCKERS.includes(state.slide)) return state; // v4: never over the IC-8 or LAL slide
+    return manifest.slides.toric.enabled ? { ...state, slide: 'toric', category: null } : { ...state, slide: null, category: null };
+  }
+  if (track === 'A') return { ...state, slide: null, category: null }; // EDOF or multifocal lights when named
   return state;
 }
 // set_visual tool values (design; not on the agent). Returns null if disabled or not for this stage.
 function visualFromTool(state, visual, manifest = VISUALS_MANIFEST) {
   const mainId = visualStageMain(state.stage, manifest);
   if (visual === mainId || (visual === 'lens_overview' && state.stage === 'lens_options')) {
-    return { ...state, slide: null, category: null, monoRange: null, goalRange: null };
-  }
-  if ((state.stage === 'vision_goals' || state.stage === 'tier_gate') && RANGE_KEYS.includes(visual)) {
-    return visualApplyCue(state, 'goal:' + visual, 'tool', manifest);
-  }
-  if (state.stage === 'lens_options' && RANGE_KEYS.includes(visual) && state.category === 'monofocal' && !state.slide) {
-    return visualApplyCue(state, 'mono:' + visual, 'tool', manifest);
+    return { ...state, slide: null, category: null };
   }
   if (LENS_CATEGORIES.includes(visual)) {
     if (state.stage !== 'lens_options' || !manifest.categories[visual]?.enabled) return null;
@@ -2289,6 +2244,7 @@ function visualFromTool(state, visual, manifest = VISUALS_MANIFEST) {
   }
   const slide = manifest.slides[visual];
   if (!slide || slide.role !== 'secondary' || !slide.enabled || slide.stage !== state.stage) return null;
+  if (visual === 'toric' && VISUAL_TORIC_BLOCKERS.includes(state.slide)) return null; // v4: not over the IC-8 or LAL slide
   return visualApplyCue(state, visual, 'tool', manifest);
 }
 function visualFrameOf(state, manifest = VISUALS_MANIFEST) {
@@ -2305,15 +2261,11 @@ function ciqVisualRender() {
   const frame = visualFrameOf(v);
   const isToric = frame === 'toric';
   const focusCat = isToric ? null : v.category;
-  const monoRange = (frame === 'lens_map' && focusCat === 'monofocal') ? v.monoRange : null;
-  const goalRange = (frame === 'daily_life') ? v.goalRange : null;
-  const key = [frame, focusCat || '', monoRange || '', goalRange || ''].join('|');
+  const key = [frame, focusCat || ''].join('|');
   const frameChanged = panel.dataset.frame !== frame;
   panel.dataset.stage = v.stage || '';
   panel.dataset.frame = frame;
   panel.dataset.category = focusCat || '';
-  panel.dataset.monoRange = monoRange || '';
-  panel.dataset.goalRange = goalRange || '';
   if (panel.dataset.key === key) return;
   panel.dataset.key = key;
   const img = document.getElementById('visual-img');
@@ -2330,9 +2282,7 @@ function ciqVisualRender() {
     map.classList.toggle('toric-on', isToric);
     map.classList.toggle('has-focus', !!focusCat);
     map.querySelectorAll('.lz').forEach(g => g.classList.toggle('is-on', g.dataset.zone === focusCat));
-    map.querySelectorAll('.lz[data-zone="monofocal"]').forEach(mz => {
-      mz.querySelectorAll('.lz-dot, .lz-rl').forEach(el => el.classList.toggle('on', el.dataset.range === monoRange));
-    });
+    // v4: range dots are static (fixed per card in the markup); speech never lights them.
     kick.textContent = isToric ? (VISUALS_MANIFEST.slides.toric.kicker || '') : '';
     cap.textContent = isToric
       ? VISUALS_MANIFEST.slides.toric.caption
@@ -2341,14 +2291,14 @@ function ciqVisualRender() {
     const meta = VISUALS_MANIFEST.slides.daily_life;
     img.hidden = true;
     map.hidden = true;
-    gmap.hidden = false;
-    gmap.classList.toggle('has-focus', !!goalRange);
-    gmap.querySelectorAll('.gz').forEach(g => g.classList.toggle('is-on', g.dataset.zone === goalRange));
+    map.classList.remove('toric-on');
+    gmap.hidden = false; // v4: static goals board, no dots
     kick.textContent = meta.kicker || '';
     cap.textContent = meta.caption;
   } else {
     const meta = VISUALS_MANIFEST.slides[frame] || VISUALS_MANIFEST.slides.welcome;
     map.hidden = true;
+    map.classList.remove('toric-on'); // v4: a hidden map never keeps a stale toric layer
     if (gmap) gmap.hidden = true;
     if (vsvg && Array.isArray(meta.overlay) && meta.overlay.length) {
       img.hidden = true;
