@@ -1935,6 +1935,47 @@ function isSpokenNext(text) {
 }
 document.getElementById('next-btn').addEventListener('click', () => advanceByUser('tap'));
 
+// ── hard-mute-v1 BEGIN ───────────────────────────────────────────────────────
+// Opt-in only (default OFF, so buyers' audio is unchanged). ?mute=hard turns it on
+// for the current tab (sessionStorage); ?mute=off turns it off. When ON, the agent's
+// voice is cut at once when the person interrupts, instead of the SDK's ~2 s fade-out.
+const CIQ_MUTE_KEY = 'ciq_mute';
+function ciqResolveHardMuteFlag(search, storage) {
+  try {
+    const v = new URLSearchParams(search || '').get('mute');
+    if (v === 'hard') {
+      try { if (storage) storage.setItem(CIQ_MUTE_KEY, 'hard'); } catch (e) {}
+      return true;
+    }
+    if (v === 'off') {
+      try { if (storage) storage.removeItem(CIQ_MUTE_KEY); } catch (e) {}
+      return false;
+    }
+    return !!(storage && storage.getItem(CIQ_MUTE_KEY) === 'hard');
+  } catch (e) {
+    return false;
+  }
+}
+const HARD_MUTE_ENABLED = ciqResolveHardMuteFlag(
+  typeof location !== 'undefined' ? location.search : '',
+  (() => { try { return typeof sessionStorage !== 'undefined' ? sessionStorage : null; } catch (e) { return null; } })()
+);
+let hardMuteCut = false;
+// The SDK ramps the volume down over 2 s on an interruption while buffered speech keeps
+// playing. Setting the volume to 0 first makes that ramp start from silence (a ramp from 0
+// stays at 0). The volume returns with the next agent audio, which is new speech.
+function ciqHardMuteOnInterrupt(conv) {
+  if (!HARD_MUTE_ENABLED || !conv) return;
+  hardMuteCut = true;
+  try { conv.setVolume({ volume: 0 }); } catch (e) {}
+}
+function ciqHardMuteOnAudio(conv, speakerMuted) {
+  if (!HARD_MUTE_ENABLED || !hardMuteCut || !conv) return;
+  hardMuteCut = false;
+  try { conv.setVolume({ volume: speakerMuted ? 0 : 1 }); } catch (e) {}
+}
+// ── hard-mute-v1 END ─────────────────────────────────────────────────────────
+
 // ── session-visuals-v2 BEGIN ─────────────────────────────────────────────────
 // In-session visuals (Martin, Nov 25, v3 manifest + Next-only + dynamic dots):
 //  - Stage changes ONLY by Next (button or spoken "next" via the existing
@@ -1946,10 +1987,12 @@ document.getElementById('next-btn').addEventListener('click', () => advanceByUse
 //    default is none lit; stage-scoped keywords light the named range as the
 //    agent speaks, with safe fallback to the default.
 // No network calls. Words (the transcript) always start hidden.
-// Hidden feature flag: OFF by default for normal buyers. Turn on via ?v=s2
-// (persisted in sessionStorage for the current tab); turn off via ?v=off.
+// Launched for everyone: ON by default. ?v=off is the kill switch (persisted in
+// sessionStorage for the current tab, so reloads keep the old view); ?v=s2 turns
+// it back on and is otherwise harmless (kept so old test links still work).
 const CIQ_VISUALS_KEY = 'ciq_visuals';
 const CIQ_VISUALS_ON_VALUE = 's2';
+const CIQ_VISUALS_OFF_VALUE = 'off';
 function ciqResolveVisualsFlag(search, storage) {
   try {
     const v = new URLSearchParams(search || '').get('v');
@@ -1957,11 +2000,11 @@ function ciqResolveVisualsFlag(search, storage) {
       try { if (storage) storage.setItem(CIQ_VISUALS_KEY, CIQ_VISUALS_ON_VALUE); } catch (e) {}
       return true;
     }
-    if (v === 'off') {
-      try { if (storage) storage.removeItem(CIQ_VISUALS_KEY); } catch (e) {}
+    if (v === CIQ_VISUALS_OFF_VALUE) {
+      try { if (storage) storage.setItem(CIQ_VISUALS_KEY, CIQ_VISUALS_OFF_VALUE); } catch (e) {}
       return false;
     }
-    return !!(storage && storage.getItem(CIQ_VISUALS_KEY) === CIQ_VISUALS_ON_VALUE);
+    return !(storage && storage.getItem(CIQ_VISUALS_KEY) === CIQ_VISUALS_OFF_VALUE);
   } catch (e) {
     return false;
   }
@@ -3569,6 +3612,12 @@ async function startConversation(opts) {
         document.getElementById('end-btn').style.display     = 'none';
       },
 
+      // hard-mute-v1: only passed when ?mute=hard is on; otherwise the SDK options are unchanged.
+      ...(HARD_MUTE_ENABLED ? {
+        onInterruption: () => ciqHardMuteOnInterrupt(conversation),
+        onAudio: () => ciqHardMuteOnAudio(conversation, isSpeakerMuted),
+      } : {}),
+
       onModeChange: ({ mode }) => {
         if (mode === 'speaking')       setStatus('speaking',  'ClarityIQ is speaking…');
         else if (mode === 'listening') setStatus('listening', 'Listening…');
@@ -4000,6 +4049,7 @@ document.getElementById('print-btn').addEventListener('click', () => { window.pr
 document.getElementById('speaker-btn').addEventListener('click', () => {
   if (!conversation) return;
   isSpeakerMuted = !isSpeakerMuted;
+  hardMuteCut = false;
   conversation.setVolume({ volume: isSpeakerMuted ? 0 : 1 });
   const btn = document.getElementById('speaker-btn');
   btn.textContent = isSpeakerMuted ? 'Speaker off' : 'Speaker';
