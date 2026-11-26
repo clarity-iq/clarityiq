@@ -1592,10 +1592,10 @@ async function verifyAndApplyPurchase() {
         });
       }
     }
-  } else if (result && (result.reason === 'expired' || result.reason === 'already_used' || result.reason === 'free_used' || result.reason === 'practice_used' || result.reason === 'practice_code')) {
-    // Dead code (Direct: a surgeon-made code is refused here too) — stop re-checking it on future loads.
+  } else if (result && (result.reason === 'expired' || result.reason === 'already_used' || result.reason === 'free_used' || result.reason === 'practice_used')) {
+    // Dead code — stop re-checking it on future loads.
     localStorage.removeItem(ACCESS_CODE_STORAGE_KEY);
-    if (result.reason === 'free_used' || result.reason === 'practice_used' || result.reason === 'practice_code' || result.message) showGateNotice(result.message || FREE_CODE_MESSAGES[result.reason]);
+    if (result.reason === 'free_used' || result.reason === 'practice_used' || result.message) showGateNotice(result.message || FREE_CODE_MESSAGES[result.reason]);
   }
   } finally {
     // Adopted source (if any) is already on CIQ_SRC. Always flush after a
@@ -1615,7 +1615,7 @@ async function tryApplyAccessCode(code) {
     applyVerifiedPurchase(result);
     return true;
   }
-  if (result && (result.reason === 'free_used' || result.reason === 'practice_used' || result.reason === 'practice_code' || (result.reason === 'expired' && result.message))) {
+  if (result && (result.reason === 'free_used' || result.reason === 'practice_used' || (result.reason === 'expired' && result.message))) {
     return { notice: result.message || FREE_CODE_MESSAGES[result.reason] };
   }
   return false;
@@ -2862,17 +2862,6 @@ vision_goal: Extract the person's stated goal in their own words, as confirmed i
 
 monovision_history: If the transcript indicates the person has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A". This can apply regardless of tier.
 
-past_refractive_surgery: Always include this field. Use only one of these values, and nothing else — no dates, no eye, no other medical details:
-- "LASIK" if they said they had LASIK only
-- "PRK" if they said they had PRK only
-- "RK" if they said they had RK only
-- "LASIK and PRK", "LASIK and RK", "PRK and RK", or "LASIK, PRK and RK" if they named more than one of these
-- "none" if they said they have not had LASIK, PRK or RK
-- "not shared" if they skipped the question, preferred not to say, or the topic never came up
-Do not infer a procedure from other comments.
-
-OTHER HISTORY RULE: Never include other personal medical or eye history in any field: no eye conditions, eye injuries or medications, and no extra detail about past surgery beyond the past_refractive_surgery value and monovision_history. Leave that out entirely; their surgeon will review their history.
-
 topics_by_group: Group the specific topics actually discussed in this conversation into the four sections below — not a generic list, and only topics that came up in this person's session. Omit any group that has nothing in it (or use an empty array). If the person did not speak, or no topics were actually discussed, omit topics_by_group entirely. Do not invent foundational topics, and do not list topics only because they are part of an earlier stage. For session-tier people, if a lens type was asked about or discussed, include it in the lenses group in plain language (e.g., "toric lens options," "advanced-technology lens options," "basic monofocal lens option") — never the internal track letter or the word "track" itself (do not write "Track A," "Track B," "Track C," "the B track," or similar). For starter-tier people, list only foundational topics that actually came up (do not list track content, since starter-tier people did not receive it). Do not also return a flat topics_covered list.
 
   basics: cataract and lens basics, how surgery works, focus ranges and vision zones, astigmatism basics, glasses and insurance myths, that the lens is meant to stay, that surgery is done one eye at a time, and similar foundational topics.
@@ -2896,7 +2885,6 @@ Return only the JSON object below, no other text — omit any field per the rule
 {
   "vision_goal": "...",
   "monovision_history": "...",
-  "past_refractive_surgery": "LASIK | PRK | RK | none | not shared",
   "topics_by_group": {
     "basics": ["..."],
     "your_life": ["..."],
@@ -2924,8 +2912,6 @@ Return only the JSON object below, no other text — omit any field per the rule
     }
   }
   if (!parsed) throw lastErr || new Error('summary extraction failed');
-
-  parsed.past_refractive_surgery = normalizePastRefractiveSurgery(parsed.past_refractive_surgery);
 
   // Prefer grouped topics. A flat topics_covered list is kept for
   // backward compatibility (older model output, or when grouping fails).
@@ -3049,28 +3035,6 @@ function summaryForEmail(summary) {
   return Object.assign({}, summary, { topics_covered: topics });
 }
 
-// Allow-list only: the on-screen and email summaries may show a past
-// refractive-surgery value, never extra medical detail. Used at extract
-// time and again at render so a fallback or a stray model phrase cannot
-// leak dates, eyes, or other history.
-function normalizePastRefractiveSurgery(value) {
-  if (value == null || String(value).trim() === '') return 'not shared';
-  const lower = String(value).trim().toLowerCase();
-  if (/\bnot shared\b/.test(lower) || /\bprefer not\b/.test(lower) || /\bskipped\b/.test(lower)) return 'not shared';
-  if (/\bnone\b/.test(lower) || /\bno prior\b/.test(lower) || /\bhave not\b/.test(lower) || /\bhaven't\b/.test(lower) || lower === 'no') return 'none';
-  const hasL = /\blasik\b/.test(lower);
-  const hasP = /\bprk\b/.test(lower);
-  const hasR = /(^|[^a-z])rk([^a-z]|$)/.test(lower) || /\bradial keratotomy\b/.test(lower);
-  const parts = [];
-  if (hasL) parts.push('LASIK');
-  if (hasP) parts.push('PRK');
-  if (hasR) parts.push('RK');
-  if (parts.length === 1) return parts[0];
-  if (parts.length === 2) return parts[0] + ' and ' + parts[1];
-  if (parts.length === 3) return 'LASIK, PRK and RK';
-  return 'not shared';
-}
-
 function escapeHtmlClient(s) {
   return String(s || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -3084,8 +3048,7 @@ function escapeHtmlClient(s) {
 const REASSURANCE_NOTE = "It's completely normal to still have questions at this point. Bring this summary to your surgeon — before you see your surgeon, after, or as a second look.";
 
 // Summary Artifact — v0.2 field order: vision_goal (with
-// monovision_history nested as a sub-line) -> past_refractive_surgery
-// (on-screen and email only; never stored) -> topics_covered ->
+// monovision_history nested as a sub-line) -> topics_covered ->
 // lens_category_interest (now includes focal point / tradeoff preference
 // inline) -> surgeon_questions -> (session_access_note removed, tap-next v1) ->
 // starter_scope_note (starter only) -> reassurance_note (always last).
@@ -3107,13 +3070,6 @@ function renderSummary(summary) {
     }
     goalCard.innerHTML = goalHtml;
     body.appendChild(goalCard);
-  }
-
-  if (summary.past_refractive_surgery) {
-    const histCard = document.createElement('div');
-    histCard.className = 'summary-card';
-    histCard.innerHTML = `<div class="summary-card-label">Past refractive surgery</div><div class="summary-card-value">${escapeHtmlClient(normalizePastRefractiveSurgery(summary.past_refractive_surgery))}</div>`;
-    body.appendChild(histCard);
   }
 
   const topicGroups = normalizeTopicGroups(summary);
@@ -3193,7 +3149,6 @@ async function buildAndShowSummary() {
     console.error('AI summary failed:', err);
     const fallbackTier = convoState ? convoState.tier : 'starter';
     pendingSummaryResult = {
-      past_refractive_surgery: 'not shared',
       ...(fallbackTier === 'starter' ? { starter_scope_note: 'This summary reflects your starter session — full lens category comparison was outside its scope.' } : {}),
     };
   }
@@ -3442,15 +3397,13 @@ async function startConversation(opts) {
   // key and rate-limits this (5/IP/hour), so it fails fast here rather than
   // after already prompting for mic access.
   let signedUrl;
-  // Direct (direct-drop-surgeon-settings): the Direct agent never gets surgeon
-  // settings. 'NONE' is sent only because the live prompt (v3.8.4) still has
-  // the {{practice_profile}} slot; drop the variable once the Direct prompt
-  // without the slot (v3.8.5-direct) is live.
-  const practiceProfile = 'NONE';
+  let practiceProfile = 'NONE'; // practice-profile-v1: 'NONE' = the standard session
   try {
     const voiceRes = await fetch(PROXY_URL + '/api/get-voice-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-ClarityIQ-Key': CLIENT_KEY },
+      // practice-profile-v1: the code lets the Worker fill the surgeon's
+      // practice profile (only for codes made in a surgeon dashboard).
       body: JSON.stringify({ session_code: sessionCode, access_code: purchaseInfo ? purchaseInfo.access_code : null, src: CIQ_SRC }),
     });
     if (voiceRes.status === 429) {
@@ -3463,13 +3416,6 @@ async function startConversation(opts) {
     if (voiceRes.status === 403) {
       // practice-profile v1.1: surgeon code already used (1 session + 1 restart).
       const data = await voiceRes.json().catch(() => ({}));
-      if (data.error === 'practice_code') {
-        // Direct: surgeon-made codes work through the practice's own link.
-        setStatus('idle', '');
-        beginBtn.disabled = false;
-        showError(data.message || "This code is from a surgeon's office. Please use the link your practice gave you.");
-        return;
-      }
       if (data.error === 'code_used') {
         setStatus('idle', '');
         beginBtn.disabled = false;
@@ -3485,6 +3431,7 @@ async function startConversation(opts) {
     const voiceData = await voiceRes.json();
     signedUrl = voiceData.signed_url;
     if (!signedUrl) throw new Error('no signed_url in response');
+    practiceProfile = (typeof voiceData.practice_profile === 'string' && voiceData.practice_profile) ? voiceData.practice_profile : 'NONE';
   } catch (e) {
     setStatus('idle', '');
     beginBtn.disabled = false;
