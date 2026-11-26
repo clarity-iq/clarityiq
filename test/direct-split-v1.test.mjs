@@ -18,9 +18,9 @@ test('surgeon-made code refused with a friendly message at gate and at start', (
   assert.match(src, /data\.error === 'practice_code'/);
 });
 
-test('summary: no monovision_history field, NO HEALTH HISTORY rule present', () => {
-  assert.equal(/"monovision_history"/.test(src), false);
-  assert.equal(/summary\.monovision_history/.test(src), false);
+test('summary: monovision_history unchanged (Martin t600u); NO HEALTH HISTORY rule for surgery/conditions', () => {
+  assert.match(src, /"monovision_history"/);
+  assert.match(src, /summary\.monovision_history/);
   assert.match(src, /NO HEALTH HISTORY RULE/);
   assert.match(src, /LASIK, PRK, RK/);
 });

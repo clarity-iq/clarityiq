@@ -2860,7 +2860,9 @@ ADDRESS THE PERSON DIRECTLY: Write every field as if speaking to the person. Use
 
 vision_goal: Extract the person's stated goal in their own words, as confirmed in Stage 6. Do not paraphrase into different language than what the person actually said. If the conversation ended before Stage 6 and this was never confirmed, omit the field entirely — do not return an empty string, null, or a placeholder like "not captured."
 
-NO HEALTH HISTORY RULE: Never include personal medical or eye history in any field, even if the person mentioned it: no past eye surgery (LASIK, PRK, RK or other), eye conditions, medications, or which eye was set for distance or near in the past. Leave it out entirely; their surgeon will review their history.
+monovision_history: If the transcript indicates the person has monovision history, extract which eye was set for distance and which for near. If no monovision history was discussed, omit the field entirely — do not return an empty string or "N/A". This can apply regardless of tier.
+
+NO HEALTH HISTORY RULE: Never include other personal medical or eye history in any field, even if the person mentioned it: no past eye surgery (LASIK, PRK, RK or other), eye conditions or medications. Leave it out entirely; their surgeon will review their history. (monovision_history above is unchanged.)
 
 topics_by_group: Group the specific topics actually discussed in this conversation into the four sections below — not a generic list, and only topics that came up in this person's session. Omit any group that has nothing in it (or use an empty array). If the person did not speak, or no topics were actually discussed, omit topics_by_group entirely. Do not invent foundational topics, and do not list topics only because they are part of an earlier stage. For session-tier people, if a lens type was asked about or discussed, include it in the lenses group in plain language (e.g., "toric lens options," "advanced-technology lens options," "basic monofocal lens option") — never the internal track letter or the word "track" itself (do not write "Track A," "Track B," "Track C," "the B track," or similar). For starter-tier people, list only foundational topics that actually came up (do not list track content, since starter-tier people did not receive it). Do not also return a flat topics_covered list.
 
@@ -2884,6 +2886,7 @@ Return only the JSON object below, no other text — omit any field per the rule
 
 {
   "vision_goal": "...",
+  "monovision_history": "...",
   "topics_by_group": {
     "basics": ["..."],
     "your_life": ["..."],
@@ -3046,7 +3049,8 @@ function escapeHtmlClient(s) {
 // so every pass type sees the same summary.
 const REASSURANCE_NOTE = "It's completely normal to still have questions at this point. Bring this summary to your surgeon — before you see your surgeon, after, or as a second look.";
 
-// Summary Artifact — v0.2 field order: vision_goal -> topics_covered ->
+// Summary Artifact — v0.2 field order: vision_goal (with
+// monovision_history nested as a sub-line) -> topics_covered ->
 // lens_category_interest (now includes focal point / tradeoff preference
 // inline) -> surgeon_questions -> (session_access_note removed, tap-next v1) ->
 // starter_scope_note (starter only) -> reassurance_note (always last).
@@ -3063,7 +3067,9 @@ function renderSummary(summary) {
     const goalCard = document.createElement('div');
     goalCard.className = 'summary-card';
     let goalHtml = `<div class="summary-card-label">My vision goal</div><div class="summary-card-value">"${escapeHtmlClient(summary.vision_goal)}"</div>`;
-    // Direct: monovision_history is no longer extracted or shown (no health history).
+    if (summary.monovision_history) {
+      goalHtml += `<div class="summary-card-subline">${escapeHtmlClient(summary.monovision_history)}</div>`;
+    }
     goalCard.innerHTML = goalHtml;
     body.appendChild(goalCard);
   }
