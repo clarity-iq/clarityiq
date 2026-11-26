@@ -632,7 +632,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 </style>
 </head>
 <body>
-<div id="app" role="main" class="ciq-visuals" data-words="closed">
+<div id="app" role="main">
 
   <!-- Password gate -->
   <div id="gate">
@@ -961,10 +961,10 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
     </div>
 
     <!-- session-visuals-v2: one main image per stage (changes on Next); words in the agent's line may pop up a slide inside the stage -->
-    <div id="visual-panel">
+    <div id="visual-panel" hidden>
       <figure id="visual-figure">
         <div id="visual-kicker"></div>
-        <img id="visual-img" alt="" src="images/session/welcome.svg" width="720" height="480" decoding="async">
+        <img id="visual-img" alt="" width="720" height="480" decoding="async" hidden>
         <div id="lens-map" hidden>
           <svg class="lens-map-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><radialGradient id="lm-optic" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#EAF3F1"/><stop offset="1" stop-color="#C9DDD6"/></radialGradient><filter id="lm-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1F3D2C" flood-opacity=".10"/></filter></defs></svg>
           <svg class="lens-map lens-map-wide" viewBox="0 0 720 420" role="img" aria-label="Three lens categories: monofocal, EDOF (extended range) and multifocal (full range), each with the ranges it is designed for.">
@@ -990,21 +990,21 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
           <rect width="1152" height="768" fill="#F7F2E9"/>
           <path d="M204,612 H948" stroke="#c9d8c3" stroke-width="8" stroke-linecap="round"/>
           <g class="gz" data-zone="near">
-            <image href="images/session/web/goals-near.jpg" x="28" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-near)"/>
+            <image data-href="images/session/web/goals-near.jpg" x="28" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-near)"/>
             <rect class="gz-card" x="28" y="28" width="352" height="528" rx="22" fill="none"/>
             <circle class="gz-dot" cx="204" cy="612" r="12"/>
             <text class="gz-rl" x="204" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Near</text>
             <text x="204" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Reading, phone</text>
           </g>
           <g class="gz" data-zone="arms">
-            <image href="images/session/web/goals-arms.jpg" x="400" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-arms)"/>
+            <image data-href="images/session/web/goals-arms.jpg" x="400" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-arms)"/>
             <rect class="gz-card" x="400" y="28" width="352" height="528" rx="22" fill="none"/>
             <circle class="gz-dot" cx="576" cy="612" r="12"/>
             <text class="gz-rl" x="576" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Arm's length</text>
             <text x="576" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Screens, dashboard</text>
           </g>
           <g class="gz" data-zone="far">
-            <image href="images/session/web/goals-far.jpg" x="772" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-far)"/>
+            <image data-href="images/session/web/goals-far.jpg" x="772" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-far)"/>
             <rect class="gz-card" x="772" y="28" width="352" height="528" rx="22" fill="none"/>
             <circle class="gz-dot" cx="948" cy="612" r="12"/>
             <text class="gz-rl" x="948" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Far</text>
@@ -1038,7 +1038,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
       </svg>
     </div>
 
-    <button id="words-toggle" type="button" aria-controls="transcript-wrap" aria-expanded="false"><span class="wt-ic" aria-hidden="true"></span><span id="words-toggle-label">Show words</span></button>
+    <button id="words-toggle" type="button" aria-controls="transcript-wrap" aria-expanded="false" hidden><span class="wt-ic" aria-hidden="true"></span><span id="words-toggle-label">Show words</span></button>
     <div id="transcript-wrap"></div>
     <div id="error-box"></div>
   </div>
@@ -1943,8 +1943,31 @@ document.getElementById('next-btn').addEventListener('click', () => advanceByUse
 //    default is none lit; stage-scoped keywords light the named range as the
 //    agent speaks, with safe fallback to the default.
 // No network calls. Words (the transcript) always start hidden.
-const VISUALS_ENABLED = true;
-const STAGE_CHANGE_NEXT_ONLY = true;
+// Hidden feature flag: OFF by default for normal buyers. Turn on via ?v=s2
+// (persisted in sessionStorage for the current tab); turn off via ?v=off.
+const CIQ_VISUALS_KEY = 'ciq_visuals';
+const CIQ_VISUALS_ON_VALUE = 's2';
+function ciqResolveVisualsFlag(search, storage) {
+  try {
+    const v = new URLSearchParams(search || '').get('v');
+    if (v === CIQ_VISUALS_ON_VALUE) {
+      try { if (storage) storage.setItem(CIQ_VISUALS_KEY, CIQ_VISUALS_ON_VALUE); } catch (e) {}
+      return true;
+    }
+    if (v === 'off') {
+      try { if (storage) storage.removeItem(CIQ_VISUALS_KEY); } catch (e) {}
+      return false;
+    }
+    return !!(storage && storage.getItem(CIQ_VISUALS_KEY) === CIQ_VISUALS_ON_VALUE);
+  } catch (e) {
+    return false;
+  }
+}
+const VISUALS_ENABLED = ciqResolveVisualsFlag(
+  typeof location !== 'undefined' ? location.search : '',
+  (() => { try { return typeof sessionStorage !== 'undefined' ? sessionStorage : null; } catch (e) { return null; } })()
+);
+const STAGE_CHANGE_NEXT_ONLY = VISUALS_ENABLED;
 const VISUAL_CHARS_PER_SEC = 15;        // speech pace used to time cues inside one line
 const VISUAL_MAX_CUE_DELAY_MS = 25000;
 const VISUAL_TOOL_PRIORITY_MS = 45 * 1000;
@@ -2352,11 +2375,18 @@ function ciqSetWords(open) {
   if (open) { const w = document.getElementById('transcript-wrap'); w.scrollTop = w.scrollHeight; }
 }
 (function initVisuals() {
+  if (!VISUALS_ENABLED) return;
   const app = document.getElementById('app');
-  if (!VISUALS_ENABLED) { app.classList.remove('ciq-visuals'); return; }
   app.classList.add('ciq-visuals');
+  const vp = document.getElementById('visual-panel');
+  const wt = document.getElementById('words-toggle');
+  if (vp) vp.hidden = false;
+  if (wt) wt.hidden = false;
+  document.querySelectorAll('#goals-map image[data-href]').forEach(el => {
+    el.setAttribute('href', el.getAttribute('data-href'));
+  });
   ciqSetWords(false);
-  document.getElementById('words-toggle').addEventListener('click', () => ciqSetWords(!ciqWordsOpen()));
+  if (wt) wt.addEventListener('click', () => ciqSetWords(!ciqWordsOpen()));
 })();
 // ── session-visuals-v2 END ───────────────────────────────────────────────────
 
@@ -2464,7 +2494,7 @@ function renderRoadmap() {
       container.appendChild(con);
     }
   });
-  ciqVisualSync(); // session-visuals-v2
+  if (VISUALS_ENABLED) ciqVisualSync(); // session-visuals-v2
 }
 
 let conversation   = null;
@@ -2670,11 +2700,11 @@ function addTranscriptLine(role, text) {
         }
         touchState();
         sendTelemetry();
-        ciqVisualOnTrack(); // session-visuals-v2
+        if (VISUALS_ENABLED) ciqVisualOnTrack(); // session-visuals-v2
         break;
       }
     }
-    ciqVisualOnAgentLine(lower); // session-visuals-v2: slides and lens category inside the stage
+    if (VISUALS_ENABLED) ciqVisualOnAgentLine(lower); // session-visuals-v2: slides and lens category inside the stage
     // Tap-next v1: highlight the Next button when the agent invites it.
     if (/\btap next\b|\bsay next\b|\bsay "next"/.test(lower)) {
       nextInvited = true;
@@ -3425,7 +3455,7 @@ async function startConversation(opts) {
           if (!convoState.tracks_visited.includes(to_track)) convoState.tracks_visited.push(to_track);
           touchState();
           sendTelemetry();
-          ciqVisualOnTrack(); // session-visuals-v2
+          if (VISUALS_ENABLED) ciqVisualOnTrack(); // session-visuals-v2
           return 'recorded';
         },
 
@@ -3439,7 +3469,7 @@ async function startConversation(opts) {
         // session-visuals-v2 (design): set_visual shows a slide or lens
         // category that belongs to the current stage. It can never change
         // the stage. Not registered on the agent, so today it is never called.
-        set_visual: async ({ visual }) => ciqVisualFromTool(visual),
+        ...(VISUALS_ENABLED ? { set_visual: async ({ visual }) => ciqVisualFromTool(visual) } : {}),
 
         record_preferred_track: async ({ track: t }) => {
           convoState.preferred_track = t;

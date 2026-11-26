@@ -14,11 +14,31 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const src = readFileSync(process.env.APP_INDEX || join(root, 'index.html'), 'utf8');
 const block = src.slice(src.indexOf('// ── session-visuals-v2 BEGIN'), src.indexOf('// ── session-visuals-v2 END'));
 const pure = block.replace(/\(function initVisuals\(\) \{[\s\S]*?\}\)\(\);/, '');
-const V = vm.createContext({ convoState: null, document: {}, console });
-vm.runInContext(
-  pure + ';Object.assign(globalThis,{STAGE_CHANGE_NEXT_ONLY,VISUALS_MANIFEST,LENS_CATEGORIES,RANGE_KEYS,visualApplyProfile,visualStageMain,visualCuePlan,visualApplyCue,visualForStage,visualForTrack,visualFromTool,visualFrameOf});',
-  V
-);
+function makeStorage(seed = {}) {
+  const m = new Map(Object.entries(seed));
+  return {
+    getItem: k => (m.has(k) ? m.get(k) : null),
+    setItem: (k, v) => m.set(k, String(v)),
+    removeItem: k => m.delete(k),
+  };
+}
+function loadVisuals(search = '', seed = {}) {
+  const storage = makeStorage(seed);
+  const ctx = vm.createContext({
+    convoState: null,
+    document: {},
+    console,
+    URLSearchParams,
+    location: { search },
+    sessionStorage: storage,
+  });
+  vm.runInContext(
+    pure + ';Object.assign(globalThis,{CIQ_VISUALS_KEY,CIQ_VISUALS_ON_VALUE,VISUALS_ENABLED,STAGE_CHANGE_NEXT_ONLY,ciqResolveVisualsFlag,VISUALS_MANIFEST,LENS_CATEGORIES,RANGE_KEYS,visualApplyProfile,visualStageMain,visualCuePlan,visualApplyCue,visualForStage,visualForTrack,visualFromTool,visualFrameOf,ciqVisualSync,ciqVisualOnAgentLine,ciqVisualOnTrack,ciqVisualFromTool});',
+    ctx
+  );
+  return { ctx, storage };
+}
+const { ctx: V } = loadVisuals('?v=s2');
 const cues = (stage, line, m) => [...V.visualCuePlan(stage, line, m)].map(c => c.cue);
 const run = (state, line, track = null, m) => V.visualCuePlan(state.stage, line, m).reduce((s, c) => V.visualApplyCue(s, c.cue, track, m), state);
 const L = V.visualForStage('lens_options');
@@ -260,18 +280,64 @@ test('set_visual tool (design) is limited to the current stage', () => {
   assert.doesNotMatch(src, /set_stage/);
 });
 
-test('stage changes ONLY by Next; agent stage-opening sentence triggers are turned off', () => {
+test('feature flag: OFF by default, ?v=s2 persists in sessionStorage, ?v=off clears it', () => {
+  const def = loadVisuals('');
+  assert.equal(def.ctx.VISUALS_ENABLED, false);
+  assert.equal(def.ctx.STAGE_CHANGE_NEXT_ONLY, false);
+  assert.equal(def.storage.getItem('ciq_visuals'), null);
+
+  // Non-obvious flag only: unrelated ?v= values keep visuals off.
+  for (const s of ['?v=1', '?v=true', '?v=on', '?v=visuals', '?visuals=1']) {
+    const other = loadVisuals(s);
+    assert.equal(other.ctx.VISUALS_ENABLED, false, s);
+  }
+
+  // ?v=s2 turns visuals on and persists across gate/checkout reloads in the same tab.
+  const on = loadVisuals('?v=s2');
+  assert.equal(on.ctx.VISUALS_ENABLED, true);
+  assert.equal(on.ctx.STAGE_CHANGE_NEXT_ONLY, true);
+  assert.equal(on.storage.getItem('ciq_visuals'), 's2');
+
+  const persisted = loadVisuals('?checkout_session_id=cs_test_123', { ciq_visuals: 's2' });
+  assert.equal(persisted.ctx.VISUALS_ENABLED, true);
+  assert.equal(persisted.ctx.STAGE_CHANGE_NEXT_ONLY, true);
+
+  // ?v=off turns visuals off and removes the persisted flag.
+  const off = loadVisuals('?v=off', { ciq_visuals: 's2' });
+  assert.equal(off.ctx.VISUALS_ENABLED, false);
+  assert.equal(off.ctx.STAGE_CHANGE_NEXT_ONLY, false);
+  assert.equal(off.storage.getItem('ciq_visuals'), null);
+});
+
+test('when visuals flag is OFF: no eager images, no ciq-visuals class, and no visuals JS runs', () => {
+  assert.match(src, /<div id="app" role="main">/);
+  assert.doesNotMatch(src, /<div id="app"[^>]*ciq-visuals/);
+  assert.match(src, /<div id="visual-panel" hidden>/);
+  assert.match(src, /<img id="visual-img" alt="" width="720" height="480" decoding="async" hidden>/);
+  assert.doesNotMatch(src, /<img id=\"visual-img\"[^>]*\ssrc=/);
+  assert.doesNotMatch(src, /<image\s+href="images\/session\//);
+  assert.match(block, /function initVisuals\(\) \{\s*if \(!VISUALS_ENABLED\) return;/);
+
+  const off = loadVisuals('');
+  off.ctx.convoState = { current_stage: 'foundations', current_track: 'C' };
+  assert.equal(off.ctx.ciqVisualSync(), undefined);
+  assert.equal(off.ctx.ciqVisualOnAgentLine('astigmatism'), undefined);
+  assert.equal(off.ctx.ciqVisualOnTrack(), undefined);
+  assert.equal(off.ctx.ciqVisualFromTool('focal_points'), 'ignored');
+});
+
+test('stage changes ONLY by Next when visuals are ON; agent stage-opening sentence triggers follow the flag', () => {
   assert.equal(V.STAGE_CHANGE_NEXT_ONLY, true);
   assert.match(src, /if \(!STAGE_CHANGE_NEXT_ONLY\) \{\s*for \(const entry of ANCHOR_PHRASES\)/);
   assert.match(src, /if \(!STAGE_CHANGE_NEXT_ONLY && STAGE_ORDER\.indexOf\(convoState\.current_stage\)/);
-  assert.match(src, /ciqVisualSync\(\); \/\/ session-visuals-v2\n\}/);
-  assert.match(src, /ciqVisualOnAgentLine\(lower\);/);
-  assert.equal((src.match(/ciqVisualOnTrack\(\);/g) || []).length, 2);
+  assert.match(src, /if \(VISUALS_ENABLED\) ciqVisualSync\(\); \/\/ session-visuals-v2\n\}/);
+  assert.match(src, /if \(VISUALS_ENABLED\) ciqVisualOnAgentLine\(lower\);/);
+  assert.equal((src.match(/if \(VISUALS_ENABLED\) ciqVisualOnTrack\(\);/g) || []).length, 2);
 });
 
 test('words panel always starts hidden; nothing remembered', () => {
-  assert.match(src, /<div id="app" role="main" class="ciq-visuals" data-words="closed">/);
-  assert.match(src, /<button id="words-toggle" type="button" aria-controls="transcript-wrap" aria-expanded="false">/);
+  assert.match(src, /<button id="words-toggle" type="button" aria-controls="transcript-wrap" aria-expanded="false" hidden>/);
+  assert.match(block, /app\.classList\.add\('ciq-visuals'\)/);
   assert.match(block, /ciqSetWords\(false\);/);
   assert.doesNotMatch(src, /ciq_words_open/);
   assert.doesNotMatch(block, /localStorage/);
