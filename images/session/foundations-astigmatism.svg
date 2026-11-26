@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
+<title id="t">Astigmatism: a surface that isn't perfectly round</title>
+<desc id="d">Left: a round front surface, curved evenly like a basketball, brings light to one point. Right: a surface curved more in one direction, like a football, so light comes to a focus unevenly.</desc>
+<defs>
+  <radialGradient id="dome" cx="36%" cy="30%" r="78%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".45" stop-color="#E7F1EE"/><stop offset="1" stop-color="#A9C6BC"/></radialGradient>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1F3D2C" flood-opacity=".10"/></filter>
+</defs>
+<rect width="720" height="480" fill="#F7F2E9"/>
+<g font-family="Inter,system-ui,sans-serif" text-anchor="middle">
+  <g transform="translate(184,0)">
+    <rect x="-170" y="12" width="340" height="456" rx="26" fill="#FFFDF9" filter="url(#shadow)"/>
+    <text y="56" font-size="30" font-weight="600" fill="#1F3D2C">Round</text>
+    <ellipse cx="0" cy="244" rx="70" ry="10" fill="#1F3D2C" opacity=".08"/>
+    <circle cx="0" cy="150" r="80" fill="url(#dome)" stroke="#1F3D2C" stroke-width="2.5"/>
+    <g fill="none" stroke="#4f6b58" stroke-width="1.5" opacity=".55"><circle cx="0" cy="150" r="58"/><circle cx="0" cy="150" r="36"/><circle cx="0" cy="150" r="14"/></g>
+    <ellipse cx="-30" cy="116" rx="20" ry="12" fill="#fff" opacity=".85" transform="rotate(-30 -30 116)"/>
+    <g stroke="#1F3D2C" stroke-width="2.4" stroke-linecap="round" opacity=".75"><path d="M-80,272 L0,380"/><path d="M0,268 L0,380"/><path d="M80,272 L0,380"/></g>
+    <circle cx="0" cy="382" r="8" fill="#1F3D2C"/>
+    <text y="436" font-size="25" fill="#3d463f">Light meets at one point</text>
+  </g>
+  <g transform="translate(536,0)">
+    <rect x="-170" y="12" width="340" height="456" rx="26" fill="#FFFDF9" filter="url(#shadow)"/>
+    <text y="56" font-size="30" font-weight="600" fill="#1F3D2C">Not perfectly round</text>
+    <ellipse cx="0" cy="244" rx="100" ry="10" fill="#1F3D2C" opacity=".08"/>
+    <ellipse cx="0" cy="150" rx="110" ry="66" fill="url(#dome)" stroke="#1F3D2C" stroke-width="2.5"/>
+    <g fill="none" stroke="#4f6b58" stroke-width="1.5" opacity=".55"><ellipse cx="0" cy="150" rx="82" ry="48"/><ellipse cx="0" cy="150" rx="52" ry="30"/><ellipse cx="0" cy="150" rx="22" ry="12"/></g>
+    <ellipse cx="-40" cy="124" rx="24" ry="10" fill="#fff" opacity=".85" transform="rotate(-18 -40 124)"/>
+    <g stroke="#9E4526" stroke-width="2.4" stroke-linecap="round" opacity=".75"><path d="M-80,272 L-10,360"/><path d="M0,268 L0,392"/><path d="M80,272 L14,400"/></g>
+    <path d="M-34,362 h68" stroke="#9E4526" stroke-width="6" stroke-linecap="round" opacity=".5"/>
+    <path d="M0,348 v56" stroke="#9E4526" stroke-width="6" stroke-linecap="round" opacity=".3"/>
+    <text y="436" font-size="25" fill="#3d463f">Light doesn't focus evenly</text>
+  </g>
+</g>
+</svg>

@@ -532,6 +532,103 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
   .surgeon-q-text::before,.surgeon-q-list li::before{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 }
 
+/* ══ session-visuals-v2: in-call image + words panel (always starts hidden) ══
+   Only applies in a call (#roadmap not empty) and only with #app.ciq-visuals. */
+#visual-panel,#words-toggle{ display:none; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #voice-panel[style*="flex"]{
+  display:grid!important; align-items:stretch; justify-items:stretch; overflow:hidden;
+  grid-template-columns:auto minmax(0,1fr) auto; grid-template-rows:minmax(0,1fr) auto auto auto auto;
+  grid-template-areas:"vis vis vis" "banner banner banner" "err err err" "orb status toggle" "words words words";
+  column-gap:12px; row-gap:8px; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #visual-panel{ grid-area:vis; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:0; min-width:0; gap:10px; }
+#visual-figure{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; width:100%; height:100%; min-height:0; margin:0; gap:10px; }
+#visual-kicker{ flex:none; align-self:center; font-size:14px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--terra); }
+#visual-kicker:empty{ display:none; }
+#lens-map,#goals-map{ display:flex; justify-content:center; width:100%; max-width:860px; flex:0 1 auto; min-height:0; }
+#lens-map[hidden],#goals-map[hidden]{ display:none; }
+#lens-map .lens-map-defs{ position:absolute; width:0; height:0; }
+#lens-map .lens-map,#goals-map .goals-map{ display:block; width:100%; height:auto; max-height:100%; }
+#lens-map .lens-map-wide{ aspect-ratio:720/420; }
+#lens-map .lens-map-tall{ display:none; aspect-ratio:360/438; }
+#goals-map .goals-map{ aspect-ratio:720/480; border-radius:22px; }
+@media (max-width:759px){ #lens-map .lens-map-wide{ display:none; } #lens-map .lens-map-tall{ display:block; } #goals-map .goals-map{ border-radius:16px; } }
+#visual-img{ display:block; width:100%; max-width:860px; flex:0 1 auto; min-height:0; height:auto; aspect-ratio:720/480; object-fit:contain; background:#F7F2E9; border-radius:22px; }
+#visual-img[hidden]{ display:none; }
+#visual-caption{ flex:none; max-width:640px; text-align:center; font-size:16px; line-height:1.45; color:var(--ink-2); text-wrap:pretty; }
+#visual-panel.vis-swap #visual-img,#visual-panel.vis-swap #lens-map,#visual-panel.vis-swap #goals-map{ animation:ciq-vis-in .45s ease-out; }
+@keyframes ciq-vis-in{ from{ opacity:.25; } to{ opacity:1; } }
+/* goals map dynamic dots: default none lit; active goal range lights its dot and card */
+#goals-map .gz{ transition:opacity .35s; }
+#goals-map .gz-card{ stroke:transparent; stroke-width:3; transition:stroke .3s; }
+#goals-map .gz-dot{ fill:#FFFDF9; stroke:#9DB8A2; stroke-width:3; transition:fill .25s, stroke .25s; }
+#goals-map .gz-rl{ fill:#1F3D2C; }
+#goals-map.has-focus .gz{ opacity:.38; }
+#goals-map.has-focus .gz.is-on{ opacity:1; }
+#goals-map .gz.is-on .gz-card{ stroke:#1F3D2C; }
+#goals-map .gz.is-on .gz-dot{ fill:#1F3D2C; stroke:#1F3D2C; }
+/* lens map zones: equal size, equal style; the zone being discussed is lit, the rest step back */
+#lens-map .lz-card{ fill:#FFFDF9; stroke:transparent; stroke-width:3; filter:url(#lm-shadow); transition:stroke .3s, fill .3s; }
+#lens-map .lz{ transition:opacity .35s; }
+#lens-map .lz-hap{ fill:none; stroke:#4f6b58; stroke-width:3; stroke-linecap:round; }
+#lens-map .lz-optic{ stroke:#1F3D2C; stroke-width:2.2; }
+#lens-map .lz-name{ font-family:var(--sans); font-weight:600; fill:#1F3D2C; }
+#lens-map .lz-tag{ font-family:var(--sans); font-weight:600; letter-spacing:.1em; fill:#9E4526; }
+#lens-map .lz-fam{ font-family:var(--sans); fill:#3d463f; }
+#lens-map .lz-rl{ font-family:var(--sans); fill:#5d665f; text-anchor:middle; transition:fill .25s; }
+#lens-map .lz-ring{ fill:none; stroke:#4f6b58; stroke-width:1.3; }
+#lens-map .lz-toric{ display:none; fill:#1F3D2C; }
+#lens-map .lz-axis{ stroke:#9E4526; stroke-width:2; stroke-dasharray:4 5; }
+#lens-map.toric-on .lz-toric{ display:inline; }
+#lens-map.toric-on .lz-card{ fill:#FBF1EA; stroke:#B85D3B; }
+#lens-map .lz-span{ stroke:#c9d8c3; stroke-width:12; stroke-linecap:round; }
+#lens-map .lz-dot{ fill:#FFFDF9; stroke:#c9d8c3; stroke-width:2.5; transition:fill .25s, stroke .25s; }
+#lens-map .lz[data-zone="monofocal"] .lz-dot:not(.on){ stroke:#9DB8A2; stroke-dasharray:3 4; }
+#lens-map .lz-dot.on{ fill:#1F3D2C; stroke:#1F3D2C; stroke-dasharray:none; }
+#lens-map .lz-rl.on{ fill:#1F3D2C; font-weight:600; }
+#lens-map.has-focus .lz{ opacity:.32; }
+#lens-map.has-focus .lz.is-on{ opacity:1; }
+#lens-map .lz.is-on .lz-card{ fill:#F2F6EF; stroke:#1F3D2C; }
+/* orb row: small orb, status, words toggle */
+#app.ciq-visuals:has(#roadmap:not(:empty)) #orb{ grid-area:orb; width:44px; height:44px; margin:0 0 0 4px; align-self:center; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #orb svg{ width:16px; height:16px; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #orb::before{ border-width:1px; box-shadow:none; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #status-pill{ grid-area:status; justify-content:flex-start; text-align:left; font-size:17px; align-self:center; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #upgrade-link-banner{ grid-area:banner; justify-self:center; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #error-box{ grid-area:err; }
+#app.ciq-visuals:has(#roadmap:not(:empty)) #words-toggle{ grid-area:toggle; display:inline-flex; align-items:center; gap:8px; align-self:center; min-height:44px; padding:0 16px; border:0; border-radius:999px; background:#fff; color:var(--forest); font-size:15px; font-weight:600; box-shadow:var(--shadow-sm); cursor:pointer; }
+#words-toggle .wt-ic{ width:10px; height:10px; border-right:2px solid currentColor; border-bottom:2px solid currentColor; transform:rotate(-135deg) translate(-2px,-2px); transition:transform .25s; }
+#app[data-words="open"] #words-toggle .wt-ic{ transform:rotate(45deg) translate(-2px,-2px); }
+/* words: hidden by default; phone = pull-up drawer under the image */
+#app.ciq-visuals:has(#roadmap:not(:empty)) #transcript-wrap{ grid-area:words; display:none; max-width:none; width:auto; }
+#app.ciq-visuals[data-words="open"]:has(#roadmap:not(:empty)) #transcript-wrap{
+  display:flex; height:34vh; height:34dvh; flex:none; background:var(--paper); border-radius:22px 22px 0 0; padding:18px 16px 10px; margin:0 -16px;
+  box-shadow:0 -10px 30px rgba(31,61,44,.10); -webkit-mask-image:none; mask-image:none; animation:ciq-drawer-up .28s ease-out; }
+#app.ciq-visuals[data-words="open"]:has(#roadmap:not(:empty)) #transcript-wrap::before{ content:""; flex:none; align-self:center; width:40px; height:4px; border-radius:2px; background:var(--rule); margin:-8px 0 4px; }
+@keyframes ciq-drawer-up{ from{ transform:translateY(24px); opacity:0; } to{ transform:none; opacity:1; } }
+@media (max-width:759px){
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #voice-panel[style*="flex"]{ padding-top:2px; row-gap:6px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #visual-panel{ margin:0 -10px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #visual-img{ border-radius:16px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #visual-caption{ font-size:16px; padding:0 8px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #status-pill{ font-size:15px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #words-toggle{ padding:0 14px; font-size:14px; }
+}
+/* tablet / laptop: big image, words in a collapsible side panel */
+@media (min-width:960px){
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #voice-panel[style*="flex"]{
+    grid-template-columns:auto minmax(0,1fr) auto 0; column-gap:14px;
+    grid-template-areas:"vis vis vis words" "banner banner banner words" "err err err words" "orb status toggle words"; padding-bottom:4px; }
+  #app.ciq-visuals[data-words="open"]:has(#roadmap:not(:empty)) #voice-panel[style*="flex"]{ grid-template-columns:auto minmax(0,1fr) auto minmax(280px,34%); }
+  #app.ciq-visuals[data-words="open"]:has(#roadmap:not(:empty)) #transcript-wrap{ height:auto; min-height:0; margin:0; border-radius:22px; padding:18px 18px 10px; box-shadow:var(--shadow-sm); animation:ciq-panel-in .28s ease-out; }
+  #app.ciq-visuals[data-words="open"]:has(#roadmap:not(:empty)) #transcript-wrap::before{ content:"Words"; width:auto; height:auto; background:none; align-self:flex-start; margin:0 0 4px; font-size:13px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) .tr-line.agent,
+  #app.ciq-visuals:has(#roadmap:not(:empty)) .tr-line.agent:nth-last-child(-n+2){ font-size:17px; }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) .tr-line.user{ font-size:15px; }
+  #words-toggle .wt-ic{ transform:rotate(135deg) translate(-2px,-2px); }
+  #app[data-words="open"] #words-toggle .wt-ic{ transform:rotate(-45deg) translate(-2px,-2px); }
+  #app.ciq-visuals:has(#roadmap:not(:empty)) #visual-caption{ font-size:17px; }
+}
+@keyframes ciq-panel-in{ from{ transform:translateX(18px); opacity:0; } to{ transform:none; opacity:1; } }
 </style>
 </head>
 <body>
@@ -863,6 +960,63 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
       <div class="mic-note">Your browser will ask to use your microphone. Choose Allow so you can talk.</div>
     </div>
 
+    <!-- session-visuals-v2: one main image per stage (changes on Next); words in the agent's line may pop up a slide inside the stage -->
+    <div id="visual-panel" hidden>
+      <figure id="visual-figure">
+        <div id="visual-kicker"></div>
+        <img id="visual-img" alt="" width="720" height="480" decoding="async" hidden>
+        <div id="lens-map" hidden>
+          <svg class="lens-map-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><radialGradient id="lm-optic" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#EAF3F1"/><stop offset="1" stop-color="#C9DDD6"/></radialGradient><filter id="lm-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1F3D2C" flood-opacity=".10"/></filter></defs></svg>
+          <svg class="lens-map lens-map-wide" viewBox="0 0 720 420" role="img" aria-label="Three lens categories: monofocal, EDOF (extended range) and multifocal (full range), each with the ranges it is designed for.">
+          <g class="lz" data-zone="monofocal" transform="translate(12,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,114)"><path class="lz-hap" d="M21.0,-45.5 C11.0,-69.2 -17.0,-79.7 -39.0,-63.5"/><path class="lz-hap" d="M-21.0,45.5 C-11.0,69.2 17.0,79.7 39.0,63.5"/><circle class="lz-optic" r="50" fill="url(#lm-optic)"/><g class="lz-toric"><path d="M-40,0 H40" class="lz-axis"/><circle cx="-44" cy="0" r="3.4"/><circle cx="-35" cy="0" r="3.4"/><circle cx="44" cy="0" r="3.4"/><circle cx="35" cy="0" r="3.4"/></g><ellipse cx="-15" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">Monofocal</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">ONE FOCAL POINT</text><circle class="lz-dot" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Includes enhanced monofocal</text></g>
+          <g class="lz" data-zone="edof" transform="translate(248,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,114)"><path class="lz-hap" d="M21.0,-45.5 C11.0,-69.2 -17.0,-79.7 -39.0,-63.5"/><path class="lz-hap" d="M-21.0,45.5 C-11.0,69.2 17.0,79.7 39.0,63.5"/><circle class="lz-optic" r="50" fill="url(#lm-optic)"/><circle r="16" class="lz-ring" opacity=".75"/><circle r="28" class="lz-ring" opacity=".35"/><g class="lz-toric"><path d="M-40,0 H40" class="lz-axis"/><circle cx="-44" cy="0" r="3.4"/><circle cx="-35" cy="0" r="3.4"/><circle cx="44" cy="0" r="3.4"/><circle cx="35" cy="0" r="3.4"/></g><ellipse cx="-15" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">EDOF</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">EXTENDED RANGE</text><path class="lz-span" d="M112,300 H172"/><circle class="lz-dot" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot on" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Extended depth of focus</text></g>
+          <g class="lz" data-zone="multifocal" transform="translate(484,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,114)"><path class="lz-hap" d="M21.0,-45.5 C11.0,-69.2 -17.0,-79.7 -39.0,-63.5"/><path class="lz-hap" d="M-21.0,45.5 C-11.0,69.2 17.0,79.7 39.0,63.5"/><circle class="lz-optic" r="50" fill="url(#lm-optic)"/><circle r="9.0" class="lz-ring" opacity=".55"/><circle r="16.0" class="lz-ring" opacity=".55"/><circle r="22.0" class="lz-ring" opacity=".55"/><circle r="27.0" class="lz-ring" opacity=".55"/><circle r="31.5" class="lz-ring" opacity=".55"/><circle r="35.5" class="lz-ring" opacity=".55"/><circle r="39.5" class="lz-ring" opacity=".55"/><circle r="43.0" class="lz-ring" opacity=".55"/><g class="lz-toric"><path d="M-40,0 H40" class="lz-axis"/><circle cx="-44" cy="0" r="3.4"/><circle cx="-35" cy="0" r="3.4"/><circle cx="44" cy="0" r="3.4"/><circle cx="35" cy="0" r="3.4"/></g><ellipse cx="-15" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">Multifocal</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">FULL RANGE</text><path class="lz-span" d="M52,300 H172"/><circle class="lz-dot on" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot on" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Includes trifocal</text></g>
+          </svg>
+          <svg class="lens-map lens-map-tall" viewBox="0 0 360 438" role="img" aria-label="Three lens categories: monofocal, EDOF (extended range) and multifocal (full range), each with the ranges it is designed for.">
+          <g class="lz" data-zone="monofocal" transform="translate(6,6)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M14.7,-31.9 C7.7,-46.7 -11.9,-53.3 -27.3,-43.2"/><path class="lz-hap" d="M-14.7,31.9 C-7.7,46.7 11.9,53.3 27.3,43.2"/><circle class="lz-optic" r="35" fill="url(#lm-optic)"/><g class="lz-toric"><path d="M-25,0 H25" class="lz-axis"/><circle cx="-29" cy="0" r="3.4"/><circle cx="-20" cy="0" r="3.4"/><circle cx="29" cy="0" r="3.4"/><circle cx="20" cy="0" r="3.4"/></g><ellipse cx="-10" cy="-13" rx="7" ry="4" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">Monofocal</text><text class="lz-tag" x="132" y="66" font-size="13">ONE FOCAL POINT</text><circle class="lz-dot" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
+          <g class="lz" data-zone="edof" transform="translate(6,150)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M14.7,-31.9 C7.7,-46.7 -11.9,-53.3 -27.3,-43.2"/><path class="lz-hap" d="M-14.7,31.9 C-7.7,46.7 11.9,53.3 27.3,43.2"/><circle class="lz-optic" r="35" fill="url(#lm-optic)"/><circle r="11" class="lz-ring" opacity=".75"/><circle r="19" class="lz-ring" opacity=".35"/><g class="lz-toric"><path d="M-25,0 H25" class="lz-axis"/><circle cx="-29" cy="0" r="3.4"/><circle cx="-20" cy="0" r="3.4"/><circle cx="29" cy="0" r="3.4"/><circle cx="20" cy="0" r="3.4"/></g><ellipse cx="-10" cy="-13" rx="7" ry="4" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">EDOF</text><text class="lz-tag" x="132" y="66" font-size="13">EXTENDED RANGE</text><path class="lz-span" d="M222,94 H294"/><circle class="lz-dot" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot on" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
+          <g class="lz" data-zone="multifocal" transform="translate(6,294)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M14.7,-31.9 C7.7,-46.7 -11.9,-53.3 -27.3,-43.2"/><path class="lz-hap" d="M-14.7,31.9 C-7.7,46.7 11.9,53.3 27.3,43.2"/><circle class="lz-optic" r="35" fill="url(#lm-optic)"/><circle r="6.3" class="lz-ring" opacity=".55"/><circle r="11.2" class="lz-ring" opacity=".55"/><circle r="15.4" class="lz-ring" opacity=".55"/><circle r="18.9" class="lz-ring" opacity=".55"/><circle r="22.1" class="lz-ring" opacity=".55"/><circle r="24.8" class="lz-ring" opacity=".55"/><circle r="27.7" class="lz-ring" opacity=".55"/><circle r="30.1" class="lz-ring" opacity=".55"/><g class="lz-toric"><path d="M-25,0 H25" class="lz-axis"/><circle cx="-29" cy="0" r="3.4"/><circle cx="-20" cy="0" r="3.4"/><circle cx="29" cy="0" r="3.4"/><circle cx="20" cy="0" r="3.4"/></g><ellipse cx="-10" cy="-13" rx="7" ry="4" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">Multifocal</text><text class="lz-tag" x="132" y="66" font-size="13">FULL RANGE</text><path class="lz-span" d="M150,94 H294"/><circle class="lz-dot on" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot on" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
+          </svg>
+        </div>
+                <div id="goals-map" hidden>
+          <svg class="goals-map" viewBox="0 0 1152 768" role="img" aria-labelledby="gm-t gm-d">
+          <title id="gm-t">Your day, near to far</title>
+          <desc id="gm-d">Three everyday distance scenes from the ClarityIQ lens guide: near, a phone in hand over an open book; arm's length, a laptop and car dashboard; far, driving on a neighborhood street.</desc>
+          <defs>
+            <clipPath id="gm-c-near"><rect x="28" y="28" width="352" height="528" rx="22"/></clipPath>
+            <clipPath id="gm-c-arms"><rect x="400" y="28" width="352" height="528" rx="22"/></clipPath>
+            <clipPath id="gm-c-far"><rect x="772" y="28" width="352" height="528" rx="22"/></clipPath>
+          </defs>
+          <rect width="1152" height="768" fill="#F7F2E9"/>
+          <path d="M204,612 H948" stroke="#c9d8c3" stroke-width="8" stroke-linecap="round"/>
+          <g class="gz" data-zone="near">
+            <image data-href="images/session/web/goals-near.jpg" x="28" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-near)"/>
+            <rect class="gz-card" x="28" y="28" width="352" height="528" rx="22" fill="none"/>
+            <circle class="gz-dot" cx="204" cy="612" r="12"/>
+            <text class="gz-rl" x="204" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Near</text>
+            <text x="204" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Reading, phone</text>
+          </g>
+          <g class="gz" data-zone="arms">
+            <image data-href="images/session/web/goals-arms.jpg" x="400" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-arms)"/>
+            <rect class="gz-card" x="400" y="28" width="352" height="528" rx="22" fill="none"/>
+            <circle class="gz-dot" cx="576" cy="612" r="12"/>
+            <text class="gz-rl" x="576" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Arm's length</text>
+            <text x="576" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Screens, dashboard</text>
+          </g>
+          <g class="gz" data-zone="far">
+            <image data-href="images/session/web/goals-far.jpg" x="772" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-far)"/>
+            <rect class="gz-card" x="772" y="28" width="352" height="528" rx="22" fill="none"/>
+            <circle class="gz-dot" cx="948" cy="612" r="12"/>
+            <text class="gz-rl" x="948" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Far</text>
+            <text x="948" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Driving, outdoors</text>
+          </g>
+          </svg>
+          
+        </div>
+        <figcaption id="visual-caption"></figcaption>
+      </figure>
+    </div>
+
     <div id="status-pill"><div id="status-dot"></div><span id="status-text">Ready to begin</span></div>
 
     <!-- Inline tappable upgrade payment link — present_upgrade_link client tool -->
@@ -884,6 +1038,7 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
       </svg>
     </div>
 
+    <button id="words-toggle" type="button" aria-controls="transcript-wrap" aria-expanded="false" hidden><span class="wt-ic" aria-hidden="true"></span><span id="words-toggle-label">Show words</span></button>
     <div id="transcript-wrap"></div>
     <div id="error-box"></div>
   </div>
@@ -1777,6 +1932,464 @@ function isSpokenNext(text) {
 }
 document.getElementById('next-btn').addEventListener('click', () => advanceByUser('tap'));
 
+// ── session-visuals-v2 BEGIN ─────────────────────────────────────────────────
+// In-session visuals (Martin, Nov 25, v3 manifest + Next-only + dynamic dots):
+//  - Stage changes ONLY by Next (button or spoken "next" via the existing
+//    mechanism). Agent stage-opening sentences never change the stage.
+//  - Each stage has ONE main image, reset when the stage moves on Next.
+//  - Secondary slides and stage images live in VISUALS_MANIFEST (JSON-safe
+//    with enabled flags) for future surgeon-profile overrides.
+//  - Dynamic range dots (near / arms / far) in BOTH Goals and Monofocal:
+//    default is none lit; stage-scoped keywords light the named range as the
+//    agent speaks, with safe fallback to the default.
+// No network calls. Words (the transcript) always start hidden.
+// Hidden feature flag: OFF by default for normal buyers. Turn on via ?v=s2
+// (persisted in sessionStorage for the current tab); turn off via ?v=off.
+const CIQ_VISUALS_KEY = 'ciq_visuals';
+const CIQ_VISUALS_ON_VALUE = 's2';
+function ciqResolveVisualsFlag(search, storage) {
+  try {
+    const v = new URLSearchParams(search || '').get('v');
+    if (v === CIQ_VISUALS_ON_VALUE) {
+      try { if (storage) storage.setItem(CIQ_VISUALS_KEY, CIQ_VISUALS_ON_VALUE); } catch (e) {}
+      return true;
+    }
+    if (v === 'off') {
+      try { if (storage) storage.removeItem(CIQ_VISUALS_KEY); } catch (e) {}
+      return false;
+    }
+    return !!(storage && storage.getItem(CIQ_VISUALS_KEY) === CIQ_VISUALS_ON_VALUE);
+  } catch (e) {
+    return false;
+  }
+}
+const VISUALS_ENABLED = ciqResolveVisualsFlag(
+  typeof location !== 'undefined' ? location.search : '',
+  (() => { try { return typeof sessionStorage !== 'undefined' ? sessionStorage : null; } catch (e) { return null; } })()
+);
+const STAGE_CHANGE_NEXT_ONLY = VISUALS_ENABLED;
+const VISUAL_CHARS_PER_SEC = 15;        // speech pace used to time cues inside one line
+const VISUAL_MAX_CUE_DELAY_MS = 25000;
+const VISUAL_TOOL_PRIORITY_MS = 45 * 1000;
+const LENS_CATEGORIES = ['monofocal', 'edof', 'multifocal'];
+const RANGE_KEYS = ['near', 'arms', 'far'];
+
+// Modular manifest (JSON-safe): every stage image, secondary slide, lens
+// category and dynamic range rule with an `enabled` flag.
+const VISUALS_MANIFEST = {
+  version: 3,
+  stages: {
+    welcome:      { main: 'welcome',    enabled: true },
+    foundations:  { main: 'cataract',   enabled: true },
+    vision_goals: { main: 'daily_life', enabled: true },
+    tier_gate:    { main: 'daily_life', enabled: true },
+    lens_options: { main: 'lens_map',   enabled: true },
+    readiness:    { main: 'readiness',  enabled: true },
+    summary:      { main: 'summary',    enabled: true },
+  },
+  slides: {
+    welcome: {
+      stage: 'welcome', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/welcome.svg',
+      alt: 'An eye beside two welcoming conversation bubbles.',
+      caption: 'Let\u2019s start with where you are today.',
+    },
+    cataract: {
+      stage: 'foundations', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/web/lens-guide-eye-macula.jpg',
+      alt: 'Cross-section of the eye: light passes through the cornea and lens and focuses on the macula of the retina, away from the optic nerve.',
+      caption: 'A cataract is a clouding of the eye\u2019s natural lens. Surgery replaces it with a clear lens implant, called an IOL.',
+    },
+    focal_points: {
+      stage: 'foundations', role: 'secondary', kind: 'image', enabled: true,
+      src: 'images/session/web/lens-guide-focus-distance-32.jpg',
+      alt: 'Near, arm\u2019s length and far, with everyday examples of each.',
+      caption: 'A focal point is a range where vision is clearest without glasses: near, arm\u2019s length or far.',
+      kicker: 'Focal points',
+      cuePattern: '\\bfocal points\\b',
+    },
+    astigmatism: {
+      stage: 'foundations', role: 'secondary', kind: 'image', enabled: true,
+      src: 'images/session/foundations-astigmatism.svg',
+      alt: 'A round eye surface next to one that is not perfectly round.',
+      caption: 'Astigmatism: the eye\u2019s surface isn\u2019t perfectly round, so light doesn\u2019t focus evenly. Your surgeon factors this in.',
+      kicker: 'Astigmatism',
+      cuePattern: '\\bastigmatism\\b',
+    },
+    daily_life: {
+      stage: 'vision_goals', role: 'main', kind: 'goals_map', enabled: true,
+      src: 'images/session/web/goals-board.jpg',
+      alt: 'Everyday activities near, at arm\u2019s length and far.',
+      caption: 'Think about what you do up close, at arm\u2019s length and far away.',
+    },
+    lens_map: {
+      stage: 'lens_options', role: 'main', kind: 'map', enabled: true,
+      caption: 'Three lens categories. We\u2019ll take them one at a time. Which one is right for your eyes is a decision you make with your surgeon.',
+    },
+    toric: {
+      stage: 'lens_options', role: 'secondary', kind: 'map_overlay', enabled: true,
+      kicker: 'Add-on: Toric, for astigmatism',
+      caption: 'Toric is an add-on, not a separate type: a toric version of a lens also corrects astigmatism. Which versions are available depends on the lens and how much astigmatism you have, which your surgeon measures.',
+      cuePattern: '\\b(toric|corrects? astigmatism|correcting astigmatism|for astigmatism)\\b',
+    },
+    lal: {
+      stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
+      homeCategory: 'monofocal',
+      src: 'images/session/web/lens-guide-lal-32.jpg',
+      alt: 'How a light-adjustable lens is fine-tuned: UV-protective glasses, a light adjustment, and lock-in visits.',
+      caption: 'Light Adjustable Lens: a monofocal lens whose power can be fine-tuned with light after the eye heals. The trade-off is extra office visits and UV-protective glasses until the adjustments are done.',
+      kicker: 'Part of: Monofocal',
+      cuePattern: '\\b(light[- ]adjustable|lal\\+?|rxsight)(?=\\W|$)',
+    },
+    ic8: {
+      stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
+      homeCategory: 'edof',
+      src: 'images/session/ic8.svg',
+      alt: 'A small-aperture lens implant, with a tag pointing back to EDOF.',
+      caption: 'IC-8: a small-aperture lens used in one eye to lengthen that eye\u2019s range, far through arm\u2019s length. Readers are common for small print. Your surgeon can tell you whether that approach is used for your eyes.',
+      kicker: 'Part of: EDOF',
+      cuePattern: '\\b(ic-8|ic 8|ic8|apthera|small[- ]aperture)\\b',
+    },
+    readiness: {
+      stage: 'readiness', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/web/lens-guide-questions-32.jpg',
+      alt: 'A person writing a list of questions to bring to their surgeon.',
+      caption: 'Your questions for your surgeon, and what recovery usually looks like.',
+    },
+    summary: {
+      stage: 'summary', role: 'main', kind: 'image', enabled: true,
+      src: 'images/session/web/lens-guide-booklet-32.jpg',
+      alt: 'A lens guide booklet on a table, ready to bring to your visit.',
+      caption: 'Next, your summary to bring to your surgeon.',
+    },
+  },
+  categories: {
+    monofocal: {
+      enabled: true,
+      caption: 'Monofocal: one focal point, set for near, arm\u2019s length or far, with glasses for the other ranges. Enhanced monofocal lenses give a bit more arm\u2019s length.',
+      cuePattern: '\\b(monofocal|basic lens(?:es)?|single[- ]focal[- ]point|one[- ]focal[- ]point|standard lens(?:es)?|enhanced basic|clareon monofocal|tecnis 1|eyhance|envista aspire)\\b',
+    },
+    edof: {
+      enabled: true,
+      caption: 'EDOF (extended range): designed for far through arm\u2019s length. Readers are common for small print. Night halos are usually milder than with multifocal lenses.',
+      cuePattern: '\\b(edof|extended[- ]range|extended depth|depth of focus|extends? (your |the )?(range|vision)|vivity|puresee|symfony)\\b',
+    },
+    multifocal: {
+      enabled: true,
+      caption: 'Multifocal (full range): designed for far, arm\u2019s length and near. Halos or glare at night are more common, and some people notice lower contrast in dim light.',
+      cuePattern: '\\b(multifocal|trifocal|full[- ]range|fuller range|panoptix|synergy|odyssey|envy)\\b',
+    },
+  },
+  monoRanges: {
+    near:  { enabled: true, cuePattern: '\\b(up close|set for near|for near|near vision|reading|phone)\\b' },
+    arms:  { enabled: true, cuePattern: '\\b(arm\'?s[- ]length|intermediate|computer|dashboard|cooking)\\b' },
+    far:   { enabled: true, cuePattern: '\\b(farther(?:\\s+out)?|distance|driving|tv|(?<!so )(?<!how )(?<!too )(?<!as )far(?! fewer)(?! more)(?! less)(?! from))\\b' },
+    clear: { enabled: true, cuePattern: '\\b(not sure|more than one|choose one|all three)\\b' },
+  },
+  goalRanges: {
+    near:  { enabled: true, cuePattern: '\\b(up close|reading|books?|menus?|medication|labels?|(?<!readers for )(?:small print|fine print)|phone|tablet|cards|needlework|near)\\b' },
+    arms:  { enabled: true, cuePattern: '\\b(arm\'?s[- ]length|intermediate|computer|screen|screens|laptop|dashboard|cooking|stove|hands in front)\\b' },
+    far:   { enabled: true, cuePattern: '\\b(farther|distance|driving|night driving|headlight|tv|golf|outdoors|faces across|(?<!so )(?<!how )(?<!too )(?<!as )far(?! fewer)(?! more)(?! less)(?! from))\\b' },
+    clear: { enabled: true, cuePattern: '\\b(not sure yet|weighing it up|all three|three zones)\\b' },
+  },
+};
+
+function visualApplyProfile(manifest, profile) {
+  const base = JSON.parse(JSON.stringify(manifest));
+  if (!profile) return base;
+  for (const group of ['stages', 'slides', 'categories', 'monoRanges', 'goalRanges']) {
+    if (!profile[group]) continue;
+    for (const [k, patch] of Object.entries(profile[group])) {
+      if (base[group][k]) Object.assign(base[group][k], patch);
+    }
+  }
+  return base;
+}
+function visualStageMain(stage, manifest = VISUALS_MANIFEST) {
+  const s = manifest.stages[stage];
+  if (!s || !s.enabled) return 'welcome';
+  const slide = manifest.slides[s.main];
+  return (slide && slide.enabled) ? s.main : 'welcome';
+}
+function visualCueEntriesForStage(stage, manifest = VISUALS_MANIFEST) {
+  const entries = [];
+  for (const [id, slide] of Object.entries(manifest.slides)) {
+    if (slide.role === 'secondary' && slide.enabled && slide.stage === stage && slide.cuePattern) {
+      entries.push({ cue: id, pattern: slide.cuePattern });
+    }
+  }
+  if (stage === 'lens_options') {
+    for (const id of LENS_CATEGORIES) {
+      const cat = manifest.categories[id];
+      if (cat && cat.enabled && cat.cuePattern) entries.push({ cue: id, pattern: cat.cuePattern });
+    }
+    for (const [rk, rule] of Object.entries(manifest.monoRanges || {})) {
+      if (rule && rule.enabled && rule.cuePattern) entries.push({ cue: 'mono:' + rk, pattern: rule.cuePattern });
+    }
+  }
+  if (stage === 'vision_goals' || stage === 'tier_gate') {
+    for (const [rk, rule] of Object.entries(manifest.goalRanges || {})) {
+      if (rule && rule.enabled && rule.cuePattern) entries.push({ cue: 'goal:' + rk, pattern: rule.cuePattern });
+    }
+  }
+  return entries;
+}
+
+let visualState = { stage: null, slide: null, category: null, monoRange: null, goalRange: null, toolAt: 0 };
+let visualCueTimers = [];
+
+// Fold typographic apostrophes and case so cue patterns can stay ASCII.
+function visualNormalize(text) {
+  return String(text == null ? '' : text)
+    .toLowerCase()
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
+    .replace(/\s+/g, ' ');
+}
+// Skip a hit when the words just before it negate or contrast it
+// ("not an extended-range", "milder than with multifocal", "versus full-range").
+function visualCueIsNegated(text, index) {
+  const before = text.slice(Math.max(0, index - 64), index);
+  if (/(?:\bnot(?: an?)?|\bnever(?: call it| say(?: it)?)?|\bthan(?: with| for)|\bcompared to|\bversus|\bvs\.?)\s+$/i.test(before)) return true;
+  // "not an extended-range or edof lens": the "or" still belongs to the negation.
+  if (/\bnot(?: an?)?\b[^,.!?;:]{0,50}\bor\s+$/i.test(before)) return true;
+  return false;
+}
+function visualLineIsMonovisionTalk(text) {
+  return /\bmonovision\b|which eye was set|one eye.{0,100}(the other|other eye)/.test(text);
+}
+// Pure: ordered cues in one agent line, each with a delay from the line's start.
+function visualCuePlan(stage, lower, manifest = VISUALS_MANIFEST) {
+  const text = visualNormalize(lower);
+  const monovisionTalk = visualLineIsMonovisionTalk(text);
+  const hits = [];
+  for (const entry of visualCueEntriesForStage(stage, manifest)) {
+    if (monovisionTalk && (entry.cue === 'goal:near' || entry.cue === 'goal:far')) continue;
+    const re = new RegExp(entry.pattern, 'g');
+    for (const m of text.matchAll(re)) {
+      if (visualCueIsNegated(text, m.index)) continue;
+      hits.push({ cue: entry.cue, index: m.index });
+    }
+  }
+  hits.sort((a, b) => a.index - b.index);
+  const plan = [];
+  for (const h of hits) {
+    if (plan.length && plan[plan.length - 1].cue === h.cue) continue; // repeated word, same cue
+    plan.push({ cue: h.cue, delayMs: Math.min(VISUAL_MAX_CUE_DELAY_MS, Math.round(h.index / VISUAL_CHARS_PER_SEC * 1000)) });
+  }
+  // A line that names two or more ranges in the same family is an overview, not a choice — finish on the default (none lit).
+  for (const prefix of ['mono:', 'goal:']) {
+    const named = new Set(plan.filter(s => s.cue.startsWith(prefix) && s.cue !== prefix + 'clear').map(s => s.cue));
+    if (named.size >= 2) {
+      const lastFamily = [...plan].reverse().find(s => s.cue.startsWith(prefix));
+      if (lastFamily && lastFamily.cue !== prefix + 'clear') {
+        plan.push({ cue: prefix + 'clear', delayMs: plan[plan.length - 1].delayMs });
+      }
+    }
+  }
+  return plan;
+}
+// Pure: apply one cue to the state. Never touches the stage.
+function visualApplyCue(state, cue, track, manifest = VISUALS_MANIFEST) {
+  const v = { ...state };
+  if (cue.startsWith('goal:')) {
+    if (v.stage !== 'vision_goals' && v.stage !== 'tier_gate') return v;
+    const rk = cue.slice(5);
+    if (!manifest.goalRanges?.[rk]?.enabled) return v;
+    v.goalRange = rk === 'clear' ? null : (RANGE_KEYS.includes(rk) ? rk : v.goalRange);
+    return v;
+  }
+  if (cue.startsWith('mono:')) {
+    if (v.stage !== 'lens_options' || v.category !== 'monofocal' || v.slide) return v;
+    const rk = cue.slice(5);
+    if (!manifest.monoRanges?.[rk]?.enabled) return v;
+    v.monoRange = rk === 'clear' ? null : (RANGE_KEYS.includes(rk) ? rk : v.monoRange);
+    return v;
+  }
+  if (LENS_CATEGORIES.includes(cue)) {
+    const cat = manifest.categories[cue];
+    if (v.stage !== 'lens_options' || !cat || !cat.enabled) return v;
+    if (v.slide === 'toric' && track === 'B') return v; // in the toric lesson, keep the toric layer equal on all 3
+    v.category = cue;
+    v.slide = null;
+    v.monoRange = null; // default: no single monofocal range lit until named
+    return v;
+  }
+  const slide = manifest.slides[cue];
+  if (!slide || slide.role !== 'secondary' || !slide.enabled || slide.stage !== v.stage) return v;
+  if (cue === 'toric') {
+    v.slide = 'toric';
+    v.category = null; // axis marks on all 3 lenses equally; no single category highlighted
+    v.monoRange = null;
+  } else {
+    v.slide = cue;
+    v.monoRange = null;
+    if (slide.homeCategory) {
+      const home = manifest.categories[slide.homeCategory];
+      v.category = (home && home.enabled) ? slide.homeCategory : null;
+    }
+  }
+  return v;
+}
+// Pure: a new stage always starts on its main image with default unlit range dots.
+function visualForStage(stage) { return { stage, slide: null, category: null, monoRange: null, goalRange: null, toolAt: 0 }; }
+// Pure: a track opening (exact track-entry sentence or record_track_switch).
+function visualForTrack(state, track, manifest = VISUALS_MANIFEST) {
+  if (state.stage !== 'lens_options') return state;
+  if (track === 'C') return { ...state, slide: null, category: manifest.categories.monofocal.enabled ? 'monofocal' : null, monoRange: null };
+  if (track === 'B') return manifest.slides.toric.enabled ? { ...state, slide: 'toric', category: null, monoRange: null } : { ...state, slide: null, category: null, monoRange: null };
+  if (track === 'A') return { ...state, slide: null, category: null, monoRange: null }; // EDOF or multifocal lights when named
+  return state;
+}
+// set_visual tool values (design; not on the agent). Returns null if disabled or not for this stage.
+function visualFromTool(state, visual, manifest = VISUALS_MANIFEST) {
+  const mainId = visualStageMain(state.stage, manifest);
+  if (visual === mainId || (visual === 'lens_overview' && state.stage === 'lens_options')) {
+    return { ...state, slide: null, category: null, monoRange: null, goalRange: null };
+  }
+  if ((state.stage === 'vision_goals' || state.stage === 'tier_gate') && RANGE_KEYS.includes(visual)) {
+    return visualApplyCue(state, 'goal:' + visual, 'tool', manifest);
+  }
+  if (state.stage === 'lens_options' && RANGE_KEYS.includes(visual) && state.category === 'monofocal' && !state.slide) {
+    return visualApplyCue(state, 'mono:' + visual, 'tool', manifest);
+  }
+  if (LENS_CATEGORIES.includes(visual)) {
+    if (state.stage !== 'lens_options' || !manifest.categories[visual]?.enabled) return null;
+    return visualApplyCue(state, visual, 'tool', manifest);
+  }
+  const slide = manifest.slides[visual];
+  if (!slide || slide.role !== 'secondary' || !slide.enabled || slide.stage !== state.stage) return null;
+  return visualApplyCue(state, visual, 'tool', manifest);
+}
+function visualFrameOf(state, manifest = VISUALS_MANIFEST) {
+  if (state.slide && manifest.slides[state.slide]?.enabled) return state.slide;
+  return visualStageMain(state.stage, manifest);
+}
+
+function ciqVisualClearCues() { visualCueTimers.forEach(clearTimeout); visualCueTimers = []; }
+function ciqVisualRender() {
+  if (!VISUALS_ENABLED) return;
+  const panel = document.getElementById('visual-panel');
+  if (!panel) return;
+  const v = visualState;
+  const frame = visualFrameOf(v);
+  const isToric = frame === 'toric';
+  const focusCat = isToric ? null : v.category;
+  const monoRange = (frame === 'lens_map' && focusCat === 'monofocal') ? v.monoRange : null;
+  const goalRange = (frame === 'daily_life') ? v.goalRange : null;
+  const key = [frame, focusCat || '', monoRange || '', goalRange || ''].join('|');
+  const frameChanged = panel.dataset.frame !== frame;
+  panel.dataset.stage = v.stage || '';
+  panel.dataset.frame = frame;
+  panel.dataset.category = focusCat || '';
+  panel.dataset.monoRange = monoRange || '';
+  panel.dataset.goalRange = goalRange || '';
+  if (panel.dataset.key === key) return;
+  panel.dataset.key = key;
+  const img = document.getElementById('visual-img');
+  const map = document.getElementById('lens-map');
+  const gmap = document.getElementById('goals-map');
+  const cap = document.getElementById('visual-caption');
+  const kick = document.getElementById('visual-kicker');
+  if (frame === 'lens_map' || isToric) {
+    img.hidden = true;
+    if (gmap) gmap.hidden = true;
+    map.hidden = false;
+    map.classList.toggle('toric-on', isToric);
+    map.classList.toggle('has-focus', !!focusCat);
+    map.querySelectorAll('.lz').forEach(g => g.classList.toggle('is-on', g.dataset.zone === focusCat));
+    map.querySelectorAll('.lz[data-zone="monofocal"]').forEach(mz => {
+      mz.querySelectorAll('.lz-dot, .lz-rl').forEach(el => el.classList.toggle('on', el.dataset.range === monoRange));
+    });
+    kick.textContent = isToric ? (VISUALS_MANIFEST.slides.toric.kicker || '') : '';
+    cap.textContent = isToric
+      ? VISUALS_MANIFEST.slides.toric.caption
+      : (focusCat ? VISUALS_MANIFEST.categories[focusCat].caption : VISUALS_MANIFEST.slides.lens_map.caption);
+  } else if (frame === 'daily_life' && gmap) {
+    const meta = VISUALS_MANIFEST.slides.daily_life;
+    img.hidden = true;
+    map.hidden = true;
+    gmap.hidden = false;
+    gmap.classList.toggle('has-focus', !!goalRange);
+    gmap.querySelectorAll('.gz').forEach(g => g.classList.toggle('is-on', g.dataset.zone === goalRange));
+    kick.textContent = meta.kicker || '';
+    cap.textContent = meta.caption;
+  } else {
+    const meta = VISUALS_MANIFEST.slides[frame] || VISUALS_MANIFEST.slides.welcome;
+    map.hidden = true;
+    if (gmap) gmap.hidden = true;
+    img.hidden = false;
+    if (img.getAttribute('src') !== meta.src) img.setAttribute('src', meta.src);
+    img.alt = meta.alt;
+    kick.textContent = meta.kicker || '';
+    cap.textContent = meta.caption;
+  }
+  if (frameChanged) { panel.classList.remove('vis-swap'); void panel.offsetWidth; panel.classList.add('vis-swap'); }
+}
+// Called from renderRoadmap() on every stage/tier change, connect and resume.
+function ciqVisualSync() {
+  if (!VISUALS_ENABLED || !convoState) return;
+  if (visualState.stage !== convoState.current_stage) {
+    ciqVisualClearCues();
+    visualState = visualForStage(convoState.current_stage);
+  }
+  ciqVisualRender();
+}
+function ciqVisualOnAgentLine(lower) {
+  if (!VISUALS_ENABLED || !convoState) return;
+  ciqVisualClearCues(); // a new line replaces any cues still pending from the last one
+  if (Date.now() - visualState.toolAt < VISUAL_TOOL_PRIORITY_MS) return; // a recent set_visual call wins
+  const stage = visualState.stage;
+  for (const step of visualCuePlan(stage, lower)) {
+    const run = () => {
+      if (!convoState || visualState.stage !== stage) return; // stage moved on: drop it
+      visualState = visualApplyCue(visualState, step.cue, convoState.current_track);
+      ciqVisualRender();
+    };
+    if (step.delayMs <= 0) run(); else visualCueTimers.push(setTimeout(run, step.delayMs));
+  }
+}
+function ciqVisualOnTrack() {
+  if (!VISUALS_ENABLED || !convoState) return;
+  ciqVisualClearCues();
+  visualState = visualForTrack(visualState, convoState.current_track);
+  ciqVisualRender();
+}
+function ciqVisualFromTool(visual) {
+  if (!VISUALS_ENABLED || !convoState) return 'ignored';
+  const v = visualFromTool(visualState, visual);
+  if (!v) return 'not_for_this_stage';
+  ciqVisualClearCues();
+  visualState = { ...v, toolAt: Date.now() };
+  ciqVisualRender();
+  return 'shown';
+}
+
+// Words panel: always starts hidden in every session (nothing is remembered).
+function ciqWordsOpen() { return document.getElementById('app').dataset.words === 'open'; }
+function ciqSetWords(open) {
+  const app = document.getElementById('app');
+  app.dataset.words = open ? 'open' : 'closed';
+  const btn = document.getElementById('words-toggle');
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  document.getElementById('words-toggle-label').textContent = open ? 'Hide words' : 'Show words';
+  if (open) { const w = document.getElementById('transcript-wrap'); w.scrollTop = w.scrollHeight; }
+}
+(function initVisuals() {
+  if (!VISUALS_ENABLED) return;
+  const app = document.getElementById('app');
+  app.classList.add('ciq-visuals');
+  const vp = document.getElementById('visual-panel');
+  const wt = document.getElementById('words-toggle');
+  if (vp) vp.hidden = false;
+  if (wt) wt.hidden = false;
+  document.querySelectorAll('#goals-map image[data-href]').forEach(el => {
+    el.setAttribute('href', el.getAttribute('data-href'));
+  });
+  ciqSetWords(false);
+  if (wt) wt.addEventListener('click', () => ciqSetWords(!ciqWordsOpen()));
+})();
+// ── session-visuals-v2 END ───────────────────────────────────────────────────
+
 // ── Tap-next v1: soft timer + wrap-up nudges ───────────────────────────────
 // Goal ~30 min; the timer never ends the call. At 30/35/40 min the agent is
 // told it's wrap-up attempt 1/2/3, and at 44 min to give its final line
@@ -1881,6 +2494,7 @@ function renderRoadmap() {
       container.appendChild(con);
     }
   });
+  if (VISUALS_ENABLED) ciqVisualSync(); // session-visuals-v2
 }
 
 let conversation   = null;
@@ -2063,21 +2677,20 @@ function addTranscriptLine(role, text) {
   // Anchor-phrase detection — agent messages only. See
   // clarityiq_anchor_state_machine_spec_v0_1.md §3 for the phrase table.
   if (role === 'agent' && convoState) {
-    for (const entry of ANCHOR_PHRASES) {
-      if (lower.includes(entry.phrase)) {
-        applyStageTransition(entry.to);
-        break;
+    // Stage changes ONLY by Next (button or spoken "next"). When
+    // STAGE_CHANGE_NEXT_ONLY is true, agent stage-opening sentences and the
+    // track-entry stage catch-up are turned off.
+    if (!STAGE_CHANGE_NEXT_ONLY) {
+      for (const entry of ANCHOR_PHRASES) {
+        if (lower.includes(entry.phrase)) {
+          applyStageTransition(entry.to);
+          break;
+        }
       }
     }
     for (const entry of TRACK_ENTRY_PHRASES) {
       if (lower.includes(entry.phrase)) {
-        // Self-heal: track content is only reachable via lens_options, so if
-        // the stage counter lagged behind — e.g. the agent moved straight
-        // into track content without speaking the Stage 3->4 anchor
-        // verbatim, which can happen if the person pushes it to move
-        // faster — catch it up now. Never regresses: only fires if the
-        // stage is still earlier in the sequence than lens_options.
-        if (STAGE_ORDER.indexOf(convoState.current_stage) < STAGE_ORDER.indexOf('lens_options')) {
+        if (!STAGE_CHANGE_NEXT_ONLY && STAGE_ORDER.indexOf(convoState.current_stage) < STAGE_ORDER.indexOf('lens_options')) {
           applyStageTransition('lens_options');
         }
         checkTrackEntryAnomaly(entry.track);
@@ -2087,9 +2700,11 @@ function addTranscriptLine(role, text) {
         }
         touchState();
         sendTelemetry();
+        if (VISUALS_ENABLED) ciqVisualOnTrack(); // session-visuals-v2
         break;
       }
     }
+    if (VISUALS_ENABLED) ciqVisualOnAgentLine(lower); // session-visuals-v2: slides and lens category inside the stage
     // Tap-next v1: highlight the Next button when the agent invites it.
     if (/\btap next\b|\bsay next\b|\bsay "next"/.test(lower)) {
       nextInvited = true;
@@ -2840,6 +3455,7 @@ async function startConversation(opts) {
           if (!convoState.tracks_visited.includes(to_track)) convoState.tracks_visited.push(to_track);
           touchState();
           sendTelemetry();
+          if (VISUALS_ENABLED) ciqVisualOnTrack(); // session-visuals-v2
           return 'recorded';
         },
 
@@ -2849,6 +3465,11 @@ async function startConversation(opts) {
           sendTelemetry();
           return 'recorded';
         },
+
+        // session-visuals-v2 (design): set_visual shows a slide or lens
+        // category that belongs to the current stage. It can never change
+        // the stage. Not registered on the agent, so today it is never called.
+        ...(VISUALS_ENABLED ? { set_visual: async ({ visual }) => ciqVisualFromTool(visual) } : {}),
 
         record_preferred_track: async ({ track: t }) => {
           convoState.preferred_track = t;

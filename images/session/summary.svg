@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="t d">
+<title id="t">Your session summary</title>
+<desc id="d">A summary card to bring to your surgeon, with what matters to you, the lens categories covered, and your questions.</desc>
+<defs>
+  <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1F3D2C" flood-opacity=".12"/></filter>
+</defs>
+<rect width="720" height="480" fill="#F7F2E9"/>
+<g transform="translate(126,42) rotate(-3)"><rect width="460" height="398" rx="24" fill="#EFE3CF"/></g>
+<g font-family="Inter,system-ui,sans-serif" transform="translate(130,36)">
+  <rect width="460" height="404" rx="24" fill="#FFFDF9" filter="url(#shadow)"/>
+  <path d="M0,24 a24,24 0 0 1 24,-24 h412 a24,24 0 0 1 24,24 v48 h-460z" fill="#DCE6D7"/>
+  <text x="28" y="44" font-size="25" font-weight="600" fill="#1F3D2C">Your session summary</text>
+  <rect x="330" y="20" width="106" height="30" rx="15" fill="#FFFDF9"/>
+  <text x="383" y="40" text-anchor="middle" font-size="15" font-weight="600" fill="#4f6b58">For your visit</text>
+
+  <text x="28" y="108" font-size="16" font-weight="600" fill="#9E4526" letter-spacing=".8">WHAT MATTERS TO YOU</text>
+  <rect x="28" y="122" width="148" height="36" rx="18" fill="#F2F6EF" stroke="#c9d8c3" stroke-width="1.8"/>
+  <text x="102" y="146" text-anchor="middle" font-size="17" font-weight="600" fill="#1F3D2C">Daily activities</text>
+  <rect x="188" y="122" width="164" height="36" rx="18" fill="#F2F6EF" stroke="#c9d8c3" stroke-width="1.8"/>
+  <text x="270" y="146" text-anchor="middle" font-size="17" font-weight="600" fill="#1F3D2C">Glasses &amp; night</text>
+
+  <text x="28" y="200" font-size="16" font-weight="600" fill="#9E4526" letter-spacing=".8">WHAT WE COVERED</text>
+  <rect x="28" y="214" width="124" height="36" rx="12" fill="#FFFDF9" stroke="#1F3D2C" stroke-width="2"/>
+  <text x="90" y="238" text-anchor="middle" font-size="17" font-weight="600" fill="#1F3D2C">Monofocal</text>
+  <rect x="164" y="214" width="96" height="36" rx="12" fill="#FFFDF9" stroke="#1F3D2C" stroke-width="2"/>
+  <text x="212" y="238" text-anchor="middle" font-size="17" font-weight="600" fill="#1F3D2C">EDOF</text>
+  <rect x="272" y="214" width="124" height="36" rx="12" fill="#FFFDF9" stroke="#1F3D2C" stroke-width="2"/>
+  <text x="334" y="238" text-anchor="middle" font-size="17" font-weight="600" fill="#1F3D2C">Multifocal</text>
+
+  <text x="28" y="294" font-size="16" font-weight="600" fill="#9E4526" letter-spacing=".8">QUESTIONS FOR YOUR SURGEON</text>
+  <circle cx="38" cy="322" r="7" fill="#4f6b58"/>
+  <text x="58" y="328" font-size="19" fill="#1F3D2C">My eye measurements &amp; astigmatism</text>
+  <circle cx="38" cy="360" r="7" fill="#4f6b58"/>
+  <text x="58" y="366" font-size="19" fill="#1F3D2C">How options compare for me</text>
+</g>
+</svg>
