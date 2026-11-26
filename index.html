@@ -1983,7 +1983,7 @@ const VISUALS_MANIFEST = {
       alt: 'Near, arm\u2019s length and far, with everyday examples of each.',
       caption: 'A focal point is a range where vision is clearest without glasses: near, arm\u2019s length or far.',
       kicker: 'Focal points',
-      cuePattern: '\\bfocal points?\\b',
+      cuePattern: '\\bfocal points\\b',
     },
     astigmatism: {
       stage: 'foundations', role: 'secondary', kind: 'image', enabled: true,
@@ -2007,7 +2007,7 @@ const VISUALS_MANIFEST = {
       stage: 'lens_options', role: 'secondary', kind: 'map_overlay', enabled: true,
       kicker: 'Add-on: Toric, for astigmatism',
       caption: 'Toric is an add-on, not a separate type: a toric version of a lens also corrects astigmatism. Which versions are available depends on the lens and how much astigmatism you have, which your surgeon measures.',
-      cuePattern: '\\b(toric|astigmatism)\\b',
+      cuePattern: '\\b(toric|corrects? astigmatism|correcting astigmatism|for astigmatism)\\b',
     },
     lal: {
       stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
@@ -2016,7 +2016,7 @@ const VISUALS_MANIFEST = {
       alt: 'How a light-adjustable lens is fine-tuned: UV-protective glasses, a light adjustment, and lock-in visits.',
       caption: 'Light Adjustable Lens: a monofocal lens whose power can be fine-tuned with light after the eye heals. The trade-off is extra office visits and UV-protective glasses until the adjustments are done.',
       kicker: 'Part of: Monofocal',
-      cuePattern: '\\b(light adjustable|lal\\+?|rxsight)(?=\\W|$)',
+      cuePattern: '\\b(light[- ]adjustable|lal\\+?|rxsight)(?=\\W|$)',
     },
     ic8: {
       stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
@@ -2025,7 +2025,7 @@ const VISUALS_MANIFEST = {
       alt: 'A small-aperture lens implant, with a tag pointing back to EDOF.',
       caption: 'IC-8: a small-aperture lens used in one eye to lengthen that eye\u2019s range, far through arm\u2019s length. Readers are common for small print. Your surgeon can tell you whether that approach is used for your eyes.',
       kicker: 'Part of: EDOF',
-      cuePattern: '\\b(ic-8|ic 8|apthera|small[- ]aperture)\\b',
+      cuePattern: '\\b(ic-8|ic 8|ic8|apthera|small[- ]aperture)\\b',
     },
     readiness: {
       stage: 'readiness', role: 'main', kind: 'image', enabled: true,
@@ -2044,12 +2044,12 @@ const VISUALS_MANIFEST = {
     monofocal: {
       enabled: true,
       caption: 'Monofocal: one focal point, set for near, arm\u2019s length or far, with glasses for the other ranges. Enhanced monofocal lenses give a bit more arm\u2019s length.',
-      cuePattern: '\\b(monofocal|basic lens(es)?|single[- ]focal[- ]point|one focal point|standard lens|enhanced basic|clareon|tecnis 1|eyhance|envista aspire)\\b',
+      cuePattern: '\\b(monofocal|basic lens(?:es)?|single[- ]focal[- ]point|one[- ]focal[- ]point|standard lens(?:es)?|enhanced basic|clareon monofocal|tecnis 1|eyhance|envista aspire)\\b',
     },
     edof: {
       enabled: true,
       caption: 'EDOF (extended range): designed for far through arm\u2019s length. Readers are common for small print. Night halos are usually milder than with multifocal lenses.',
-      cuePattern: '\\b(edof|extended[- ]range|extended depth|extends? (your |the )?(range|vision)|vivity|puresee|symfony)\\b',
+      cuePattern: '\\b(edof|extended[- ]range|extended depth|depth of focus|extends? (your |the )?(range|vision)|vivity|puresee|symfony)\\b',
     },
     multifocal: {
       enabled: true,
@@ -2060,13 +2060,13 @@ const VISUALS_MANIFEST = {
   monoRanges: {
     near:  { enabled: true, cuePattern: '\\b(up close|set for near|for near|near vision|reading|phone)\\b' },
     arms:  { enabled: true, cuePattern: '\\b(arm\'?s[- ]length|intermediate|computer|dashboard|cooking)\\b' },
-    far:   { enabled: true, cuePattern: '\\b(far|farther out|distance|driving|tv)\\b' },
+    far:   { enabled: true, cuePattern: '\\b(farther(?:\\s+out)?|distance|driving|tv|(?<!so )(?<!how )(?<!too )(?<!as )far(?! fewer)(?! more)(?! less)(?! from))\\b' },
     clear: { enabled: true, cuePattern: '\\b(not sure|more than one|choose one|all three)\\b' },
   },
   goalRanges: {
-    near:  { enabled: true, cuePattern: '\\b(near|up close|reading|book|books|menu|menus|medication|label|labels|small print|fine print|phone|tablet|cards|needlework)\\b' },
+    near:  { enabled: true, cuePattern: '\\b(up close|reading|books?|menus?|medication|labels?|(?<!readers for )(?:small print|fine print)|phone|tablet|cards|needlework|near)\\b' },
     arms:  { enabled: true, cuePattern: '\\b(arm\'?s[- ]length|intermediate|computer|screen|screens|laptop|dashboard|cooking|stove|hands in front)\\b' },
-    far:   { enabled: true, cuePattern: '\\b(far|farther|distance|driving|night driving|headlight|tv|golf|outdoors|faces across)\\b' },
+    far:   { enabled: true, cuePattern: '\\b(farther|distance|driving|night driving|headlight|tv|golf|outdoors|faces across|(?<!so )(?<!how )(?<!too )(?<!as )far(?! fewer)(?! more)(?! less)(?! from))\\b' },
     clear: { enabled: true, cuePattern: '\\b(not sure yet|weighing it up|all three|three zones)\\b' },
   },
 };
@@ -2115,18 +2115,53 @@ function visualCueEntriesForStage(stage, manifest = VISUALS_MANIFEST) {
 let visualState = { stage: null, slide: null, category: null, monoRange: null, goalRange: null, toolAt: 0 };
 let visualCueTimers = [];
 
+// Fold typographic apostrophes and case so cue patterns can stay ASCII.
+function visualNormalize(text) {
+  return String(text == null ? '' : text)
+    .toLowerCase()
+    .replace(/[\u2018\u2019\u201B\u2032]/g, "'")
+    .replace(/\s+/g, ' ');
+}
+// Skip a hit when the words just before it negate or contrast it
+// ("not an extended-range", "milder than with multifocal", "versus full-range").
+function visualCueIsNegated(text, index) {
+  const before = text.slice(Math.max(0, index - 64), index);
+  if (/(?:\bnot(?: an?)?|\bnever(?: call it| say(?: it)?)?|\bthan(?: with| for)|\bcompared to|\bversus|\bvs\.?)\s+$/i.test(before)) return true;
+  // "not an extended-range or edof lens": the "or" still belongs to the negation.
+  if (/\bnot(?: an?)?\b[^,.!?;:]{0,50}\bor\s+$/i.test(before)) return true;
+  return false;
+}
+function visualLineIsMonovisionTalk(text) {
+  return /\bmonovision\b|which eye was set|one eye.{0,100}(the other|other eye)/.test(text);
+}
 // Pure: ordered cues in one agent line, each with a delay from the line's start.
 function visualCuePlan(stage, lower, manifest = VISUALS_MANIFEST) {
+  const text = visualNormalize(lower);
+  const monovisionTalk = visualLineIsMonovisionTalk(text);
   const hits = [];
   for (const entry of visualCueEntriesForStage(stage, manifest)) {
+    if (monovisionTalk && (entry.cue === 'goal:near' || entry.cue === 'goal:far')) continue;
     const re = new RegExp(entry.pattern, 'g');
-    for (const m of lower.matchAll(re)) hits.push({ cue: entry.cue, index: m.index });
+    for (const m of text.matchAll(re)) {
+      if (visualCueIsNegated(text, m.index)) continue;
+      hits.push({ cue: entry.cue, index: m.index });
+    }
   }
   hits.sort((a, b) => a.index - b.index);
   const plan = [];
   for (const h of hits) {
     if (plan.length && plan[plan.length - 1].cue === h.cue) continue; // repeated word, same cue
     plan.push({ cue: h.cue, delayMs: Math.min(VISUAL_MAX_CUE_DELAY_MS, Math.round(h.index / VISUAL_CHARS_PER_SEC * 1000)) });
+  }
+  // A line that names two or more ranges in the same family is an overview, not a choice — finish on the default (none lit).
+  for (const prefix of ['mono:', 'goal:']) {
+    const named = new Set(plan.filter(s => s.cue.startsWith(prefix) && s.cue !== prefix + 'clear').map(s => s.cue));
+    if (named.size >= 2) {
+      const lastFamily = [...plan].reverse().find(s => s.cue.startsWith(prefix));
+      if (lastFamily && lastFamily.cue !== prefix + 'clear') {
+        plan.push({ cue: prefix + 'clear', delayMs: plan[plan.length - 1].delayMs });
+      }
+    }
   }
   return plan;
 }

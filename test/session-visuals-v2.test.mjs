@@ -151,6 +151,62 @@ test('nuance slides only when named, each pointing back to its home category', (
   assert.equal(V.visualFrameOf(run(L, 'a basic monofocal lens')), 'lens_map');
 });
 
+test('cue matcher follows live v3.8.3 scripted wording (paraphrased; no personal data)', () => {
+  // Foundations: the teaching line uses plural "focal points"; singular "focal point"
+  // in the astigmatism block must not steal the slide back.
+  assert.deepEqual(cues('foundations', 'every iol gives one or more focal points, ranges where vision is clearest without glasses'), ['focal_points']);
+  assert.deepEqual(cues('foundations', "it's called astigmatism; it can blur vision at any focal point"), ['astigmatism']);
+  assert.deepEqual(cues('foundations', 'one focal point usually means glasses for the other ranges'), []);
+
+  // Goals: scripted lifestyle questions and routing.
+  assert.deepEqual(cues('vision_goals', 'how much does reading books or medication labels matter?'), ['goal:near']);
+  assert.deepEqual(cues('vision_goals', "what about things at about arm's length — a computer screen, the car dashboard, cooking?"), ['goal:arms']);
+  assert.deepEqual(cues('vision_goals', 'and night driving and headlight glare?'), ['goal:far']);
+  assert.deepEqual(cues('vision_goals', "or you're not sure yet, which is a perfectly good answer too"), ['goal:clear']);
+  assert.deepEqual(cues('vision_goals', 'work at about arm\u2019s length, like a computer'), ['goal:arms']); // typographic apostrophe
+  // Scripted comprehension check must not light Far.
+  assert.deepEqual(cues('vision_goals', 'does that make sense so far?'), []);
+  // "readers for small print" is the residual on a far-plus-arm's goal, not a near goal;
+  // naming two ranges in one line finishes on the default (none lit).
+  assert.deepEqual(
+    cues('vision_goals', "seeing well far away and at arm's length, with readers for small print"),
+    ['goal:far', 'goal:arms', 'goal:clear']
+  );
+  // Monovision history in Goals must not light the Near or Far goal dots.
+  assert.deepEqual(cues('vision_goals', 'have you ever tried monovision before — where one eye is set for near and the other for distance?'), []);
+  assert.deepEqual(cues('vision_goals', 'and which eye was set for distance, which for near?'), []);
+
+  // Lens categories, from scripted Stage 4 lines.
+  assert.equal(run(L, 'a basic lens is set for one distance, usually far').category, 'monofocal');
+  assert.equal(run(L, "extended-range lenses are designed for far through arm's length").category, 'edof');
+  assert.equal(run(L, 'puresee, from j&j vision, and vivity, from alcon').category, 'edof');
+  assert.equal(run(L, "full-range lenses are designed for far, arm's length and near").category, 'multifocal');
+  assert.equal(run(L, 'clareon monofocal, from alcon, is designed for one distance').category, 'monofocal');
+  assert.equal(run(L, "they're still mainly a one-focal-point lens").category, 'monofocal');
+  assert.equal(run(L, 'they are approved as standard lenses').category, 'monofocal');
+  // "Clareon" is a platform name: Clareon PanOptix Pro is multifocal, not monofocal.
+  assert.deepEqual(cues('lens_options', "clareon panoptix pro, alcon's newer version of it"), ['multifocal']);
+  // Comparisons and negations should not steal the highlight.
+  assert.deepEqual(cues('lens_options', 'night halos are usually milder than with multifocal lenses'), []);
+  assert.deepEqual(cues('lens_options', 'the ic-8 is a small-aperture lens, not an extended-range or edof lens'), ['ic8']);
+  // Toric: the scripted "correct astigmatism" line hits; passing "some astigmatism" does not.
+  assert.ok(cues('lens_options', 'these lenses can also correct astigmatism, to varying degrees').includes('toric'));
+  assert.ok(!cues('lens_options', 'the lal is approved for people with some astigmatism, and your surgeon checks if you qualify').includes('toric'));
+  assert.ok(cues('lens_options', 'the light adjustable lens, lal, from rxsight').includes('lal'));
+  assert.ok(cues('lens_options', 'a light-adjustable lens can be fine-tuned').includes('lal'));
+  assert.ok(cues('lens_options', 'the ic8 apthera is used in one eye').includes('ic8'));
+
+  // Monofocal dots: a multi-range overview must not land on the last named range;
+  // "so far" and "far fewer" must not light Far.
+  const cOpen = V.visualForTrack(L, 'C');
+  assert.equal(cOpen.category, 'monofocal');
+  const intro = run(cOpen, "a basic lens is set for one distance, usually far. for the other distances, like arm's length and reading, you'll need glasses.");
+  assert.equal(intro.monoRange, null);
+  assert.equal(run(cOpen, 'does that make sense so far?').monoRange, null);
+  assert.equal(run(cOpen, 'far fewer people were bothered very much').monoRange, null);
+  assert.equal(run(cOpen, 'set for one distance, usually far').monoRange, 'far');
+});
+
 test('C-loop IOL haptics have opposite-shoulder attachment and matching rotational curvature', () => {
   for (const file of ['foundations-cataract.svg', 'lal.svg', 'ic8.svg']) {
     const svg = readFileSync(join(root, 'images/session', file), 'utf8');
