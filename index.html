@@ -554,8 +554,18 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 @media (max-width:759px){ #lens-map .lens-map-wide{ display:none; } #lens-map .lens-map-tall{ display:block; } #goals-map .goals-map{ border-radius:16px; } }
 #visual-img{ display:block; width:100%; max-width:860px; flex:0 1 auto; min-height:0; height:auto; aspect-ratio:720/480; object-fit:contain; background:#F7F2E9; border-radius:22px; }
 #visual-img[hidden]{ display:none; }
+#visual-svg{ display:block; width:100%; max-width:860px; flex:0 1 auto; min-height:0; height:auto; aspect-ratio:720/480; }
+#visual-svg[hidden]{ display:none; }
+#visual-svg .ov-label{ font-family:var(--serif); font-size:26px; fill:#1F3D2C; paint-order:stroke; stroke:#FBF6EE; stroke-width:5px; stroke-linejoin:round; }
+#visual-svg .ov-note{ font-family:var(--serif); font-size:21px; fill:#1F3D2C; }
+#visual-svg .ov-bullet{ fill:#7E9C86; }
+#visual-svg .ray-a{ fill:none; stroke:#D9A441; stroke-width:2.6; stroke-linejoin:round; }
+#visual-svg .ray-b{ fill:none; stroke:#B85D3B; stroke-width:2.4; stroke-dasharray:7 6; stroke-linejoin:round; }
+#visual-svg .ray-b-ghost{ fill:none; stroke:#B85D3B; stroke-width:1.8; stroke-dasharray:3 6; opacity:.6; }
+#visual-svg .focus-a{ fill:#D9A441; stroke:#FFFDF9; stroke-width:1.5; }
+#visual-svg .focus-b{ fill:#FFFDF9; stroke:#B85D3B; stroke-width:2.4; }
 #visual-caption{ flex:none; max-width:640px; text-align:center; font-size:16px; line-height:1.45; color:var(--ink-2); text-wrap:pretty; }
-#visual-panel.vis-swap #visual-img,#visual-panel.vis-swap #lens-map,#visual-panel.vis-swap #goals-map{ animation:ciq-vis-in .45s ease-out; }
+#visual-panel.vis-swap #visual-img,#visual-panel.vis-swap #visual-svg,#visual-panel.vis-swap #lens-map,#visual-panel.vis-swap #goals-map{ animation:ciq-vis-in .45s ease-out; }
 @keyframes ciq-vis-in{ from{ opacity:.25; } to{ opacity:1; } }
 /* goals map dynamic dots: default none lit; active goal range lights its dot and card */
 #goals-map .gz{ transition:opacity .35s; }
@@ -569,15 +579,12 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
 /* lens map zones: equal size, equal style; the zone being discussed is lit, the rest step back */
 #lens-map .lz-card{ fill:#FFFDF9; stroke:transparent; stroke-width:3; filter:url(#lm-shadow); transition:stroke .3s, fill .3s; }
 #lens-map .lz{ transition:opacity .35s; }
-#lens-map .lz-hap{ fill:none; stroke:#4f6b58; stroke-width:3; stroke-linecap:round; }
-#lens-map .lz-optic{ stroke:#1F3D2C; stroke-width:2.2; }
 #lens-map .lz-name{ font-family:var(--sans); font-weight:600; fill:#1F3D2C; }
 #lens-map .lz-tag{ font-family:var(--sans); font-weight:600; letter-spacing:.1em; fill:#9E4526; }
 #lens-map .lz-fam{ font-family:var(--sans); fill:#3d463f; }
 #lens-map .lz-rl{ font-family:var(--sans); fill:#5d665f; text-anchor:middle; transition:fill .25s; }
-#lens-map .lz-ring{ fill:none; stroke:#4f6b58; stroke-width:1.3; }
 #lens-map .lz-toric{ display:none; fill:#1F3D2C; }
-#lens-map .lz-axis{ stroke:#9E4526; stroke-width:2; stroke-dasharray:4 5; }
+#lens-map .lz-img{ pointer-events:none; }
 #lens-map.toric-on .lz-toric{ display:inline; }
 #lens-map.toric-on .lz-card{ fill:#FBF1EA; stroke:#B85D3B; }
 #lens-map .lz-span{ stroke:#c9d8c3; stroke-width:12; stroke-linecap:round; }
@@ -965,23 +972,24 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
       <figure id="visual-figure">
         <div id="visual-kicker"></div>
         <img id="visual-img" alt="" width="720" height="480" decoding="async" hidden>
+        <svg id="visual-svg" viewBox="0 0 720 480" role="img" aria-label="" hidden><defs><clipPath id="vs-clip"><rect width="720" height="480" rx="18"/></clipPath></defs><g clip-path="url(#vs-clip)"><rect width="720" height="480" fill="#F7F2E9"/><image id="visual-svg-img" width="720" height="480" preserveAspectRatio="xMidYMid slice"/><g id="visual-svg-ov"></g></g></svg>
         <div id="lens-map" hidden>
-          <svg class="lens-map-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><radialGradient id="lm-optic" cx="40%" cy="36%" r="70%"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".6" stop-color="#EAF3F1"/><stop offset="1" stop-color="#C9DDD6"/></radialGradient><filter id="lm-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1F3D2C" flood-opacity=".10"/></filter></defs></svg>
+          <svg class="lens-map-defs" width="0" height="0" aria-hidden="true" focusable="false"><defs><filter id="lm-shadow" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#1F3D2C" flood-opacity=".10"/></filter></defs></svg>
           <svg class="lens-map lens-map-wide" viewBox="0 0 720 420" role="img" aria-label="Three lens categories: monofocal, EDOF (extended range) and multifocal (full range), each with the ranges it is designed for.">
-          <g class="lz" data-zone="monofocal" transform="translate(12,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,114)"><path class="lz-hap" d="M21.0,-45.5 C11.0,-69.2 -17.0,-79.7 -39.0,-63.5"/><path class="lz-hap" d="M-21.0,45.5 C-11.0,69.2 17.0,79.7 39.0,63.5"/><circle class="lz-optic" r="50" fill="url(#lm-optic)"/><g class="lz-toric"><path d="M-40,0 H40" class="lz-axis"/><circle cx="-44" cy="0" r="3.4"/><circle cx="-35" cy="0" r="3.4"/><circle cx="44" cy="0" r="3.4"/><circle cx="35" cy="0" r="3.4"/></g><ellipse cx="-15" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">Monofocal</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">ONE FOCAL POINT</text><circle class="lz-dot" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Includes enhanced monofocal</text></g>
-          <g class="lz" data-zone="edof" transform="translate(248,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,114)"><path class="lz-hap" d="M21.0,-45.5 C11.0,-69.2 -17.0,-79.7 -39.0,-63.5"/><path class="lz-hap" d="M-21.0,45.5 C-11.0,69.2 17.0,79.7 39.0,63.5"/><circle class="lz-optic" r="50" fill="url(#lm-optic)"/><circle r="16" class="lz-ring" opacity=".75"/><circle r="28" class="lz-ring" opacity=".35"/><g class="lz-toric"><path d="M-40,0 H40" class="lz-axis"/><circle cx="-44" cy="0" r="3.4"/><circle cx="-35" cy="0" r="3.4"/><circle cx="44" cy="0" r="3.4"/><circle cx="35" cy="0" r="3.4"/></g><ellipse cx="-15" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">EDOF</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">EXTENDED RANGE</text><path class="lz-span" d="M112,300 H172"/><circle class="lz-dot" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot on" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Extended depth of focus</text></g>
-          <g class="lz" data-zone="multifocal" transform="translate(484,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g transform="translate(112,114)"><path class="lz-hap" d="M21.0,-45.5 C11.0,-69.2 -17.0,-79.7 -39.0,-63.5"/><path class="lz-hap" d="M-21.0,45.5 C-11.0,69.2 17.0,79.7 39.0,63.5"/><circle class="lz-optic" r="50" fill="url(#lm-optic)"/><circle r="9.0" class="lz-ring" opacity=".55"/><circle r="16.0" class="lz-ring" opacity=".55"/><circle r="22.0" class="lz-ring" opacity=".55"/><circle r="27.0" class="lz-ring" opacity=".55"/><circle r="31.5" class="lz-ring" opacity=".55"/><circle r="35.5" class="lz-ring" opacity=".55"/><circle r="39.5" class="lz-ring" opacity=".55"/><circle r="43.0" class="lz-ring" opacity=".55"/><g class="lz-toric"><path d="M-40,0 H40" class="lz-axis"/><circle cx="-44" cy="0" r="3.4"/><circle cx="-35" cy="0" r="3.4"/><circle cx="44" cy="0" r="3.4"/><circle cx="35" cy="0" r="3.4"/></g><ellipse cx="-15" cy="-18" rx="10" ry="6" fill="#fff" opacity=".8"/></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">Multifocal</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">FULL RANGE</text><path class="lz-span" d="M52,300 H172"/><circle class="lz-dot on" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot on" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Includes trifocal</text></g>
+          <g class="lz" data-zone="monofocal" transform="translate(12,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g class="lz-art"><image class="lz-img" data-href="images/session/v3/lens-monofocal.png" x="21" y="14" width="182" height="182"/><g class="lz-toric"><circle cx="62.0" cy="94.1" r="2.4"/><circle cx="67.5" cy="94.1" r="2.4"/><circle cx="73.0" cy="94.1" r="2.4"/><circle cx="154.0" cy="94.1" r="2.4"/><circle cx="148.5" cy="94.1" r="2.4"/><circle cx="143.0" cy="94.1" r="2.4"/></g></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">Monofocal</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">ONE FOCAL POINT</text><circle class="lz-dot" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Includes enhanced monofocal</text></g>
+          <g class="lz" data-zone="edof" transform="translate(248,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g class="lz-art"><image class="lz-img" data-href="images/session/v3/lens-edof.png" x="21" y="14" width="182" height="182"/><g class="lz-toric"><circle cx="62.0" cy="94.1" r="2.4"/><circle cx="67.5" cy="94.1" r="2.4"/><circle cx="73.0" cy="94.1" r="2.4"/><circle cx="154.0" cy="94.1" r="2.4"/><circle cx="148.5" cy="94.1" r="2.4"/><circle cx="143.0" cy="94.1" r="2.4"/></g></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">EDOF</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">EXTENDED RANGE</text><path class="lz-span" d="M112,300 H172"/><circle class="lz-dot" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot on" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Extended depth of focus</text></g>
+          <g class="lz" data-zone="multifocal" transform="translate(484,12)"><rect class="lz-card" width="224" height="396" rx="26"/><g class="lz-art"><image class="lz-img" data-href="images/session/v3/lens-multifocal.png" x="21" y="14" width="182" height="182"/><g class="lz-toric"><circle cx="62.0" cy="94.1" r="2.4"/><circle cx="67.5" cy="94.1" r="2.4"/><circle cx="73.0" cy="94.1" r="2.4"/><circle cx="154.0" cy="94.1" r="2.4"/><circle cx="148.5" cy="94.1" r="2.4"/><circle cx="143.0" cy="94.1" r="2.4"/></g></g><text class="lz-name" x="112" y="222" text-anchor="middle" font-size="28">Multifocal</text><text class="lz-tag" x="112" y="252" text-anchor="middle" font-size="15">FULL RANGE</text><path class="lz-span" d="M52,300 H172"/><circle class="lz-dot on" data-range="near" cx="52" cy="300" r="11"/><text class="lz-rl" data-range="near" x="52" y="338" font-size="17">Near</text><circle class="lz-dot on" data-range="arms" cx="112" cy="300" r="11"/><text class="lz-rl" data-range="arms" x="112" y="338" font-size="17">Arm’s</text><circle class="lz-dot on" data-range="far" cx="172" cy="300" r="11"/><text class="lz-rl" data-range="far" x="172" y="338" font-size="17">Far</text><text class="lz-fam" x="112" y="374" text-anchor="middle" font-size="15">Includes trifocal</text></g>
           </svg>
           <svg class="lens-map lens-map-tall" viewBox="0 0 360 438" role="img" aria-label="Three lens categories: monofocal, EDOF (extended range) and multifocal (full range), each with the ranges it is designed for.">
-          <g class="lz" data-zone="monofocal" transform="translate(6,6)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M14.7,-31.9 C7.7,-46.7 -11.9,-53.3 -27.3,-43.2"/><path class="lz-hap" d="M-14.7,31.9 C-7.7,46.7 11.9,53.3 27.3,43.2"/><circle class="lz-optic" r="35" fill="url(#lm-optic)"/><g class="lz-toric"><path d="M-25,0 H25" class="lz-axis"/><circle cx="-29" cy="0" r="3.4"/><circle cx="-20" cy="0" r="3.4"/><circle cx="29" cy="0" r="3.4"/><circle cx="20" cy="0" r="3.4"/></g><ellipse cx="-10" cy="-13" rx="7" ry="4" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">Monofocal</text><text class="lz-tag" x="132" y="66" font-size="13">ONE FOCAL POINT</text><circle class="lz-dot" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
-          <g class="lz" data-zone="edof" transform="translate(6,150)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M14.7,-31.9 C7.7,-46.7 -11.9,-53.3 -27.3,-43.2"/><path class="lz-hap" d="M-14.7,31.9 C-7.7,46.7 11.9,53.3 27.3,43.2"/><circle class="lz-optic" r="35" fill="url(#lm-optic)"/><circle r="11" class="lz-ring" opacity=".75"/><circle r="19" class="lz-ring" opacity=".35"/><g class="lz-toric"><path d="M-25,0 H25" class="lz-axis"/><circle cx="-29" cy="0" r="3.4"/><circle cx="-20" cy="0" r="3.4"/><circle cx="29" cy="0" r="3.4"/><circle cx="20" cy="0" r="3.4"/></g><ellipse cx="-10" cy="-13" rx="7" ry="4" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">EDOF</text><text class="lz-tag" x="132" y="66" font-size="13">EXTENDED RANGE</text><path class="lz-span" d="M222,94 H294"/><circle class="lz-dot" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot on" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
-          <g class="lz" data-zone="multifocal" transform="translate(6,294)"><rect class="lz-card" width="348" height="134" rx="22"/><g transform="translate(66,67)"><path class="lz-hap" d="M14.7,-31.9 C7.7,-46.7 -11.9,-53.3 -27.3,-43.2"/><path class="lz-hap" d="M-14.7,31.9 C-7.7,46.7 11.9,53.3 27.3,43.2"/><circle class="lz-optic" r="35" fill="url(#lm-optic)"/><circle r="6.3" class="lz-ring" opacity=".55"/><circle r="11.2" class="lz-ring" opacity=".55"/><circle r="15.4" class="lz-ring" opacity=".55"/><circle r="18.9" class="lz-ring" opacity=".55"/><circle r="22.1" class="lz-ring" opacity=".55"/><circle r="24.8" class="lz-ring" opacity=".55"/><circle r="27.7" class="lz-ring" opacity=".55"/><circle r="30.1" class="lz-ring" opacity=".55"/><g class="lz-toric"><path d="M-25,0 H25" class="lz-axis"/><circle cx="-29" cy="0" r="3.4"/><circle cx="-20" cy="0" r="3.4"/><circle cx="29" cy="0" r="3.4"/><circle cx="20" cy="0" r="3.4"/></g><ellipse cx="-10" cy="-13" rx="7" ry="4" fill="#fff" opacity=".8"/></g><text class="lz-name" x="132" y="44" font-size="25">Multifocal</text><text class="lz-tag" x="132" y="66" font-size="13">FULL RANGE</text><path class="lz-span" d="M150,94 H294"/><circle class="lz-dot on" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot on" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
+          <g class="lz" data-zone="monofocal" transform="translate(6,6)"><rect class="lz-card" width="348" height="134" rx="22"/><g class="lz-art"><image class="lz-img" data-href="images/session/v3/lens-monofocal.png" x="4" y="5" width="124" height="124"/><g class="lz-toric"><circle cx="32.1" cy="59.6" r="2"/><circle cx="36.6" cy="59.6" r="2"/><circle cx="41.1" cy="59.6" r="2"/><circle cx="94.5" cy="59.6" r="2"/><circle cx="90.0" cy="59.6" r="2"/><circle cx="85.5" cy="59.6" r="2"/></g></g><text class="lz-name" x="132" y="44" font-size="25">Monofocal</text><text class="lz-tag" x="132" y="66" font-size="13">ONE FOCAL POINT</text><circle class="lz-dot" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
+          <g class="lz" data-zone="edof" transform="translate(6,150)"><rect class="lz-card" width="348" height="134" rx="22"/><g class="lz-art"><image class="lz-img" data-href="images/session/v3/lens-edof.png" x="4" y="5" width="124" height="124"/><g class="lz-toric"><circle cx="32.1" cy="59.6" r="2"/><circle cx="36.6" cy="59.6" r="2"/><circle cx="41.1" cy="59.6" r="2"/><circle cx="94.5" cy="59.6" r="2"/><circle cx="90.0" cy="59.6" r="2"/><circle cx="85.5" cy="59.6" r="2"/></g></g><text class="lz-name" x="132" y="44" font-size="25">EDOF</text><text class="lz-tag" x="132" y="66" font-size="13">EXTENDED RANGE</text><path class="lz-span" d="M222,94 H294"/><circle class="lz-dot" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot on" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
+          <g class="lz" data-zone="multifocal" transform="translate(6,294)"><rect class="lz-card" width="348" height="134" rx="22"/><g class="lz-art"><image class="lz-img" data-href="images/session/v3/lens-multifocal.png" x="4" y="5" width="124" height="124"/><g class="lz-toric"><circle cx="32.1" cy="59.6" r="2"/><circle cx="36.6" cy="59.6" r="2"/><circle cx="41.1" cy="59.6" r="2"/><circle cx="94.5" cy="59.6" r="2"/><circle cx="90.0" cy="59.6" r="2"/><circle cx="85.5" cy="59.6" r="2"/></g></g><text class="lz-name" x="132" y="44" font-size="25">Multifocal</text><text class="lz-tag" x="132" y="66" font-size="13">FULL RANGE</text><path class="lz-span" d="M150,94 H294"/><circle class="lz-dot on" data-range="near" cx="150" cy="94" r="9"/><text class="lz-rl" data-range="near" x="150" y="124" font-size="14">Near</text><circle class="lz-dot on" data-range="arms" cx="222" cy="94" r="9"/><text class="lz-rl" data-range="arms" x="222" y="124" font-size="14">Arm’s</text><circle class="lz-dot on" data-range="far" cx="294" cy="94" r="9"/><text class="lz-rl" data-range="far" x="294" y="124" font-size="14">Far</text></g>
           </svg>
         </div>
                 <div id="goals-map" hidden>
           <svg class="goals-map" viewBox="0 0 1152 768" role="img" aria-labelledby="gm-t gm-d">
           <title id="gm-t">Your day, near to far</title>
-          <desc id="gm-d">Three everyday distance scenes from the ClarityIQ lens guide: near, a phone in hand over an open book; arm's length, a laptop and car dashboard; far, driving on a neighborhood street.</desc>
+          <desc id="gm-d">Three everyday distance scenes: near, an open book, reading glasses and a phone; arm's length, a laptop on a kitchen table; far, a country road seen from the driver's seat.</desc>
           <defs>
             <clipPath id="gm-c-near"><rect x="28" y="28" width="352" height="528" rx="22"/></clipPath>
             <clipPath id="gm-c-arms"><rect x="400" y="28" width="352" height="528" rx="22"/></clipPath>
@@ -990,21 +998,21 @@ body:has(#roadmap:not(:empty)):not(:has(#summary[style*="flex"])) .app-footer{ d
           <rect width="1152" height="768" fill="#F7F2E9"/>
           <path d="M204,612 H948" stroke="#c9d8c3" stroke-width="8" stroke-linecap="round"/>
           <g class="gz" data-zone="near">
-            <image data-href="images/session/web/goals-near.jpg" x="28" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-near)"/>
+            <image data-href="images/session/v3/goals-near.jpg" x="28" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-near)"/>
             <rect class="gz-card" x="28" y="28" width="352" height="528" rx="22" fill="none"/>
             <circle class="gz-dot" cx="204" cy="612" r="12"/>
             <text class="gz-rl" x="204" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Near</text>
             <text x="204" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Reading, phone</text>
           </g>
           <g class="gz" data-zone="arms">
-            <image data-href="images/session/web/goals-arms.jpg" x="400" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-arms)"/>
+            <image data-href="images/session/v3/goals-arms.jpg" x="400" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-arms)"/>
             <rect class="gz-card" x="400" y="28" width="352" height="528" rx="22" fill="none"/>
             <circle class="gz-dot" cx="576" cy="612" r="12"/>
             <text class="gz-rl" x="576" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Arm's length</text>
             <text x="576" y="688" text-anchor="middle" font-size="22" font-family="Inter,system-ui,sans-serif" fill="#3d463f">Screens, dashboard</text>
           </g>
           <g class="gz" data-zone="far">
-            <image data-href="images/session/web/goals-far.jpg" x="772" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-far)"/>
+            <image data-href="images/session/v3/goals-far.jpg" x="772" y="28" width="352" height="528" preserveAspectRatio="xMidYMid slice" clip-path="url(#gm-c-far)"/>
             <rect class="gz-card" x="772" y="28" width="352" height="528" rx="22" fill="none"/>
             <circle class="gz-dot" cx="948" cy="612" r="12"/>
             <text class="gz-rl" x="948" y="656" text-anchor="middle" font-size="32" font-weight="600" font-family="Inter,system-ui,sans-serif" fill="#1F3D2C">Far</text>
@@ -1990,8 +1998,8 @@ const VISUALS_MANIFEST = {
   slides: {
     welcome: {
       stage: 'welcome', role: 'main', kind: 'image', enabled: true,
-      src: 'images/session/welcome.svg',
-      alt: 'An eye beside two welcoming conversation bubbles.',
+      src: 'images/session/v3/intro.jpg',
+      alt: 'A calm desk with an open notebook, reading glasses and a cup of tea.',
       caption: 'Let\u2019s start with where you are today.',
     },
     cataract: {
@@ -2002,23 +2010,38 @@ const VISUALS_MANIFEST = {
     },
     focal_points: {
       stage: 'foundations', role: 'secondary', kind: 'image', enabled: true,
-      src: 'images/session/web/lens-guide-focus-distance-32.jpg',
-      alt: 'Near, arm\u2019s length and far, with everyday examples of each.',
+      src: 'images/session/v3/focal.jpg',
+      alt: 'Near, arm\u2019s length and far: an open book and reading glasses up close, a laptop at arm\u2019s length, and a road through the window far away.',
+      overlay: [
+        { t: 'text', x: 176, y: 452, anchor: 'middle', cls: 'ov-label', s: 'Near' },
+        { t: 'text', x: 420, y: 452, anchor: 'middle', cls: 'ov-label', s: 'Arm\u2019s length' },
+        { t: 'text', x: 638, y: 452, anchor: 'middle', cls: 'ov-label', s: 'Far' },
+      ],
       caption: 'A focal point is a range where vision is clearest without glasses: near, arm\u2019s length or far.',
       kicker: 'Focal points',
       cuePattern: '\\bfocal points\\b',
     },
     astigmatism: {
       stage: 'foundations', role: 'secondary', kind: 'image', enabled: true,
-      src: 'images/session/foundations-astigmatism.svg',
-      alt: 'A round eye surface next to one that is not perfectly round.',
+      src: 'images/session/v3/astigmatism-eye.jpg',
+      alt: 'Cross-section of the eye: with astigmatism, light comes to two focal points, one in front of the retina and one behind it, instead of one.',
+      overlay: [
+        { t: 'path', cls: 'ray-a', d: 'M0,229.3 L532,229.3' },
+        { t: 'path', cls: 'ray-a', d: 'M0,196 L180,196 L266.7,199.3 L486.7,229.3 L532,235.5' },
+        { t: 'path', cls: 'ray-a', d: 'M0,262.6 L180,262.6 L266.7,259.3 L486.7,229.3 L532,223.1' },
+        { t: 'path', cls: 'ray-b', d: 'M0,209.3 L180,209.3 L266.7,211.3 L532,226.2' },
+        { t: 'path', cls: 'ray-b', d: 'M0,249.3 L180,249.3 L266.7,247.3 L532,232.4' },
+        { t: 'path', cls: 'ray-b-ghost', d: 'M532,226.2 L586.7,229.3 M532,232.4 L586.7,229.3' },
+        { t: 'circle', cls: 'focus-a', cx: 486.7, cy: 229.3, r: 5.5 },
+        { t: 'circle', cls: 'focus-b', cx: 586.7, cy: 229.3, r: 6 },
+      ],
       caption: 'Astigmatism: the eye\u2019s surface isn\u2019t perfectly round, so light doesn\u2019t focus evenly. Your surgeon factors this in.',
       kicker: 'Astigmatism',
       cuePattern: '\\bastigmatism\\b',
     },
     daily_life: {
       stage: 'vision_goals', role: 'main', kind: 'goals_map', enabled: true,
-      src: 'images/session/web/goals-board.jpg',
+      src: 'images/session/v3/goals-board.jpg',
       alt: 'Everyday activities near, at arm\u2019s length and far.',
       caption: 'Think about what you do up close, at arm\u2019s length and far away.',
     },
@@ -2035,8 +2058,8 @@ const VISUALS_MANIFEST = {
     lal: {
       stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
       homeCategory: 'monofocal',
-      src: 'images/session/web/lens-guide-lal-32.jpg',
-      alt: 'How a light-adjustable lens is fine-tuned: UV-protective glasses, a light adjustment, and lock-in visits.',
+      src: 'images/session/v3/lal.jpg',
+      alt: 'UV-protective glasses resting in a soft beam of light.',
       caption: 'Light Adjustable Lens: a monofocal lens whose power can be fine-tuned with light after the eye heals. The trade-off is extra office visits and UV-protective glasses until the adjustments are done.',
       kicker: 'Part of: Monofocal',
       cuePattern: '\\b(light[- ]adjustable|lal\\+?|rxsight)(?=\\W|$)',
@@ -2044,22 +2067,30 @@ const VISUALS_MANIFEST = {
     ic8: {
       stage: 'lens_options', role: 'secondary', kind: 'image', enabled: true,
       homeCategory: 'edof',
-      src: 'images/session/ic8.svg',
-      alt: 'A small-aperture lens implant, with a tag pointing back to EDOF.',
+      src: 'images/session/v3/ic8.jpg',
+      alt: 'A small-aperture lens implant: a clear optic with a dark ring inside it.',
       caption: 'IC-8: a small-aperture lens used in one eye to lengthen that eye\u2019s range, far through arm\u2019s length. Readers are common for small print. Your surgeon can tell you whether that approach is used for your eyes.',
       kicker: 'Part of: EDOF',
       cuePattern: '\\b(ic-8|ic 8|ic8|apthera|small[- ]aperture)\\b',
     },
     readiness: {
       stage: 'readiness', role: 'main', kind: 'image', enabled: true,
-      src: 'images/session/web/lens-guide-questions-32.jpg',
-      alt: 'A person writing a list of questions to bring to their surgeon.',
+      src: 'images/session/v3/readiness.jpg',
+      alt: 'A notebook with three short questions on a side table, next to a cozy chair for recovery at home.',
+      overlay: [
+        { t: 'circle', cls: 'ov-bullet', cx: 52, cy: 82, r: 6 },
+        { t: 'text', x: 68, y: 89, cls: 'ov-note', s: 'Up to 3 questions for your surgeon' },
+        { t: 'circle', cls: 'ov-bullet', cx: 52, cy: 126, r: 6 },
+        { t: 'text', x: 68, y: 133, cls: 'ov-note', s: 'What recovery usually looks like' },
+        { t: 'circle', cls: 'ov-bullet', cx: 52, cy: 170, r: 6 },
+        { t: 'text', x: 68, y: 177, cls: 'ov-note', s: 'Not 100% decided? That\u2019s fine.' },
+      ],
       caption: 'Your questions for your surgeon, and what recovery usually looks like.',
     },
     summary: {
       stage: 'summary', role: 'main', kind: 'image', enabled: true,
-      src: 'images/session/web/lens-guide-booklet-32.jpg',
-      alt: 'A lens guide booklet on a table, ready to bring to your visit.',
+      src: 'images/session/v3/summary.jpg',
+      alt: 'A closed booklet and reading glasses on a table, ready to bring to your visit.',
       caption: 'Next, your summary to bring to your surgeon.',
     },
   },
@@ -2290,6 +2321,8 @@ function ciqVisualRender() {
   const gmap = document.getElementById('goals-map');
   const cap = document.getElementById('visual-caption');
   const kick = document.getElementById('visual-kicker');
+  const vsvg = document.getElementById('visual-svg');
+  if (vsvg) vsvg.toggleAttribute('hidden', true); // SVG elements have no .hidden property
   if (frame === 'lens_map' || isToric) {
     img.hidden = true;
     if (gmap) gmap.hidden = true;
@@ -2317,13 +2350,45 @@ function ciqVisualRender() {
     const meta = VISUALS_MANIFEST.slides[frame] || VISUALS_MANIFEST.slides.welcome;
     map.hidden = true;
     if (gmap) gmap.hidden = true;
-    img.hidden = false;
-    if (img.getAttribute('src') !== meta.src) img.setAttribute('src', meta.src);
-    img.alt = meta.alt;
+    if (vsvg && Array.isArray(meta.overlay) && meta.overlay.length) {
+      img.hidden = true;
+      ciqDrawSlideSvg(vsvg, meta);
+      vsvg.toggleAttribute('hidden', false);
+    } else {
+      img.hidden = false;
+      if (img.getAttribute('src') !== meta.src) img.setAttribute('src', meta.src);
+      img.alt = meta.alt;
+    }
     kick.textContent = meta.kicker || '';
     cap.textContent = meta.caption;
   }
   if (frameChanged) { panel.classList.remove('vis-swap'); void panel.offsetWidth; panel.classList.add('vis-swap'); }
+}
+// session-visuals-v3: a painted slide plus labels/rays drawn in code (never baked into the art).
+function ciqDrawSlideSvg(svg, meta) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const im = svg.querySelector('#visual-svg-img');
+  const ov = svg.querySelector('#visual-svg-ov');
+  svg.setAttribute('aria-label', meta.alt || '');
+  if (im.getAttribute('href') !== meta.src) im.setAttribute('href', meta.src);
+  if (ov.dataset.src === meta.src) return;
+  ov.dataset.src = meta.src;
+  ov.textContent = '';
+  for (const o of meta.overlay) {
+    const tag = o.t === 'text' ? 'text' : (o.t === 'circle' ? 'circle' : 'path');
+    const el = document.createElementNS(NS, tag);
+    if (o.cls) el.setAttribute('class', o.cls);
+    if (tag === 'text') {
+      el.setAttribute('x', o.x); el.setAttribute('y', o.y);
+      if (o.anchor) el.setAttribute('text-anchor', o.anchor);
+      el.textContent = o.s;
+    } else if (tag === 'circle') {
+      el.setAttribute('cx', o.cx); el.setAttribute('cy', o.cy); el.setAttribute('r', o.r);
+    } else {
+      el.setAttribute('d', o.d);
+    }
+    ov.appendChild(el);
+  }
 }
 // Called from renderRoadmap() on every stage/tier change, connect and resume.
 function ciqVisualSync() {
@@ -2382,7 +2447,7 @@ function ciqSetWords(open) {
   const wt = document.getElementById('words-toggle');
   if (vp) vp.hidden = false;
   if (wt) wt.hidden = false;
-  document.querySelectorAll('#goals-map image[data-href]').forEach(el => {
+  document.querySelectorAll('#goals-map image[data-href], #lens-map image[data-href]').forEach(el => {
     el.setAttribute('href', el.getAttribute('data-href'));
   });
   ciqSetWords(false);

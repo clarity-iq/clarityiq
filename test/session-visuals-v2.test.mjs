@@ -236,14 +236,45 @@ test('C-loop IOL haptics have opposite-shoulder attachment and matching rotation
     for (let i = 0; i < 8; i++) assert.ok(Math.abs(a[i] + b[i]) < 0.2, `${file} idx ${i}: ${a[i]} vs ${b[i]}`);
     assert.ok(a[0] > 0 && a[1] < 0, `${file}: superior haptic must exit on the right and sit above the optic`);
   }
+});
+
+test('session-visuals-v3: lens map shows the painted cut-outs (no drawn optics) with code-drawn toric rim dots', () => {
   const lm = src.slice(src.indexOf('<div id="lens-map"'), src.indexOf('<div id="goals-map"'));
-  const haps = [...lm.matchAll(/class="lz-hap" d="M(-?[\d.]+),(-?[\d.]+) C(-?[\d.]+),(-?[\d.]+) (-?[\d.]+),(-?[\d.]+) (-?[\d.]+),(-?[\d.]+)"/g)];
-  assert.equal(haps.length, 12); // 2 haptics x 3 lenses x 2 layouts
-  for (let i = 0; i < haps.length; i += 2) {
-    const a = haps[i].slice(1).map(Number), b = haps[i + 1].slice(1).map(Number);
-    for (let j = 0; j < 8; j++) assert.ok(Math.abs(a[j] + b[j]) < 0.2, `lens-map pair ${i} idx ${j}`);
-    assert.ok(a[0] > 0 && a[1] < 0, `lens-map pair ${i}: superior haptic must exit on the right and sit above the optic`);
+  assert.doesNotMatch(lm, /class="lz-hap"|class="lz-optic"|class="lz-axis"/);
+  const imgs = [...lm.matchAll(/<image class="lz-img" data-href="(images\/session\/v3\/lens-(\w+)\.png)"/g)];
+  assert.deepEqual(imgs.map(m => m[2]), ['monofocal', 'edof', 'multifocal', 'monofocal', 'edof', 'multifocal']);
+  for (const m of imgs) readFileSync(join(root, m[1]));
+  assert.doesNotMatch(lm, /<image[^>]*\shref=/); // hydrated only when the flag is on
+  const toric = [...lm.matchAll(/<g class="lz-toric">(.*?)<\/g>/g)];
+  assert.equal(toric.length, 6);
+  for (const t of toric) {
+    assert.equal((t[1].match(/<circle /g) || []).length, 6); // 3 rim dots each side
+    assert.doesNotMatch(t[1], /<path|<line/); // no line across the optic
   }
+  assert.match(block, /#goals-map image\[data-href\], #lens-map image\[data-href\]/);
+});
+
+test('session-visuals-v3: painted slides, overlays drawn in code, astigmatism shows two focal points', () => {
+  const S = V.VISUALS_MANIFEST.slides;
+  for (const k of ['welcome', 'focal_points', 'astigmatism', 'lal', 'ic8', 'readiness', 'summary']) {
+    assert.match(S[k].src, /^images\/session\/v3\/[\w-]+\.jpg$/, k);
+  }
+  assert.match(S.cataract.src, /lens-guide-eye-macula\.jpg$/); // anchor painting stays
+  for (const z of ['near', 'arms', 'far']) assert.match(src, new RegExp(`data-href="images/session/v3/goals-${z}\\.jpg"`));
+  assert.equal(JSON.stringify(S.focal_points.overlay.filter(o => o.t === 'text').map(o => o.s)), JSON.stringify(['Near', 'Arm\u2019s length', 'Far']));
+  const notes = S.readiness.overlay.filter(o => o.t === 'text').map(o => o.s);
+  assert.equal(notes.length, 3);
+  assert.match(notes.join(' '), /3 questions/);
+  assert.match(notes.join(' '), /recovery/);
+  assert.match(notes.join(' '), /100% decided/);
+  const foci = S.astigmatism.overlay.filter(o => o.t === 'circle').map(o => o.cx);
+  const retinaX = 532;
+  assert.equal(foci.length, 2);
+  assert.ok(foci.some(x => x < retinaX) && foci.some(x => x > retinaX), String(foci));
+  assert.match(block, /function ciqDrawSlideSvg\(svg, meta\)/);
+  assert.doesNotMatch(block, /innerHTML/);
+  assert.match(src, /<svg id="visual-svg" viewBox="0 0 720 480" role="img" aria-label="" hidden>/);
+  assert.doesNotMatch(src, /<image id="visual-svg-img"[^>]*\shref=/);
 });
 
 test('welcome sketch contains no stage numbers', () => {
